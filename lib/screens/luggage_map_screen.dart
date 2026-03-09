@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_echarts/flutter_echarts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/luggage.dart';
 import '../services/luggage_service.dart';
 
 /// 行李位置地图页面
-/// 使用 ECharts 集成百度地图，展示行李位置
+/// 使用 OpenStreetMap 展示行李位置
 /// 支持在线模式和离线模式
 class LuggageMapScreen extends StatefulWidget {
-  const LuggageMapScreen({super.key});
+  const LuggageMapScreen({Key? key}) : super(key: key);
 
   @override
   State<LuggageMapScreen> createState() => _LuggageMapScreenState();
@@ -19,6 +22,9 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _offlineMode = false;
+  
+  /// 地图控制器，用于处理地图操作
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -33,11 +39,56 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     });
 
     try {
+      // 请求位置权限
+      final locationStatus = await Permission.location.request();
+      
+      LatLng? currentLocation;
+
+      if (locationStatus.isGranted) {
+        // 权限已授予，获取用户位置
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('位置权限已授予，正在获取当前位置...')),
+        );
+
+        try {
+          // 获取当前位置
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          );
+          currentLocation = LatLng(position.latitude, position.longitude);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('当前位置: ${position.latitude}, ${position.longitude}')),
+          );
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('获取位置失败: ${e.toString()}')),
+          );
+        }
+      } else if (locationStatus.isDenied) {
+        // 权限被拒绝，使用默认位置
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('位置权限被拒绝，使用默认位置')),
+        );
+      } else if (locationStatus.isPermanentlyDenied) {
+        // 权限被永久拒绝，引导用户去设置
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('位置权限已被永久拒绝，请在系统设置中开启')),
+        );
+      }
+
       final luggages = await LuggageService.getLuggageList();
       setState(() {
         _luggages = luggages;
         _isLoading = false;
       });
+
+      // 如果获取到当前位置，更新地图中心点
+      if (currentLocation != null) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _mapController.move(currentLocation!, 10);
+        });
+      }
     } catch (e) {
       setState(() {
         _errorMessage = '获取行李数据失败: ${e.toString()}';
@@ -122,122 +173,6 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     ];
   }
 
-  String _getEchartsOption() {
-    final luggageData = _luggages
-        .where((l) => l.latitude != null && l.longitude != null)
-        .map((l) => {
-              'value': [l.longitude, l.latitude],
-              'name': l.tagNumber,
-              'status': l.status.toString().split('.').last,
-              'ownerName': l.passengerName,
-              'location': l.destination,
-            })
-        .toList();
-
-    double centerLng = 116.404;
-    double centerLat = 39.915;
-    if (luggageData.isNotEmpty) {
-      centerLng = (luggageData[0]['value'] as List)[0] as double;
-      centerLat = (luggageData[0]['value'] as List)[1] as double;
-    }
-
-    return '''
-    {
-      bmap: {
-        center: [$centerLng, $centerLat],
-        zoom: 5,
-        roam: true,
-        mapStyle: {
-          styleJson: [
-            {
-              "featureType": "water",
-              "elementType": "all",
-              "stylers": {
-                "color": "#d1e5f0"
-              }
-            },
-            {
-              "featureType": "land",
-              "elementType": "all",
-              "stylers": {
-                "color": "#f3f3f3"
-              }
-            },
-            {
-              "featureType": "road",
-              "elementType": "all",
-              "stylers": {
-                "color": "#ffffff"
-              }
-            },
-            {
-              "featureType": "poi",
-              "elementType": "all",
-              "stylers": {
-                "color": "#f5f5f5"
-              }
-            }
-          ]
-        }
-      },
-      tooltip: {
-        trigger: 'item',
-        formatter: function(params) {
-          const data = params.data;
-          const statusMap = {
-            'checked_in': '已托运',
-            'in_transit': '运输中',
-            'delivered': '已送达',
-            'lost': '丢失'
-          };
-          const statusText = statusMap[data.status] || '未知';
-          return '<div style="font-weight:bold;margin-bottom:5px;">' + data.name + '</div>' +
-                 '<div>状态: ' + statusText + '</div>' +
-                 '<div>位置: ' + (data.location || '未知') + '</div>' +
-                 '<div>所有者: ' + (data.ownerName || '未知') + '</div>';
-        }
-      },
-      series: [
-        {
-          type: 'scatter',
-          coordinateSystem: 'bmap',
-          data: ${jsonEncode(luggageData)},
-          symbolSize: 20,
-          itemStyle: {
-            color: function(params) {
-              const statusMap = {
-                'checked_in': '#4CAF50',
-                'in_transit': '#FF9800',
-                'delivered': '#2196F3',
-                'lost': '#F44336'
-              };
-              return statusMap[params.data.status] || '#9E9E9E';
-            },
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.3)'
-          },
-          label: {
-            show: true,
-            formatter: function(params) {
-              return params.data.name;
-            },
-            position: 'top',
-            fontSize: 10,
-            color: '#666'
-          },
-          emphasis: {
-            scale: true,
-            itemStyle: {
-              shadowBlur: 20,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          }
-        }
-      ]
-    }
-    ''';
-  }
-
   Widget _buildMap() {
     if (_isLoading) {
       return const Center(
@@ -252,16 +187,94 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
       );
     }
 
-    return Column(
+    final List<Marker> luggageMarkers = _luggages
+        .where((l) => l.latitude != null && l.longitude != null)
+        .map((l) => Marker(
+              width: 80,
+              height: 80,
+              point: LatLng(l.latitude!, l.longitude!),
+              child: GestureDetector(
+                onTap: () => _showLuggageDetail(l),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(l.status),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            spreadRadius: 2,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.luggage,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        l.tagNumber,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ))
+        .toList();
+
+    // 计算地图中心点
+    LatLng center = const LatLng(39.9042, 116.4074); // 默认北京
+    if (luggageMarkers.isNotEmpty) {
+      center = luggageMarkers[0].point;
+    }
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: 5,
+        minZoom: 3,
+        maxZoom: 18,
+        onTap: (_, __) {
+          // 点击地图空白处可以关闭详情面板
+        },
+        // 启用默认的交互功能，包括双击缩放
+        interactiveFlags: InteractiveFlag.all,
+      ),
       children: [
-        Expanded(
-          child: Echarts(
-            option: _getEchartsOption(),
-            extensions: [
-              'https://api.map.baidu.com/api?v=3.0&ak=E4805d16520de693a3fe707cdc962045'
-            ],
-          ),
+        // 高德地图瓦片图层（国内可访问）
+        TileLayer(
+          urlTemplate: 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+          subdomains: ['1', '2', '3', '4'],
+          userAgentPackageName: 'com.example.my_first_app',
         ),
+        // 行李标记图层
+        MarkerLayer(markers: luggageMarkers),
       ],
     );
   }

@@ -7,7 +7,7 @@ import '../services/luggage_service.dart';
 class DamageReportScreen extends StatefulWidget {
   final Luggage luggage;
 
-  const DamageReportScreen({super.key, required this.luggage});
+  const DamageReportScreen({Key? key, required this.luggage}) : super(key: key);
 
   @override
   State<DamageReportScreen> createState() => _DamageReportScreenState();

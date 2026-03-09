@@ -9,7 +9,7 @@ import 'luggage_map_screen.dart';
 /// 包含底部导航栏，管理四个主要页面：首页、行李管理、行李地图、个人中心
 /// 使用IndexedStack保持各页面状态，避免切换时重建
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  const MainScreen({Key? key}) : super(key: key);
 
   @override
   State<MainScreen> createState() => _MainScreenState();

@@ -6,9 +6,14 @@ import 'contact_passenger_screen.dart';
 
 /// 待办事项页面
 /// 展示需要处理的异常行李列表
-class TodoScreen extends StatelessWidget {
-  const TodoScreen({super.key});
+class TodoScreen extends StatefulWidget {
+  const TodoScreen({Key? key}) : super(key: key);
 
+  @override
+  State<TodoScreen> createState() => _TodoScreenState();
+}
+
+class _TodoScreenState extends State<TodoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

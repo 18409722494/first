@@ -7,7 +7,7 @@ import 'qr_scan_screen.dart';
 /// 查询行李页面
 /// 用于通过条件搜索行李信息
 class SearchLuggageScreen extends StatefulWidget {
-  const SearchLuggageScreen({super.key});
+  const SearchLuggageScreen({Key? key}) : super(key: key);
 
   @override
   State<SearchLuggageScreen> createState() => _SearchLuggageScreenState();

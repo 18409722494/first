@@ -16,10 +16,10 @@ class LuggageDetailScreen extends StatefulWidget {
   final String raw;
 
   const LuggageDetailScreen({
-    super.key,
+    Key? key,
     required this.qrPayload,
     required this.raw,
-  });
+  }) : super(key: key);
 
   @override
   State<LuggageDetailScreen> createState() => _LuggageDetailScreenState();

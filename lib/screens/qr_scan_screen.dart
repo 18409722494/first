@@ -8,7 +8,7 @@ import 'luggage_detail_screen.dart';
 /// 使用摄像头扫描行李二维码
 /// 支持闪光灯切换和前后摄像头切换
 class QrScanScreen extends StatefulWidget {
-  const QrScanScreen({super.key});
+  const QrScanScreen({Key? key}) : super(key: key);
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -99,7 +99,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: Colors.black.withOpacity(0.5),
                     child: Text(
                       _lastRaw == null ? '对准二维码进行识别…' : '已识别：$_lastRaw',
                       style: const TextStyle(color: Colors.white),

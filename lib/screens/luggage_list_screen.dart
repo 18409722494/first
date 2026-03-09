@@ -12,7 +12,7 @@ import '../models/qr_payload.dart';
 /// 显示当前用户的所有行李信息
 /// 支持下拉刷新、点击查看详情、搜索过滤等功能
 class LuggageListScreen extends StatefulWidget {
-  const LuggageListScreen({super.key});
+  const LuggageListScreen({Key? key}) : super(key: key);
 
   @override
   State<LuggageListScreen> createState() => _LuggageListScreenState();
@@ -22,21 +22,28 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   List<Luggage> _luggageList = [];
   List<Luggage> _filteredList = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
   String? _error;
   String _searchQuery = '';
   String? _statusFilter;
+  int _page = 1;
+  final int _pageSize = 10;
 
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadLuggageList();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -44,6 +51,8 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _page = 1;
+      _hasMoreData = true;
     });
 
     try {
@@ -59,6 +68,45 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
       setState(() {
         _error = e.toString();
         _isLoading = false;
+      });
+    }
+  }
+
+  /// 加载更多行李数据
+  Future<void> _loadMoreLuggage() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.id;
+      
+      // 模拟分页加载
+      _page++;
+      
+      // 这里应该调用带分页参数的API
+      // 由于当前是模拟数据，我们简单地返回空列表来模拟没有更多数据
+      final moreLuggage = await LuggageService.getLuggageList(ownerId: userId);
+      
+      setState(() {
+        // 模拟没有更多数据
+        _hasMoreData = false;
+        
+        // 如果有更多数据，添加到列表中
+        if (moreLuggage.isNotEmpty) {
+          _luggageList.addAll(moreLuggage);
+          _filteredList = _luggageList;
+          _filterList();
+        }
+        
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
       });
     }
   }
@@ -99,6 +147,17 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
       _filteredList = _luggageList;
     });
     _searchController.clear();
+  }
+
+  /// 滚动监听器
+  /// 当滚动到底部时触发加载更多数据
+  void _onScroll() {
+    if (_isLoadingMore || !_hasMoreData) return;
+    
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 100) {
+      _loadMoreLuggage();
+    }
   }
 
   String _getStatusText(dynamic status) {
@@ -553,9 +612,19 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
                         : RefreshIndicator(
                             onRefresh: _loadLuggageList,
                             child: ListView.builder(
+                              controller: _scrollController,
                               padding: const EdgeInsets.all(16),
-                              itemCount: _filteredList.length,
+                              itemCount: _filteredList.length + (_isLoadingMore ? 1 : 0),
                               itemBuilder: (context, index) {
+                                if (index == _filteredList.length) {
+                                  // 显示加载更多指示器
+                                  return Container(
+                                    padding: const EdgeInsets.all(16),
+                                    alignment: Alignment.center,
+                                    child: const CircularProgressIndicator(),
+                                  );
+                                }
+                                
                                 final luggage = _filteredList[index];
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 12),

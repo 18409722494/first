@@ -1,14 +1,31 @@
 /// 行李状态枚举
 enum LuggageStatus {
-  checkIn('已办理托运'),
-  inTransit('运输中'),
-  arrived('已到达'),
-  delivered('已交付'),
-  damaged('已损坏'),
-  lost('已丢失');
+  checkIn,
+  inTransit,
+  arrived,
+  delivered,
+  damaged,
+  lost;
 
-  final String displayName;
-  const LuggageStatus(this.displayName);
+  /// 获取状态的显示名称
+  String get displayName {
+    switch (this) {
+      case LuggageStatus.checkIn:
+        return '已办理托运';
+      case LuggageStatus.inTransit:
+        return '运输中';
+      case LuggageStatus.arrived:
+        return '已到达';
+      case LuggageStatus.delivered:
+        return '已交付';
+      case LuggageStatus.damaged:
+        return '已损坏';
+      case LuggageStatus.lost:
+        return '已丢失';
+      default:
+        return '未知状态';
+    }
+  }
 
   @override
   String toString() => displayName;

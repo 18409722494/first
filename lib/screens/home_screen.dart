@@ -12,7 +12,7 @@ import 'package:flutter_echarts/flutter_echarts.dart';
 /// 显示欢迎信息和快捷功能入口
 /// 包含功能卡片和使用说明
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

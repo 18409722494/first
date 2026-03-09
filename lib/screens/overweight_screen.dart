@@ -6,7 +6,7 @@ import '../models/luggage.dart';
 class OverweightScreen extends StatefulWidget {
   final Luggage luggage;
 
-  const OverweightScreen({super.key, required this.luggage});
+  const OverweightScreen({Key? key, required this.luggage}) : super(key: key);
 
   @override
   State<OverweightScreen> createState() => _OverweightScreenState();

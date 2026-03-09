@@ -9,7 +9,7 @@ import '../providers/auth_provider.dart';
 /// 添加行李页面
 /// 用于手动录入行李信息
 class AddLuggageScreen extends StatefulWidget {
-  const AddLuggageScreen({super.key});
+  const AddLuggageScreen({Key? key}) : super(key: key);
 
   @override
   State<AddLuggageScreen> createState() => _AddLuggageScreenState();

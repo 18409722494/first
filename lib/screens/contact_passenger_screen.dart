@@ -6,7 +6,7 @@ import '../models/luggage.dart';
 class ContactPassengerScreen extends StatefulWidget {
   final Luggage luggage;
 
-  const ContactPassengerScreen({super.key, required this.luggage});
+  const ContactPassengerScreen({Key? key, required this.luggage}) : super(key: key);
 
   @override
   State<ContactPassengerScreen> createState() => _ContactPassengerScreenState();

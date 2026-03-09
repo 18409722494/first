@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 /// 注册界面
 /// 提供用户注册功能，包含用户名、邮箱、密码和确认密码输入
 /// 支持密码显示/隐藏切换，表单验证（包括密码一致性验证）
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({Key? key}) : super(key: key);
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -20,8 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// 用户名输入控制器
   final _usernameController = TextEditingController();
   
-  /// 邮箱输入控制器
-  final _emailController = TextEditingController();
+  
   
   /// 密码输入控制器
   final _passwordController = TextEditingController();
@@ -39,7 +38,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     // 释放资源
     _usernameController.dispose();
-    _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -53,13 +51,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.register(
         _usernameController.text.trim(),
-        _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (success && mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,33 +124,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                       if (value.length < 3) { 
                         return '工号长度至少3位';
-                      }
-                      return null;
-                    },
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 邮箱输入框
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: '工作邮箱',
-                      hintText: '请输入绑定工号的工作邮箱',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return '请输入邮箱';
-                      }
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return '请输入有效的邮箱地址';
                       }
                       return null;
                     },
