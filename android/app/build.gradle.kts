@@ -41,3 +41,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // MainActivity 使用 WindowCompat
+    implementation("androidx.core:core-ktx:1.15.0")
+}

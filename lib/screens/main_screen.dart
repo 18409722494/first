@@ -22,7 +22,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildBody(),
+      // 明确占满 Scaffold 的 body 区域，避免部分机型/模拟器在嵌套 Scaffold 时出现
+      // 约束异常（日志里可能出现 FlutterRenderer: Width is zero）
+      body: SizedBox.expand(child: _buildBody()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),

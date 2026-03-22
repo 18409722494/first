@@ -17,7 +17,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spacingSm = Responsive.spacing(context, AppSpacing.sm);
     final spacingMd = Responsive.spacing(context, AppSpacing.md);
 
     return Scaffold(
@@ -34,25 +33,23 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
-          return Padding(
+          return ListView(
             padding: EdgeInsets.symmetric(
               horizontal: Responsive.padding(context, AppSpacing.pageHorizontal),
+              vertical: Responsive.spacing(context, AppSpacing.sm),
             ),
-            child: Column(
-              children: [
-                SizedBox(height: spacingSm),
-                _buildWelcomeCard(context, authProvider.user),
-                SizedBox(height: spacingMd),
-                _buildStartWorkingSection(context),
-                SizedBox(height: spacingMd),
-                _buildStatsSection(context),
-                SizedBox(height: spacingMd),
-                _buildChartSection(context),
-                const Spacer(),
-                _buildScanButton(context),
-                SizedBox(height: spacingMd),
-              ],
-            ),
+            children: [
+              _buildWelcomeCard(context, authProvider.user),
+              SizedBox(height: spacingMd),
+              _buildStartWorkingSection(context),
+              SizedBox(height: spacingMd),
+              _buildStatsSection(context),
+              SizedBox(height: spacingMd),
+              _buildChartSection(context),
+              SizedBox(height: spacingMd),
+              _buildScanButton(context),
+              SizedBox(height: spacingMd),
+            ],
           );
         },
       ),
@@ -222,7 +219,8 @@ class HomeScreen extends StatelessWidget {
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             SizedBox(
               height: chartH,
-              child: const _WorkStatsBarChart(),
+              // 首帧后再构建图表，减轻主线程卡顿（避免与 FlutterRenderer 首帧尺寸为 0 叠加）
+              child: const _DeferredBarChart(),
             ),
           ],
         ),
@@ -259,6 +257,43 @@ class HomeScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const QrScanScreen()),
     );
+  }
+}
+
+/// 首帧结束后再挂载柱状图，降低冷启动时主线程压力
+class _DeferredBarChart extends StatefulWidget {
+  const _DeferredBarChart();
+
+  @override
+  State<_DeferredBarChart> createState() => _DeferredBarChartState();
+}
+
+class _DeferredBarChartState extends State<_DeferredBarChart> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _ready = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+    return const _WorkStatsBarChart();
   }
 }
 

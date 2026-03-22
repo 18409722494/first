@@ -13,114 +13,32 @@ import 'system_settings_screen.dart';
 import 'quick_functions_screen.dart';
 import 'help_support_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isDrawerOpen = false;
-  double _dragOffset = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('员工中心'),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            setState(() {
-              _isDrawerOpen = !_isDrawerOpen;
-            });
-          },
-        ),
       ),
-      body: GestureDetector(
-        onHorizontalDragStart: (details) {
-          _dragOffset = 0;
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final user = authProvider.user;
+          final username = user?.username ?? 'User';
+          final email = user?.email ?? 'user@example.com';
+
+          return Column(
+            children: [
+              _buildProfileHeader(context, username, email),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              _buildSettingsSection(context),
+              const Spacer(),
+              _buildLogoutButton(context, authProvider),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+            ],
+          );
         },
-        onHorizontalDragUpdate: (details) {
-          _dragOffset += details.delta.dx;
-
-          if (_dragOffset > 0 && !_isDrawerOpen) {
-            setState(() {
-              _dragOffset = _dragOffset.clamp(0.0, Responsive.fractionWidth(context, 0.7));
-            });
-          }
-        },
-        onHorizontalDragEnd: (details) {
-          if (_dragOffset > Responsive.fractionWidth(context, 0.25)) {
-            setState(() {
-              _isDrawerOpen = true;
-              _dragOffset = 0;
-            });
-          } else {
-            setState(() {
-              _dragOffset = 0;
-            });
-          }
-        },
-        child: Stack(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              transform: Matrix4.translationValues(
-                _isDrawerOpen
-                    ? Responsive.fractionWidth(context, 0.7)
-                    : _dragOffset,
-                0,
-                0,
-              ),
-              child: Scaffold(
-                body: Consumer<AuthProvider>(
-                  builder: (context, authProvider, child) {
-                    final user = authProvider.user;
-                    final username = user?.username ?? 'User';
-                    final email = user?.email ?? 'user@example.com';
-
-                    return Column(
-                      children: [
-                        _buildProfileHeader(context, username, email),
-                        SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                        _buildSettingsSection(context),
-                        const Spacer(),
-                        _buildLogoutButton(context, authProvider),
-                        SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              left: _isDrawerOpen ? 0 : -Responsive.fractionWidth(context, 0.7),
-              top: 0,
-              bottom: 0,
-              width: Responsive.fractionWidth(context, 0.7),
-              child: _buildDrawer(context),
-            ),
-
-            if (_isDrawerOpen)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isDrawerOpen = false;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  color: Colors.black.withValues(alpha: 0.5),
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -235,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.badge_outlined,
             iconColor: AppColors.primary,
             title: '账户信息',
-            onTap: () => _navigateTo(const AccountInfoScreen()),
+            onTap: () => _navigateTo(context, const AccountInfoScreen()),
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -243,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.lock_outlined,
             iconColor: AppColors.warning,
             title: '账户安全',
-            onTap: () => _navigateTo(const AccountSecurityScreen()),
+            onTap: () => _navigateTo(context, const AccountSecurityScreen()),
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -251,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.account_circle_outlined,
             iconColor: AppColors.info,
             title: '个性化设置',
-            onTap: () => _navigateTo(const PersonalizationScreen()),
+            onTap: () => _navigateTo(context, const PersonalizationScreen()),
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -259,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.settings_outlined,
             iconColor: AppColors.textSecondary,
             title: '系统设置',
-            onTap: () => _navigateTo(const SystemSettingsScreen()),
+            onTap: () => _navigateTo(context, const SystemSettingsScreen()),
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -267,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.speed_outlined,
             iconColor: AppColors.success,
             title: '快捷功能',
-            onTap: () => _navigateTo(const QuickFunctionsScreen()),
+            onTap: () => _navigateTo(context, const QuickFunctionsScreen()),
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -275,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.help_outline,
             iconColor: AppColors.primaryLight,
             title: '帮助与支持',
-            onTap: () => _navigateTo(const HelpSupportScreen()),
+            onTap: () => _navigateTo(context, const HelpSupportScreen()),
             showDivider: false,
           ),
         ],
@@ -291,10 +209,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
     bool showDivider = true,
   }) {
-    final iconContainerSize = Responsive.spacing(context, 36);
-    final iconSizeVal = Responsive.iconSize(context, 18);
-    final dividerIndent = iconContainerSize + Responsive.spacing(context, AppSpacing.sm) * 2 + iconSizeVal;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -308,8 +222,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             children: [
               Container(
-                width: iconContainerSize,
-                height: iconContainerSize,
+                width: Responsive.spacing(context, 36),
+                height: Responsive.spacing(context, 36),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -317,7 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Icon(
                   icon,
                   color: iconColor,
-                  size: iconSizeVal,
+                  size: Responsive.iconSize(context, 18),
                 ),
               ),
               SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
@@ -389,96 +303,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    return Container(
-      color: Theme.of(context).cardColor,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(
-              '快速导航',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.home,
-            title: '首页',
-            onTap: () => _closeDrawer(),
-          ),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.luggage,
-            title: '行李管理',
-            onTap: () => _closeDrawer(),
-          ),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.task,
-            title: '待办事项',
-            onTap: () => _closeDrawer(),
-          ),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.person,
-            title: '个人中心',
-            onTap: () => _closeDrawer(),
-          ),
-          const Divider(height: AppSpacing.lg),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.qr_code_scanner,
-            title: '扫描二维码',
-            onTap: () => _closeDrawer(),
-          ),
-          _buildDrawerItem(
-            context: context,
-            icon: Icons.map,
-            title: '行李地图',
-            onTap: () => _closeDrawer(),
-            showDivider: false,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    bool showDivider = true,
-  }) {
-    return Column(
-      children: [
-        ListTile(
-          leading: Icon(icon, color: AppColors.primary),
-          title: Text(title),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
-          onTap: onTap,
-        ),
-        if (showDivider) const SizedBox(height: AppSpacing.xs),
-      ],
-    );
-  }
-
-  void _navigateTo(Widget screen) {
+  void _navigateTo(BuildContext context, Widget screen) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
     );
-  }
-
-  void _closeDrawer() {
-    Navigator.of(context).pop();
-    setState(() {
-      _isDrawerOpen = false;
-    });
   }
 }

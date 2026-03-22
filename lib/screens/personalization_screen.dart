@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
+import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
@@ -27,11 +27,12 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                // ==================== 相册权限 - 使用 PermissionService ====================
                 FilledButton.icon(
                   onPressed: () async {
-                    final status = await Permission.photos.request();
+                    final hasPermission = await PermissionService.requestPhotos(context);
 
-                    if (status.isGranted) {
+                    if (hasPermission) {
                       Navigator.pop(dialogContext);
 
                       try {
@@ -55,43 +56,19 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           SnackBar(content: Text('选择图片失败: ${e.toString()}')),
                         );
                       }
-                    } else if (status.isDenied) {
+                    } else {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('需要相册权限才能选择图片')),
-                      );
-                    } else if (status.isPermanentlyDenied) {
-                      Navigator.pop(dialogContext);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('权限被拒绝'),
-                          content: const Text('相册权限已被永久拒绝，请在系统设置中开启'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('取消'),
-                            ),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                openAppSettings();
-                              },
-                              child: const Text('去设置'),
-                            ),
-                          ],
-                        ),
-                      );
                     }
                   },
                   icon: Icon(Icons.photo_library_outlined, size: Responsive.iconSize(context, 20)),
                   label: Text('相册', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                 ),
+                // ==================== 相机权限 - 使用 PermissionService ====================
                 FilledButton.icon(
                   onPressed: () async {
-                    final status = await Permission.camera.request();
+                    final hasPermission = await PermissionService.requestCamera(context);
 
-                    if (status.isGranted) {
+                    if (hasPermission) {
                       Navigator.pop(dialogContext);
 
                       try {
@@ -115,33 +92,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           SnackBar(content: Text('拍摄失败: ${e.toString()}')),
                         );
                       }
-                    } else if (status.isDenied) {
+                    } else {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('需要相机权限才能拍照')),
-                      );
-                    } else if (status.isPermanentlyDenied) {
-                      Navigator.pop(dialogContext);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('权限被拒绝'),
-                          content: const Text('相机权限已被永久拒绝，请在系统设置中开启'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('取消'),
-                            ),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                openAppSettings();
-                              },
-                              child: const Text('去设置'),
-                            ),
-                          ],
-                        ),
-                      );
                     }
                   },
                   icon: Icon(Icons.camera_alt_outlined, size: Responsive.iconSize(context, 20)),

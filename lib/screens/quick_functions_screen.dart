@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import 'luggage_map_screen.dart';
@@ -8,6 +8,17 @@ import 'luggage_map_screen.dart';
 /// 显示和管理快捷功能
 class QuickFunctionsScreen extends StatelessWidget {
   const QuickFunctionsScreen({super.key});
+
+  // ==================== 快速扫描 - 使用 PermissionService ====================
+  void _onQuickScan(BuildContext context) async {
+    final hasPermission = await PermissionService.requestCamera(context);
+
+    if (hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('快速扫描功能已启用')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +52,6 @@ class QuickFunctionsScreen extends StatelessWidget {
                   subtitle: const Text('查看工作安排'),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
-                    // 排班表功能
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('排班表功能已启用')),
                     );
@@ -54,56 +64,19 @@ class QuickFunctionsScreen extends StatelessWidget {
                   subtitle: const Text('查看工作数据统计'),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
-                    // 工作统计功能
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('工作统计功能已启用')),
                     );
                   },
                 ),
                 const Divider(height: 1),
+                // ==================== 相机权限 - 使用 PermissionService ====================
                 ListTile(
                   leading: const Icon(Icons.qr_code_scanner_outlined),
                   title: const Text('快速扫描'),
                   subtitle: const Text('直接进入扫描界面'),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () async {
-                    // 申请相机权限
-                    final status = await Permission.camera.request();
-                    
-                    if (status.isGranted) {
-                      // 权限已授予，显示成功提示
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('快速扫描功能已启用')),
-                      );
-                    } else if (status.isDenied) {
-                      // 权限被拒绝，显示提示
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('需要相机权限才能使用扫描功能')),
-                      );
-                    } else if (status.isPermanentlyDenied) {
-                      // 权限被永久拒绝，引导用户去设置页
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('权限被拒绝'),
-                          content: const Text('相机权限已被永久拒绝，请在系统设置中开启'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('取消'),
-                            ),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                openAppSettings();
-                              },
-                              child: const Text('去设置'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
+                  onTap: () => _onQuickScan(context),
                 ),
               ],
             ),

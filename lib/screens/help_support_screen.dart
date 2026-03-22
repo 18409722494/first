@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
@@ -73,6 +73,17 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
+  // ==================== 联系我们 - 使用 PermissionService ====================
+  void _onContactUs(BuildContext context) async {
+    final hasPermission = await PermissionService.requestPhone(context);
+
+    if (hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('联系我们功能已启用')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,45 +121,13 @@ class HelpSupportScreen extends StatelessWidget {
                   onTap: () => _showAboutDialog(context),
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
+                // ==================== 电话权限 - 使用 PermissionService ====================
                 ListTile(
                   leading: Icon(Icons.phone_outlined, size: Responsive.iconSize(context, 24)),
                   title: Text('联系我们', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   subtitle: Text('400-123-4567', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () async {
-                    final status = await Permission.phone.request();
-
-                    if (status.isGranted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('联系我们功能已启用')),
-                      );
-                    } else if (status.isDenied) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('需要电话权限才能拨打电话')),
-                      );
-                    } else if (status.isPermanentlyDenied) {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('权限被拒绝'),
-                          content: const Text('电话权限已被永久拒绝，请在系统设置中开启'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('取消'),
-                            ),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                openAppSettings();
-                              },
-                              child: const Text('去设置'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
+                  onTap: () => _onContactUs(context),
                 ),
               ],
             ),

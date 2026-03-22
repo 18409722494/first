@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../components/app_text_field.dart';
 import '../components/app_button.dart';
 import '../services/damage_report_service.dart';
 import '../services/local_queue_service.dart';
+import '../services/permission_service.dart';
+import '../models/permission_type.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -54,72 +55,50 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     }
   }
 
+  // ==================== 位置权限 - 使用 PermissionService ====================
+
   Future<void> _getCurrentLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+    // 使用 PermissionService 请求位置权限
+    final hasPermission = await PermissionService.requestLocation(context);
 
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('位置权限已被永久拒绝，请在系统设置中手动开启'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
+    if (!hasPermission) {
+      return;
+    }
 
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position? position;
-        for (int i = 0; i < 3; i++) {
-          try {
-            position = await Geolocator.getCurrentPosition(
-              desiredAccuracy: LocationAccuracy.high,
-              timeLimit: const Duration(seconds: 10),
-            );
-            break;
-          } catch (e) {
-            debugPrint('第${i + 1}次获取位置失败：$e');
-            if (i < 2) {
-              await Future.delayed(const Duration(seconds: 2));
-            }
-          }
-        }
-
-        if (position != null) {
-          if (mounted) {
-            setState(() {
-              _position = position;
-            });
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('无法获取位置信息，请检查 GPS 是否开启'),
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
+    // 权限获取成功后，尝试获取位置
+    Position? position;
+    for (int i = 0; i < 3; i++) {
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10),
+        );
+        break;
+      } catch (e) {
+        debugPrint('第${i + 1}次获取位置失败：$e');
+        if (i < 2) {
+          await Future.delayed(const Duration(seconds: 2));
         }
       }
-    } catch (e) {
-      debugPrint('获取位置失败：$e');
+    }
+
+    if (position != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('获取位置信息失败，请稍后重试'),
-            duration: Duration(seconds: 3),
-          ),
+        setState(() {
+          _position = position;
+        });
+      }
+    } else {
+      if (mounted) {
+        PermissionService.showSnackBar(
+          context,
+          '无法获取位置信息，请检查 GPS 是否开启',
         );
       }
     }
   }
+
+  // ==================== 图片选择 - 使用 PermissionService ====================
 
   Future<void> _showImageSourceDialog() async {
     return showDialog<void>(
@@ -148,21 +127,17 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
 
   Future<void> _pickImageFromSource(ImageSource source) async {
     try {
-      Permission permission = source == ImageSource.camera
-          ? Permission.camera
-          : Permission.photos;
+      // 使用 PermissionService 请求对应权限
+      final PermissionType permissionType = source == ImageSource.camera
+          ? PermissionType.camera
+          : PermissionType.photos;
 
-      final status = await permission.request();
-      if (status != PermissionStatus.granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(source == ImageSource.camera
-                  ? '需要相机权限才能拍摄照片'
-                  : '需要相册权限才能选择照片'),
-            ),
-          );
-        }
+      final hasPermission = await PermissionService.request(
+        permissionType,
+        context: context,
+      );
+
+      if (!hasPermission) {
         return;
       }
 
