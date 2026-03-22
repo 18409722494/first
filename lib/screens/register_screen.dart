@@ -6,9 +6,7 @@ import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import 'main_screen.dart';
 
-/// 注册界面
-/// 提供用户注册功能，包含用户名、邮箱、密码和确认密码输入
-/// 支持密码显示/隐藏切换，表单验证（包括密码一致性验证）
+/// 注册页面
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
@@ -17,22 +15,11 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  /// 表单验证键
   final _formKey = GlobalKey<FormState>();
-  
-  /// 用户名输入控制器
   final _usernameController = TextEditingController();
-  
-  /// 密码输入控制器
   final _passwordController = TextEditingController();
-  
-  /// 确认密码输入控制器
   final _confirmPasswordController = TextEditingController();
-  
-  /// 是否隐藏密码
   bool _obscurePassword = true;
-  
-  /// 是否隐藏确认密码
   bool _obscureConfirmPassword = true;
 
   @override
@@ -43,9 +30,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  /// 处理注册逻辑
-  /// 验证表单后调用AuthProvider进行注册
-  /// 注册成功后跳转到首页
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);

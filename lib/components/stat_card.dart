@@ -5,7 +5,6 @@ import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
 /// 统计卡片组件
-/// 用于首页仪表盘展示关键数据指标
 class StatCard extends StatelessWidget {
   final String title;
   final String value;

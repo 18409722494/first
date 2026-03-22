@@ -7,7 +7,6 @@ enum LuggageStatus {
   damaged,
   lost;
 
-  /// 获取状态的显示名称
   String get displayName {
     switch (this) {
       case LuggageStatus.checkIn:
@@ -31,46 +30,21 @@ enum LuggageStatus {
   String toString() => displayName;
 }
 
-/// 行李数据模型
-/// 用于表示行李的完整信息
+/// 行李模型
 class Luggage {
-  /// 行李唯一标识符
   final String id;
-  
-  /// 行李标签号
   final String tagNumber;
-  
-  /// 航班号
   final String flightNumber;
-  
-  /// 乘客姓名
   final String passengerName;
-  
-  /// 行李重量（单位：千克）
   final double weight;
-  
-  /// 行李状态
   final LuggageStatus status;
-  
-  /// 办理托运时间
   final DateTime checkInTime;
-  
-  /// 最后更新时间
   final DateTime lastUpdated;
-  
-  /// 目的地
   final String destination;
-  
-  /// 备注信息
   final String notes;
-  
-  /// 行李位置纬度
   final double? latitude;
-  
-  /// 行李位置经度
   final double? longitude;
 
-  /// 构造函数
   const Luggage({
     required this.id,
     required this.tagNumber,
@@ -86,11 +60,7 @@ class Luggage {
     this.longitude,
   });
 
-  /// 从JSON数据创建Luggage对象
-  /// 兼容不同的字段命名格式（驼峰和下划线）
   factory Luggage.fromJson(Map<String, dynamic> json) {
-    /// 解析时间字段的辅助函数
-    /// 支持DateTime对象或字符串格式
     DateTime? parseTime(dynamic v) {
       if (v == null) return null;
       if (v is DateTime) return v;
@@ -98,15 +68,12 @@ class Luggage {
       return DateTime.tryParse(s);
     }
 
-    /// 解析数字字段的辅助函数
-    /// 支持各种数字类型
     double? parseDouble(dynamic v) {
       if (v == null) return null;
       if (v is num) return v.toDouble();
       return double.tryParse(v.toString());
     }
 
-    /// 解析状态字段
     LuggageStatus parseStatus(dynamic v) {
       if (v == null) return LuggageStatus.checkIn;
       if (v is LuggageStatus) return v;
@@ -144,7 +111,6 @@ class Luggage {
     );
   }
 
-  /// 将Luggage对象转换为JSON格式
   Map<String, dynamic> toJson() => {
         'id': id,
         'tagNumber': tagNumber,
@@ -160,8 +126,6 @@ class Luggage {
         'longitude': longitude,
       };
 
-  /// 创建一个新的Luggage对象，只更新指定的字段
-  /// 用于不可变对象的更新操作
   Luggage copyWith({
     String? id,
     String? tagNumber,

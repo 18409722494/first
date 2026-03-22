@@ -3,50 +3,18 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-/// 统一输入框组件
-/// 支持文本、密码、数字键盘等多种类型
-///
-/// 使用示例：
-/// ```dart
-/// AppTextField(
-///   controller: _tagController,
-///   label: '行李标签号',
-///   hint: '请输入标签号',
-///   prefixIcon: Icons.qr_code,
-/// )
-/// ```
+/// 输入框组件
 class AppTextField extends StatelessWidget {
-  /// 控制器
   final TextEditingController? controller;
-
-  /// 标签文本
   final String? label;
-
-  /// 提示文本
   final String? hint;
-
-  /// 前缀图标
   final IconData? prefixIcon;
-
-  /// 后缀组件
   final Widget? suffixIcon;
-
-  /// 输入类型
   final TextInputType keyboardType;
-
-  /// 是否为密码输入
   final bool obscureText;
-
-  /// 密码切换图标（自定义）
   final bool showPasswordToggle;
-
-  /// 错误文本
   final String? errorText;
-
-  /// 验证器
   final String? Function(String?)? validator;
-
-  /// 值变化回调
   final ValueChanged<String>? onChanged;
 
   /// 提交回调

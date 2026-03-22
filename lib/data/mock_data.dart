@@ -1,12 +1,10 @@
 import '../models/luggage.dart';
 
-/// 统一管理所有模拟/测试数据
-/// 禁止在 screens/ 或 services/ 业务代码中直接定义静态模拟数据
+/// 模拟数据
 class MockData {
   MockData._();
 
-  // ==================== 行李模拟数据 ====================
-  /// 获取行李列表的模拟数据
+  // 行李模拟数据
   static List<Luggage> getLuggageList() {
     return [
       Luggage(
@@ -68,7 +66,7 @@ class MockData {
     ];
   }
 
-  /// 获取行李地图页的模拟数据（少量，适合列表展示）
+  /// 地图页行李数据
   static List<Luggage> getLuggageForMap() {
     return [
       Luggage(
@@ -102,7 +100,7 @@ class MockData {
     ];
   }
 
-  /// 根据行李标签号创建模拟行李（用于待办事项跳转）
+  /// 根据标签号创建行李
   static Luggage createByTagNumber(String tagNumber) {
     return Luggage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -118,13 +116,12 @@ class MockData {
     );
   }
 
-  // ==================== 待办事项模拟数据 ====================
-  /// 待办事项类型枚举
+  // 待办事项类型
   static const String todoTypeDamage = 'damage';
   static const String todoTypeOverweight = 'overweight';
   static const String todoTypeContact = 'contact';
 
-  /// 待办事项数据项
+  /// 待办事项数据
   static final List<Map<String, dynamic>> todoItems = [
     {
       'title': '行李破损登记',
@@ -160,16 +157,14 @@ class MockData {
     },
   ];
 
-  // ==================== 旅客联系页模拟数据 ====================
-  /// 通话记录模拟数据
+  // 通话记录数据
   static final List<Map<String, String>> callRecords = [
     {'time': '2026-02-01 07:00', 'status': '未接通', 'description': '拨打旅客电话，无人接听'},
     {'time': '2026-02-01 06:30', 'status': '未接通', 'description': '拨打旅客电话，无人接听'},
     {'time': '2026-02-01 06:00', 'status': '未接通', 'description': '拨打旅客电话，无人接听'},
   ];
 
-  // ==================== 行李详情页历史日志模拟数据 ====================
-  /// 操作日志模拟数据
+  // 操作日志数据
   static final List<Map<String, String>> luggageHistoryLogs = [
     {'operator': '系统',      'action': '创建行李记录', 'time': '2026-01-29 10:00:00', 'details': '系统自动创建'},
     {'operator': '员工001',   'action': '扫描行李',     'time': '2026-01-29 10:05:30', 'details': '通过二维码扫描'},

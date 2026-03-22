@@ -14,14 +14,9 @@ import '../components/empty_state.dart';
 import '../utils/responsive.dart';
 import 'luggage_map_screen.dart';
 
-/// 行李详情界面
-/// 显示行李的详细信息，支持查看和编辑
-/// 可以更新行李的状态、位置、备注等信息
+/// 行李详情页面
 class LuggageDetailScreen extends StatefulWidget {
-  /// 二维码解析后的载荷数据
   final QrPayload qrPayload;
-
-  /// 原始二维码字符串
   final String raw;
 
   const LuggageDetailScreen({
@@ -35,22 +30,11 @@ class LuggageDetailScreen extends StatefulWidget {
 }
 
 class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
-  /// 是否正在加载
   bool _loading = true;
-
-  /// 错误信息
   String? _error;
-
-  /// 行李数据
   Luggage? _luggage;
-
-  /// 状态输入控制器
   final TextEditingController _statusCtrl = TextEditingController();
-
-  /// 位置输入控制器
   final TextEditingController _locationCtrl = TextEditingController();
-
-  /// 备注输入控制器
   final TextEditingController _noteCtrl = TextEditingController();
 
   @override
@@ -67,7 +51,6 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     super.dispose();
   }
 
-  /// 加载行李详情数据
   Future<void> _load() async {
     setState(() {
       _loading = true;

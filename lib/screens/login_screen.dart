@@ -9,9 +9,7 @@ import '../utils/responsive.dart';
 import 'register_screen.dart';
 import 'main_screen.dart';
 
-/// 登录界面
-/// 提供用户登录功能，包含用户名和密码输入
-/// 支持密码显示/隐藏切换，表单验证
+/// 登录页面
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -20,13 +18,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  /// 表单验证键
   final _formKey = GlobalKey<FormState>();
-  
-  /// 用户名输入控制器
   final _usernameController = TextEditingController();
-  
-  /// 密码输入控制器
   final _passwordController = TextEditingController();
 
   @override
@@ -36,9 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// 处理登录逻辑
-  /// 验证表单后调用AuthProvider进行登录
-  /// 登录成功后跳转到首页
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);

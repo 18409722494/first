@@ -7,33 +7,12 @@ import '../utils/responsive.dart';
 import 'status_badge.dart';
 
 /// 行李卡片组件
-/// 用于列表中展示单个行李项的完整信息
-///
-/// 使用示例：
-/// ```dart
-/// LuggageCard(
-///   luggage: luggage,
-///   onTap: () => Navigator.push(...),
-///   onLongPress: () => _showContextMenu(context, luggage),
-/// )
-/// ```
 class LuggageCard extends StatelessWidget {
-  /// 行李数据
   final Luggage luggage;
-
-  /// 点击回调
   final VoidCallback? onTap;
-
-  /// 长按回调
   final VoidCallback? onLongPress;
-
-  /// 是否显示删除按钮
   final bool showDeleteAction;
-
-  /// 删除回调
   final VoidCallback? onDelete;
-
-  /// 紧凑模式（减少内边距）
   final bool compact;
 
   const LuggageCard({

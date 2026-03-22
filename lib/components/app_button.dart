@@ -2,73 +2,30 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-/// 统一按钮组件
-/// 支持 Primary / Secondary / Outline / Ghost 四种样式
-///
-/// 使用示例：
-/// ```dart
-/// AppButton(
-///   text: '确认提交',
-///   type: AppButtonType.primary,
-///   onPressed: () => _submit(),
-///   isLoading: _isSubmitting,
-/// )
-/// ```
+/// 按钮组件
 enum AppButtonType {
-  /// 实心主按钮
   primary,
-
-  /// 次要实心按钮
   secondary,
-
-  /// 描边按钮
   outline,
-
-  /// 文字按钮（无背景）
   ghost,
 }
 
-/// 按钮尺寸
 enum AppButtonSize {
-  /// 小尺寸
   small,
-
-  /// 中尺寸（默认）
   medium,
-
-  /// 大尺寸
   large,
 }
 
 class AppButton extends StatelessWidget {
-  /// 按钮文本
   final String text;
-
-  /// 图标（可选，显示在文本左侧）
   final IconData? icon;
-
-  /// 按钮类型
   final AppButtonType type;
-
-  /// 按钮尺寸
   final AppButtonSize size;
-
-  /// 点击回调
   final VoidCallback? onPressed;
-
-  /// 是否为加载状态
   final bool isLoading;
-
-  /// 是否占满宽度
   final bool fullWidth;
-
-  /// 自定义宽度
   final double? width;
-
-  /// 是否禁用
   final bool disabled;
-
-  /// 自定义子组件（覆盖 text）
   final Widget? child;
 
   const AppButton({
@@ -231,12 +188,8 @@ class AppButton extends StatelessWidget {
 }
 
 /// 底部操作按钮组
-/// 用于表单页面底部固定按钮区域
 class AppBottomBar extends StatelessWidget {
-  /// 按钮列表
   final List<Widget> children;
-
-  /// 顶部间距（默认安全区）
   final double topPadding;
 
   const AppBottomBar({

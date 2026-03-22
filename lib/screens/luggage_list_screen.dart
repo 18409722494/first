@@ -14,9 +14,7 @@ import 'luggage_detail_screen.dart';
 import 'damage_report_screen.dart';
 import '../models/qr_payload.dart';
 
-/// 行李列表界面
-/// 显示当前用户的所有行李信息
-/// 支持下拉刷新、点击查看详情、搜索过滤等功能
+/// 行李列表页面
 class LuggageListScreen extends StatefulWidget {
   const LuggageListScreen({Key? key}) : super(key: key);
 
@@ -76,7 +74,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     }
   }
 
-  /// 加载更多行李数据
+  /// 加载更多
   Future<void> _loadMoreLuggage() async {
     if (_isLoadingMore || !_hasMoreData) return;
 

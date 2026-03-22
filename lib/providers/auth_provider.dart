@@ -3,6 +3,7 @@ import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/api_service.dart';
 
+/// 用户认证状态管理
 class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;

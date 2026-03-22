@@ -1,10 +1,7 @@
 import 'dart:convert';
 
-/// 扫码得到的二维码载荷（可按你们实际二维码内容调整字段）
-///
-/// 兼容两种常见格式：
-/// - JSON：{"userId":"...","luggageId":"...","role":"...","extra":{...}}
-/// - QueryString：userId=...&luggageId=...&role=...
+/// 二维码载荷解析
+/// 支持JSON和QueryString两种格式
 class QrPayload {
   final String? userId;
   final String? luggageId;
