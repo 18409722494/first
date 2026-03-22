@@ -1,0 +1,271 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../utils/responsive.dart';
+import 'main_screen.dart';
+
+/// 注册界面
+/// 提供用户注册功能，包含用户名、邮箱、密码和确认密码输入
+/// 支持密码显示/隐藏切换，表单验证（包括密码一致性验证）
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({Key? key}) : super(key: key);
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  /// 表单验证键
+  final _formKey = GlobalKey<FormState>();
+  
+  /// 用户名输入控制器
+  final _usernameController = TextEditingController();
+  
+  /// 密码输入控制器
+  final _passwordController = TextEditingController();
+  
+  /// 确认密码输入控制器
+  final _confirmPasswordController = TextEditingController();
+  
+  /// 是否隐藏密码
+  bool _obscurePassword = true;
+  
+  /// 是否隐藏确认密码
+  bool _obscureConfirmPassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  /// 处理注册逻辑
+  /// 验证表单后调用AuthProvider进行注册
+  /// 注册成功后跳转到首页
+  Future<void> _handleRegister() async {
+    if (_formKey.currentState!.validate()) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.register(
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (success && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? '注册失败'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.padding(context, AppSpacing.md),
+              vertical: Responsive.spacing(context, AppSpacing.md),
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.badge_outlined,
+                    size: Responsive.iconSize(context, 80),
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+                  Text(
+                    '用户账号注册/激活',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: Responsive.fontSize(context, 24),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+                  Text(
+                    '填写信息以创建新账户',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
+                          fontSize: Responsive.fontSize(context, 14),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: '用户名',
+                      hintText: '请输入用户名',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '请输入用户名';
+                      }
+                      if (value.length < 3) {
+                        return '用户名长度至少3位';
+                      }
+                      return null;
+                    },
+                    textInputAction: TextInputAction.next,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: '密码',
+                      hintText: '请输入密码（至少6位）',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '请输入密码';
+                      }
+                      if (value.length < 6) {
+                        return '密码长度至少6位';
+                      }
+                      return null;
+                    },
+                    textInputAction: TextInputAction.next,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      labelText: '确认密码',
+                      hintText: '请再次输入密码',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '请确认密码';
+                      }
+                      if (value != _passwordController.text) {
+                        return '两次输入的密码不一致';
+                      }
+                      return null;
+                    },
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _handleRegister(),
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return ElevatedButton(
+                        onPressed:
+                            authProvider.isLoading ? null : _handleRegister,
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: Responsive.buttonHeight(context, 16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: authProvider.isLoading
+                            ? SizedBox(
+                                height: Responsive.iconSize(context, 20),
+                                width: Responsive.iconSize(context, 20),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                '注册',
+                                style: TextStyle(
+                                  fontSize: Responsive.fontSize(context, 16),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '已有账户？',
+                        style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 13)),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('立即登录', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,32 @@
+lib/
+├── main.dart                    # 应用入口
+├── constants/                   # 全局常量（勿硬编码）
+│   └── app_constants.dart       # API地址、超重规则、行李状态颜色等
+├── data/                        # 数据层
+│   └── mock_data.dart          # 所有模拟/测试数据（勿散落各处）
+├── models/                      # 数据模型
+│   ├── luggage.dart
+│   ├── user.dart
+│   ├── auth_response.dart
+│   └── qr_payload.dart
+├── providers/                   # 状态管理
+│   └── auth_provider.dart
+├── screens/                     # 页面（一个功能 = 一个文件）
+├── services/                    # 业务逻辑层
+│   ├── api_service.dart
+│   ├── luggage_service.dart
+│   └── ...
+└── utils/                       # 工具函数
+    └── luggage_utils.dart       # 行李状态文本/颜色等UI工具
+
+文件命名规范：
+- 页面文件：xxx_screen.dart（全部小写下划线）
+- Service文件：xxx_service.dart
+- Model文件：xxx.dart（名词单数）
+- Utils文件：xxx_utils.dart
+- 常量文件：xxx_constants.dart
+
+禁止：
+- 在 screens/ 中定义静态模拟数据 → 统一放到 lib/data/mock_data.dart
+- 在 screens/ 中硬编码 API 地址、颜色值等 → 统一提取到 lib/constants/
+- 重复的状态工具函数 → 统一放到 lib/utils/luggage_utils.dart
