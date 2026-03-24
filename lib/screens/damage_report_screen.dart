@@ -51,7 +51,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
       await LocalQueueService.init();
       await DamageReportService.processLocalQueue();
     } catch (e) {
-      debugPrint('初始化本地队列失败: $e');
+      // 初始化本地队列失败，静默处理
     }
   }
 
@@ -75,7 +75,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
         );
         break;
       } catch (e) {
-        debugPrint('第${i + 1}次获取位置失败：$e');
+        // 位置获取失败，静默处理
         if (i < 2) {
           await Future.delayed(const Duration(seconds: 2));
         }
@@ -155,7 +155,6 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
         _imageBytes = await pickedFile.readAsBytes();
       }
     } catch (e) {
-      debugPrint('选择图片失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('选择图片失败')),
@@ -213,7 +212,6 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
           }
         }
       } catch (e) {
-        debugPrint('提交报告失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('提交报告失败，请稍后再试')),

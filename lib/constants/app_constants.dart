@@ -1,12 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// 应用常量
 class AppConstants {
   AppConstants._();
 
-  // API配置
-  static const String apiBaseUrl = 'http://8.137.145.195:3338';
+  // API配置（已升级 HTTPS）
+  static const String apiBaseUrl = 'https://8.137.145.195:3338';
   static const String ossUploadEndpoint = '$apiBaseUrl/upload';
+
+  /// 天地图 API Key
+  /// 从 .env 文件运行时读取，绝不能硬编码真实 Key
+  static String get tiandituApiKey {
+    final key = dotenv.env['TIANDITU_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception('Missing TIANDITU_API_KEY in .env file');
+    }
+    return key;
+  }
+
+  /// 天地图影像底图瓦片 URL
+  static String get tiandituImageTileUrl =>
+      'https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=$tiandituApiKey';
+
+  /// 天地图影像标注层瓦片 URL
+  static String get tiandituAnnotationTileUrl =>
+      'https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=$tiandituApiKey';
 
   // 行李超重规则
   static const double freeBaggageWeightKg = 20.0;

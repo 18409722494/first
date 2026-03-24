@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../constants/app_constants.dart';
 import '../models/luggage.dart';
 import '../models/qr_payload.dart';
+import '../models/search_result.dart';
 import '../data/mock_data.dart';
 import '../services/luggage_service.dart';
 import '../theme/app_colors.dart';
@@ -11,6 +13,7 @@ import '../theme/app_spacing.dart';
 import '../components/status_badge.dart';
 import '../components/app_button.dart';
 import '../utils/responsive.dart';
+import '../widgets/location_search_bar.dart';
 import 'luggage_detail_screen.dart';
 
 /// 行李地图页面
@@ -29,6 +32,13 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   bool _isLoading = true;
   String? _error;
   bool _tileError = false;
+  SearchResult? _searchResult;
+
+  /// 预缓存的行李标记，key 与 _luggages 一一对应，只在数据加载/刷新时重建一次
+  List<Marker> _luggageMarkerCache = [];
+
+  /// 第一个有坐标行李的位置，用于地图初始中心
+  LatLng? _firstLuggagePosition;
 
   late final MapController _mapController;
 
@@ -52,18 +62,57 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     setState(() => _isLoading = true);
     try {
       final list = await LuggageService.getLuggageList();
+      final loaded = list.isNotEmpty ? list : MockData.getLuggageList();
       setState(() {
-        _luggages = list.isNotEmpty ? list : MockData.getLuggageList();
+        _luggages = loaded;
         _isLoading = false;
         _error = null;
       });
+      _rebuildMarkerCache(loaded);
     } catch (e) {
+      final fallback = MockData.getLuggageList();
       setState(() {
-        _luggages = MockData.getLuggageList();
+        _luggages = fallback;
         _isLoading = false;
         _error = '加载失败，使用演示数据';
       });
+      _rebuildMarkerCache(fallback);
     }
+  }
+
+  /// 根据行李列表一次性构建 marker 列表，避免每次地图 rebuild 重复创建对象
+  void _rebuildMarkerCache(List<Luggage> luggages) {
+    final validLuggages = luggages
+        .where((l) => l.latitude != null && l.longitude != null)
+        .toList();
+    _firstLuggagePosition = validLuggages.isNotEmpty
+        ? LatLng(validLuggages.first.latitude!, validLuggages.first.longitude!)
+        : null;
+    _luggageMarkerCache = [
+      for (final luggage in validLuggages) _buildMarker(luggage),
+    ];
+  }
+
+  Marker _buildMarker(Luggage luggage) {
+    return Marker(
+      point: LatLng(luggage.latitude!, luggage.longitude!),
+      width: 44,
+      height: 44,
+      child: GestureDetector(
+        onTap: () => _onMarkerTap(luggage),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _markerColor(luggage).withValues(alpha: 0.85),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Icon(_markerIcon(luggage), color: Colors.white, size: 22),
+        ),
+      ),
+    );
   }
 
   LatLng _luggagePosition(Luggage luggage) {
@@ -116,6 +165,20 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
       final pos = _luggagePosition(_luggages.first);
       _mapController.move(pos, 10.0);
     }
+  }
+
+  void _onSearchResult(SearchResult result) {
+    setState(() {
+      _searchResult = result;
+    });
+    // 定位到目标并缩放到合适层级（14 级适合城市视图）
+    _mapController.move(result.location, 14.0);
+  }
+
+  void _clearSearchResult() {
+    setState(() {
+      _searchResult = null;
+    });
   }
 
   void _fitAllMarkers() {
@@ -213,6 +276,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
           if (_isLoading) _buildLoadingOverlay(),
           if (_tileError) _buildTileErrorBanner(),
           if (_error != null) _buildErrorBanner(),
+          _buildSearchBar(),
           _buildZoomControls(),
           _buildLegend(),
         ],
@@ -221,10 +285,6 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   Widget _buildMap() {
-    final validLuggages = _luggages
-        .where((l) => l.latitude != null && l.longitude != null)
-        .toList();
-
     return GestureDetector(
       onDoubleTap: () {
         final currentZoom = _mapController.camera.zoom;
@@ -238,9 +298,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
       child: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
-          initialCenter: validLuggages.isNotEmpty
-              ? _luggagePosition(validLuggages.first)
-              : _defaultCenter,
+          initialCenter: _firstLuggagePosition ?? _defaultCenter,
           initialZoom: _defaultZoom,
           minZoom: 4,
           maxZoom: 17,
@@ -250,52 +308,34 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
         ),
         children: [
           TileLayer(
-            urlTemplate:
-                'https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=8dbce657d57bc70df37d297bb4b261f6',
+            urlTemplate: AppConstants.tiandituImageTileUrl,
             userAgentPackageName: 'com.example.my_first_app',
             maxZoom: 17,
             minZoom: 4,
             tileProvider: NetworkTileProvider(),
           ),
           TileLayer(
-            urlTemplate:
-                'https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=8dbce657d57bc70df37d297bb4b261f6',
+            urlTemplate: AppConstants.tiandituAnnotationTileUrl,
             userAgentPackageName: 'com.example.my_first_app',
             maxZoom: 17,
             minZoom: 4,
             tileProvider: NetworkTileProvider(),
           ),
           MarkerLayer(
-            markers: validLuggages.map((luggage) {
-              final color = _markerColor(luggage);
-              return Marker(
-                point: _luggagePosition(luggage),
-                width: 44,
-                height: 44,
-                child: GestureDetector(
-                  onTap: () => _onMarkerTap(luggage),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.85),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      _markerIcon(luggage),
-                      color: Colors.white,
-                      size: 22,
-                    ),
+            markers: [
+              ..._luggageMarkerCache,
+              if (_searchResult != null)
+                Marker(
+                  point: _searchResult!.location,
+                  width: 40,
+                  height: 40,
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.red,
+                    size: 40,
                   ),
                 ),
-              );
-            }).toList(),
+            ],
           ),
         ],
       ),
@@ -494,6 +534,61 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Positioned(
+      top: 0,
+      left: Responsive.padding(context, AppSpacing.md),
+      right: Responsive.padding(context, AppSpacing.md),
+      child: SafeArea(
+        bottom: false,
+        minimum: EdgeInsets.only(top: Responsive.padding(context, AppSpacing.md)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          LocationSearchBar(
+            onSearchResult: _onSearchResult,
+          ),
+          if (_searchResult != null)
+            Container(
+              margin: EdgeInsets.only(top: Responsive.spacing(context, AppSpacing.sm)),
+              padding: EdgeInsets.symmetric(
+                horizontal: Responsive.padding(context, AppSpacing.md),
+                vertical: Responsive.spacing(context, AppSpacing.sm),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on, color: Colors.white, size: 18),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      _searchResult!.displayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: _clearSearchResult,
+                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        ),
       ),
     );
   }

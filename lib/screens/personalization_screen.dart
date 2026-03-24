@@ -32,6 +32,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onPressed: () async {
                     final hasPermission = await PermissionService.requestPhotos(context);
 
+                    if (!mounted) return;
+
                     if (hasPermission) {
                       Navigator.pop(dialogContext);
 
@@ -41,6 +43,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           source: ImageSource.gallery,
                           imageQuality: 80,
                         );
+
+                        if (!mounted) return;
 
                         if (image != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +56,7 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           );
                         }
                       } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('选择图片失败: ${e.toString()}')),
                         );
@@ -68,6 +73,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onPressed: () async {
                     final hasPermission = await PermissionService.requestCamera(context);
 
+                    if (!mounted) return;
+
                     if (hasPermission) {
                       Navigator.pop(dialogContext);
 
@@ -77,6 +84,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           source: ImageSource.camera,
                           imageQuality: 80,
                         );
+
+                        if (!mounted) return;
 
                         if (image != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +97,7 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           );
                         }
                       } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('拍摄失败: ${e.toString()}')),
                         );
@@ -144,6 +154,7 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
               }
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('昵称修改成功')),
                 );

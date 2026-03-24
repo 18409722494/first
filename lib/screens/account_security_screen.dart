@@ -74,6 +74,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               }
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('密码修改成功')),
                 );
@@ -151,6 +152,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               }
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('手机绑定成功')),
                 );

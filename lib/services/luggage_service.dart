@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:collection/collection.dart';
 import '../models/luggage.dart';
 import '../data/mock_data.dart';
 import 'api_service.dart';
@@ -67,10 +68,10 @@ class LuggageService {
       throw Exception(msg ?? '查询行李失败(${res.statusCode})');
     } catch (e) {
       final mockData = _getMockLuggageData();
-      final luggage = mockData.firstWhere(
-        (item) => item.id == luggageId,
-        orElse: () => mockData[0],
-      );
+      final luggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
+      if (luggage == null) {
+        throw Exception('未找到行李: $luggageId');
+      }
       return luggage;
     }
   }
@@ -95,10 +96,12 @@ class LuggageService {
       throw Exception(msg ?? '更新行李失败(${res.statusCode})');
     } catch (e) {
       final mockData = _getMockLuggageData();
-      var luggage = mockData.firstWhere(
-        (item) => item.id == luggageId,
-        orElse: () => mockData[0],
-      );
+      final mockLuggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
+      if (mockLuggage == null) {
+        throw Exception('未找到行李: $luggageId');
+      }
+
+      var luggage = mockLuggage;
       if (patch.containsKey('status')) {
         try {
           final statusStr = patch['status'] as String;
@@ -136,14 +139,13 @@ class LuggageService {
       throw Exception(msg ?? '上传行李失败(${res.statusCode})');
     } catch (e) {
       LuggageStatus status = LuggageStatus.checkIn;
-      try {
-        final statusStr = payload['status']?.toString() ?? '';
-        if (statusStr.isNotEmpty) {
-          status = LuggageStatus.values.firstWhere(
-            (s) => s.toString().split('.').last == statusStr,
-          );
-        }
-      } catch (_) {}
+      final statusStr = payload['status']?.toString() ?? '';
+      if (statusStr.isNotEmpty) {
+        final found = LuggageStatus.values.firstWhereOrNull(
+          (s) => s.toString().split('.').last == statusStr,
+        );
+        if (found != null) status = found;
+      }
 
       final mockLuggage = Luggage(
         id: 'new_${DateTime.now().millisecondsSinceEpoch}',
@@ -195,10 +197,10 @@ class LuggageService {
       throw Exception(msg ?? '更新行李位置失败(${res.statusCode})');
     } catch (e) {
       final mockData = _getMockLuggageData();
-      var luggage = mockData.firstWhere(
-        (item) => item.id == luggageId,
-        orElse: () => mockData[0],
-      );
+      var luggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
+      if (luggage == null) {
+        throw Exception('未找到行李: $luggageId');
+      }
       return luggage.copyWith(
         latitude: latitude,
         longitude: longitude,

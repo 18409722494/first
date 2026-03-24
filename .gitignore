@@ -1,4 +1,7 @@
-# Miscellaneous
+# Environment variables（包含 API Key 等敏感配置）
+.env
+.env.local
+.env.*.local
 *.class
 *.log
 *.pyc

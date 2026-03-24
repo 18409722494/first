@@ -5,11 +5,16 @@ import '../utils/responsive.dart';
 
 /// 帮助与支持详情页面
 /// 显示和管理帮助与支持相关的功能
-class HelpSupportScreen extends StatelessWidget {
+class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
 
+  @override
+  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
+}
+
+class _HelpSupportScreenState extends State<HelpSupportScreen> {
   /// 显示意见反馈对话框
-  void _showFeedbackDialog(BuildContext context) {
+  void _showFeedbackDialog() {
     final feedbackController = TextEditingController();
 
     showDialog(
@@ -40,7 +45,9 @@ class HelpSupportScreen extends StatelessWidget {
                 return;
               }
               Navigator.pop(dialogContext);
+              // 使用 dialogContext 而非外层 context，避免页面已销毁时崩溃
               Future.delayed(const Duration(milliseconds: 100), () {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('反馈提交成功，感谢您的建议')),
                 );
@@ -54,7 +61,7 @@ class HelpSupportScreen extends StatelessWidget {
   }
 
   /// 显示关于对话框
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog() {
     showAboutDialog(
       context: context,
       applicationName: '行李管理系统',
@@ -74,8 +81,10 @@ class HelpSupportScreen extends StatelessWidget {
   }
 
   // ==================== 联系我们 - 使用 PermissionService ====================
-  void _onContactUs(BuildContext context) async {
+  void _onContactUs() async {
     final hasPermission = await PermissionService.requestPhone(context);
+
+    if (!mounted) return;
 
     if (hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,14 +120,14 @@ class HelpSupportScreen extends StatelessWidget {
                   leading: Icon(Icons.feedback_outlined, size: Responsive.iconSize(context, 24)),
                   title: Text('意见反馈', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () => _showFeedbackDialog(context),
+                  onTap: _showFeedbackDialog,
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 ListTile(
                   leading: Icon(Icons.info_outline, size: Responsive.iconSize(context, 24)),
                   title: Text('关于', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () => _showAboutDialog(context),
+                  onTap: _showAboutDialog,
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 // ==================== 电话权限 - 使用 PermissionService ====================
@@ -127,7 +136,7 @@ class HelpSupportScreen extends StatelessWidget {
                   title: Text('联系我们', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   subtitle: Text('400-123-4567', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () => _onContactUs(context),
+                  onTap: _onContactUs,
                 ),
               ],
             ),

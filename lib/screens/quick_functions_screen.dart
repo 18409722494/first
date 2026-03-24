@@ -6,12 +6,29 @@ import 'luggage_map_screen.dart';
 
 /// 快捷功能详情页面
 /// 显示和管理快捷功能
-class QuickFunctionsScreen extends StatelessWidget {
+class QuickFunctionsScreen extends StatefulWidget {
   const QuickFunctionsScreen({super.key});
 
+  @override
+  State<QuickFunctionsScreen> createState() => _QuickFunctionsScreenState();
+}
+
+class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   // ==================== 快速扫描 - 使用 PermissionService ====================
-  void _onQuickScan(BuildContext context) async {
+  void _onQuickScan() async {
     final hasPermission = await PermissionService.requestCamera(context);
+
+    if (!mounted) return;
 
     if (hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +93,7 @@ class QuickFunctionsScreen extends StatelessWidget {
                   title: const Text('快速扫描'),
                   subtitle: const Text('直接进入扫描界面'),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: () => _onQuickScan(context),
+                  onTap: _onQuickScan,
                 ),
               ],
             ),

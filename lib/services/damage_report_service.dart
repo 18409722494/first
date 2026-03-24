@@ -50,15 +50,12 @@ class DamageReportService {
       );
 
       if (response.statusCode == 200) {
-        print('破损报告提交成功');
         return true;
       } else {
-        print('破损报告提交失败: ${response.statusCode}, ${response.body}');
         await _saveToLocalQueue({...requestData, 'imageBytes': imageBytes});
         return false;
       }
     } catch (e) {
-      print('提交破损报告失败: $e');
       await _saveToLocalQueue({
         'luggageId': luggageId.trim(),
         'timestamp': timestamp.toUtc().toIso8601String(),
@@ -81,6 +78,9 @@ class DamageReportService {
       final luggageId = reportData['luggageId'] as String;
       final timestamp = DateTime.parse(reportData['timestamp'] as String);
       final locationParts = (reportData['location'] as String).split(',');
+      if (locationParts.length < 2) {
+        throw Exception('报告数据中位置信息格式错误: ${reportData['location']}');
+      }
       final latitude = double.parse(locationParts[0]);
       final longitude = double.parse(locationParts[1]);
       final damageDescription = reportData['damageDescription'] as String;
@@ -114,14 +114,11 @@ class DamageReportService {
       );
 
       if (response.statusCode == 200) {
-        print('本地队列报告提交成功');
         return true;
       } else {
-        print('本地队列报告提交失败: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('从本地队列提交失败: $e');
       return false;
     }
   }
@@ -130,7 +127,6 @@ class DamageReportService {
   static Future<void> processLocalQueue() async {
     try {
       final queueItems = await LocalQueueService.getQueueItems();
-      print('本地队列中有 ${queueItems.length} 个待处理报告');
 
       for (int i = 0; i < queueItems.length; i++) {
         final success = await submitFromLocalQueue(queueItems[i]);
@@ -139,7 +135,7 @@ class DamageReportService {
         }
       }
     } catch (e) {
-      print('处理本地队列失败: $e');
+      // 保存到本地队列失败，静默处理
     }
   }
 
@@ -148,9 +144,8 @@ class DamageReportService {
     try {
       final serializableData = Map<String, dynamic>.from(reportData);
       await LocalQueueService.saveToQueue(serializableData);
-      print('报告已保存到本地队列');
     } catch (e) {
-      print('保存到本地队列失败: $e');
+      // 保存到本地队列失败，静默处理
     }
   }
 }

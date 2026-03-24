@@ -165,7 +165,6 @@ class PermissionService {
       }
       return false;
     } catch (e) {
-      debugPrint('位置权限请求失败: $e');
       if (showDeniedSnackBar) {
         showSnackBar(context, '获取位置信息失败，请稍后重试');
       }
