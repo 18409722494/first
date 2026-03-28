@@ -8,18 +8,17 @@ import 'storage_service.dart';
 
 /// 行李服务
 class LuggageService {
-  static Future<String> _requireToken() async {
-    final token = await StorageService.getToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('未登录或token缺失');
+  static Future<String> _sessionToken() async {
+    if (!await StorageService.isLoggedIn()) {
+      throw Exception('未登录');
     }
-    return token;
+    return (await StorageService.getToken()) ?? '';
   }
 
   /// 获取行李列表
   static Future<List<Luggage>> getLuggageList({String? ownerId}) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final endpoint = ownerId != null
           ? '/luggage?ownerId=$ownerId'
           : '/luggage';
@@ -51,7 +50,7 @@ class LuggageService {
   /// 获取行李详情
   static Future<Luggage> getLuggageById(String luggageId) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final http.Response res = await ApiService.authenticatedRequest(
         'GET', '/luggage/$luggageId', null, token,
       );
@@ -79,7 +78,7 @@ class LuggageService {
   /// 更新行李信息
   static Future<Luggage> updateLuggage(String luggageId, Map<String, dynamic> patch) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final http.Response res = await ApiService.authenticatedRequest(
         'PUT', '/luggage/$luggageId', patch, token,
       );
@@ -122,7 +121,7 @@ class LuggageService {
   /// 上传行李信息
   static Future<Luggage> uploadLuggage(Map<String, dynamic> payload) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final http.Response res = await ApiService.authenticatedRequest(
         'POST', '/luggage', payload, token,
       );
@@ -173,7 +172,7 @@ class LuggageService {
     String? locationName,
   }) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final payload = {
         'latitude': latitude,
         'longitude': longitude,
@@ -212,7 +211,7 @@ class LuggageService {
   /// 添加行李
   static Future<Luggage> addLuggage(Luggage luggage) async {
     try {
-      final token = await _requireToken();
+      final token = await _sessionToken();
       final payload = luggage.toJson();
 
       final http.Response res = await ApiService.authenticatedRequest(

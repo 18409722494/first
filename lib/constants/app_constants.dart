@@ -5,12 +5,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConstants {
   AppConstants._();
 
-  // API配置（已升级 HTTPS）
-  static const String apiBaseUrl = 'https://8.137.145.195:3338';
+  // API配置（当前使用 HTTP）
+  static const String apiBaseUrl = 'http://8.137.145.195:3338';
   static const String ossUploadEndpoint = '$apiBaseUrl/upload';
 
   /// 天地图 API Key
-  /// 从 .env 文件运行时读取，绝不能硬编码真实 Key
   static String get tiandituApiKey {
     final key = dotenv.env['TIANDITU_API_KEY'];
     if (key == null || key.isEmpty) {

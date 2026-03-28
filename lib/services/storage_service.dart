@@ -62,6 +62,12 @@ class StorageService {
     };
   }
 
+  /// 清除本地保存的 token（无 JWT 的会话模式会用到）
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
   /// 清除所有存储的数据
   /// 在用户登出时调用，清除所有本地保存的认证和用户信息
   static Future<void> clearAll() async {
@@ -74,12 +80,12 @@ class StorageService {
   }
 
   /// 检查用户是否已登录
-  /// 通过检查是否存在有效的token来判断
-  /// 返回true表示已登录，false表示未登录
+  /// 有 JWT 时用 token；后端仅返回 `{"result":"success"}` 时无 token，以已保存的 userId 为准
   static Future<bool> isLoggedIn() async {
-    // 调用getToken方法获取令牌
-    final token = await getToken();
-    // 检查token是否不为null且不为空字符串
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString(_userIdKey);
+    if (userId != null && userId.isNotEmpty) return true;
+    final token = prefs.getString(_tokenKey);
     return token != null && token.isNotEmpty;
   }
 }

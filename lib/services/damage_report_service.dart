@@ -39,11 +39,10 @@ class DamageReportService {
         'damageDescription': damageDescription,
       };
 
-      // 发送请求
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('未登录或token缺失');
+      if (!await StorageService.isLoggedIn()) {
+        throw Exception('未登录');
       }
+      final token = (await StorageService.getToken()) ?? '';
 
       final response = await ApiService.authenticatedRequest(
         'POST', '/damage-report', requestData, token,
@@ -104,10 +103,10 @@ class DamageReportService {
         'damageDescription': damageDescription,
       };
 
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('未登录或token缺失');
+      if (!await StorageService.isLoggedIn()) {
+        throw Exception('未登录');
       }
+      final token = (await StorageService.getToken()) ?? '';
 
       final response = await ApiService.authenticatedRequest(
         'POST', '/damage-report', requestData, token,

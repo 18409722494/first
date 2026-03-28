@@ -24,7 +24,7 @@ class AuthProvider with ChangeNotifier {
         final userInfo = await StorageService.getUserInfo();
         final token = await StorageService.getToken();
         
-        if (userInfo['userId'] != null && token != null) {
+        if (userInfo['userId'] != null) {
           _user = User(
             id: userInfo['userId']!,
             username: userInfo['username'] ?? '',
@@ -49,11 +49,16 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await ApiService.login(username, password);
       
-      if (response.success && response.token != null) {
-        final userId = response.user?.id ?? 'user_${DateTime.now().millisecondsSinceEpoch}';
+      if (response.success) {
+        // 后端仅返回 {"result":"success"} 时无 token；userId 用接口里的 id，否则用用户名作本地会话标识
+        final userId = response.user?.id ?? username;
         final userEmail = response.user?.email ?? '';
-        
-        await StorageService.saveToken(response.token!);
+
+        if (response.token != null && response.token!.isNotEmpty) {
+          await StorageService.saveToken(response.token!);
+        } else {
+          await StorageService.clearToken();
+        }
         await StorageService.saveUserInfo(
           userId: userId,
           username: username,
@@ -64,9 +69,9 @@ class AuthProvider with ChangeNotifier {
           id: userId,
           username: username,
           email: userEmail,
-          token: response.token!,
+          token: response.token,
         );
-        
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -92,11 +97,15 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await ApiService.register(username, password);
       
-      if (response.success && response.token != null) {
-        final userId = response.user?.id ?? 'user_${DateTime.now().millisecondsSinceEpoch}';
+      if (response.success) {
+        final userId = response.user?.id ?? username;
         final userEmail = response.user?.email ?? '';
-        
-        await StorageService.saveToken(response.token!);
+
+        if (response.token != null && response.token!.isNotEmpty) {
+          await StorageService.saveToken(response.token!);
+        } else {
+          await StorageService.clearToken();
+        }
         await StorageService.saveUserInfo(
           userId: userId,
           username: username,
@@ -107,9 +116,9 @@ class AuthProvider with ChangeNotifier {
           id: userId,
           username: username,
           email: userEmail,
-          token: response.token!,
+          token: response.token,
         );
-        
+
         _isLoading = false;
         notifyListeners();
         return true;

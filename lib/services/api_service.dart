@@ -9,6 +9,48 @@ class ApiService {
   static const String baseUrl = AppConstants.apiBaseUrl;
   static const Duration _timeout = Duration(seconds: 15);
 
+  /// 从登录/注册响应 JSON 中解析 token（兼容多种后端字段名与嵌套结构）
+  static String? _extractAuthToken(dynamic decoded) {
+    if (decoded is! Map) return null;
+    final root = Map<String, dynamic>.from(decoded);
+
+    String? fromMap(Map<String, dynamic> map) {
+      const keys = [
+        'token',
+        'accessToken',
+        'access_token',
+        'jwt',
+        'id_token',
+        'bearer',
+      ];
+      for (final k in keys) {
+        final v = map[k];
+        if (v is String && v.isNotEmpty) return v;
+        if (v != null && v is! Map && v is! List && v.toString().isNotEmpty) {
+          return v.toString();
+        }
+      }
+      return null;
+    }
+
+    final direct = fromMap(root);
+    if (direct != null) return direct;
+
+    final data = root['data'];
+    if (data is Map) {
+      final t = fromMap(Map<String, dynamic>.from(data));
+      if (t != null) return t;
+    }
+
+    final user = root['user'];
+    if (user is Map) {
+      final t = fromMap(Map<String, dynamic>.from(user));
+      if (t != null) return t;
+    }
+
+    return null;
+  }
+
   /// 登录
   static Future<AuthResponse> login(String username, String password) async {
     try {
@@ -25,10 +67,8 @@ class ApiService {
       final result = data['result']?.toString() ?? '';
 
       if (result == 'success') {
-        final token = data['token']?.toString();
-        if (token == null || token.isEmpty) {
-          throw Exception('Server error: Login successful but no token received');
-        }
+        // 后端约定成功可为 {"result":"success"}，无 token；若有则一并解析（兼容将来扩展）
+        final token = _extractAuthToken(data);
         return AuthResponse(
           success: true,
           message: '登录成功',
@@ -79,10 +119,7 @@ class ApiService {
       final result = data['result']?.toString() ?? '';
 
       if (result == 'success') {
-        final token = data['token']?.toString();
-        if (token == null || token.isEmpty) {
-          throw Exception('Server error: Register successful but no token received');
-        }
+        final token = _extractAuthToken(data);
         return AuthResponse(
           success: true,
           message: '注册成功',
@@ -124,10 +161,12 @@ class ApiService {
     Map<String, dynamic>? body,
     String token,
   ) async {
-    final headers = {
+    final headers = <String, String>{
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
     };
+    if (token.trim().isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     try {
       switch (method.toUpperCase()) {

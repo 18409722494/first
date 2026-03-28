@@ -62,7 +62,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
     }
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(value);
+      _performSearch(_controller.text.trim()); // 始终从 controller 读取最新文本
     });
   }
 
