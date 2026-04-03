@@ -33,8 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.login(
-        _usernameController.text.trim(),
-        _passwordController.text,
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
       );
 
       if (success && mounted) {

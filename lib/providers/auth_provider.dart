@@ -30,6 +30,7 @@ class AuthProvider with ChangeNotifier {
             username: userInfo['username'] ?? '',
             email: userInfo['email'] ?? '',
             token: token,
+            employeeId: userInfo['employeeId'],
           );
         }
       }
@@ -41,35 +42,37 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<bool> login({
+    required String username,
+    required String password,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await ApiService.login(username, password);
+      final response = await ApiService.login(
+        username: username.trim(),
+        password: password,
+      );
       
       if (response.success) {
-        // 后端仅返回 {"result":"success"} 时无 token；userId 用接口里的 id，否则用用户名作本地会话标识
-        final userId = response.user?.id ?? username;
-        final userEmail = response.user?.email ?? '';
-
-        if (response.token != null && response.token!.isNotEmpty) {
-          await StorageService.saveToken(response.token!);
-        } else {
-          await StorageService.clearToken();
-        }
+        final savedUserInfo = await StorageService.getUserInfo();
+        final savedEmployeeId = savedUserInfo['employeeId'];
+        
         await StorageService.saveUserInfo(
-          userId: userId,
-          username: username,
-          email: userEmail,
+          userId: username.trim(),
+          username: username.trim(),
+          email: '',
+          employeeId: savedEmployeeId,
         );
 
         _user = User(
-          id: userId,
-          username: username,
-          email: userEmail,
+          id: username.trim(),
+          username: username.trim(),
+          email: '',
           token: response.token,
+          employeeId: savedEmployeeId,
         );
 
         _isLoading = false;
@@ -89,34 +92,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> register(String username, String password) async {
+  /// 注册（航司员工：工号须已在后台预置且尚未激活）
+  /// 注册成功返回 true，但用户仍需调用登录接口
+  Future<bool> register(
+    String employeeId,
+    String username,
+    String password,
+  ) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await ApiService.register(username, password);
+      final empId = employeeId.trim();
+      final name = username.trim();
+      final response = await ApiService.register(empId, name, password);
       
       if (response.success) {
-        final userId = response.user?.id ?? username;
-        final userEmail = response.user?.email ?? '';
-
-        if (response.token != null && response.token!.isNotEmpty) {
-          await StorageService.saveToken(response.token!);
-        } else {
-          await StorageService.clearToken();
-        }
+        // 注册成功，保存员工工号到本地（用于后续登录后关联）
         await StorageService.saveUserInfo(
-          userId: userId,
-          username: username,
-          email: userEmail,
-        );
-
-        _user = User(
-          id: userId,
-          username: username,
-          email: userEmail,
-          token: response.token,
+          userId: name,
+          username: name,
+          email: '',
+          employeeId: empId,
         );
 
         _isLoading = false;
@@ -136,11 +134,21 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
+  /// 先请求服务端注销，再清除本地会话。返回非 null 表示服务端提示（本地仍会清除）。
+  Future<String?> logout() async {
+    final id = _user?.employeeId?.trim();
+    String? serverMessage;
+    if (id != null && id.isNotEmpty) {
+      final response = await ApiService.logout(id);
+      if (!response.success) {
+        serverMessage = response.message;
+      }
+    }
     await StorageService.clearAll();
     _user = null;
     _errorMessage = null;
     notifyListeners();
+    return serverMessage;
   }
 
   void clearError() {

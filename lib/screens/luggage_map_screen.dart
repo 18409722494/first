@@ -61,7 +61,8 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   Future<void> _loadLuggageData() async {
     setState(() => _isLoading = true);
     try {
-      final list = await LuggageService.getLuggageList();
+      final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
+      final list = result.items;
       final loaded = list.isNotEmpty ? list : MockData.getLuggageList();
       setState(() {
         _luggages = loaded;

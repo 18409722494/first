@@ -127,24 +127,47 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
 
   Future<void> _pickImageFromSource(ImageSource source) async {
     try {
-      // 使用 PermissionService 请求对应权限
-      final PermissionType permissionType = source == ImageSource.camera
-          ? PermissionType.camera
-          : PermissionType.photos;
-
-      final hasPermission = await PermissionService.request(
-        permissionType,
-        context: context,
-      );
-
-      if (!hasPermission) {
-        return;
+      if (source == ImageSource.camera) {
+        final ok = await PermissionService.request(
+          PermissionType.camera,
+          context: context,
+        );
+        if (!ok) return;
+      } else {
+        // Android 13+ 上 image_picker 走系统 Photo Picker，多数机型无需 READ_MEDIA_IMAGES；
+        // 部分国产系统先调 permission_handler 会拿不到系统弹窗、直接 denied，导致永远进不了相册。
+        if (!Platform.isAndroid) {
+          final ok = await PermissionService.request(
+            PermissionType.photos,
+            context: context,
+          );
+          if (!ok) return;
+        }
       }
 
-      final pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 80,
-      );
+      XFile? pickedFile;
+      try {
+        pickedFile = await _picker.pickImage(
+          source: source,
+          imageQuality: 80,
+        );
+      } catch (_) {
+        // Android 低版本若必须先授权存储，再请求一次后重试
+        if (source == ImageSource.gallery && Platform.isAndroid && mounted) {
+          final ok = await PermissionService.request(
+            PermissionType.photos,
+            context: context,
+          );
+          if (ok) {
+            pickedFile = await _picker.pickImage(
+              source: source,
+              imageQuality: 80,
+            );
+          }
+        } else {
+          rethrow;
+        }
+      }
 
       if (pickedFile != null) {
         if (mounted) {
@@ -157,7 +180,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('选择图片失败')),
+          SnackBar(content: Text('选择图片失败')),
         );
       }
     }

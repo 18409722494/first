@@ -23,12 +23,17 @@ class LuggageListScreen extends StatefulWidget {
 }
 
 class _LuggageListScreenState extends State<LuggageListScreen> {
-  List<Luggage> _luggageList = [];
-  List<Luggage> _filteredList = [];
-  bool _isLoading = true;
+  // 数据
+  final List<Luggage> _allItems = [];
+  List<Luggage> _filteredItems = [];
+  bool _isLoadingFirst = true;
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   String? _error;
+  int _currentPage = 1;
+  static const int _pageSize = 20;
+
+  // 筛选
   String _searchQuery = '';
   String? _statusFilter;
   final TextEditingController _searchController = TextEditingController();
@@ -39,7 +44,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadLuggageList();
+      if (mounted) _loadFirstPage();
     });
   }
 
@@ -50,99 +55,114 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     super.dispose();
   }
 
-  Future<void> _loadLuggageList() async {
+  /// 首次加载（第 1 页）
+  Future<void> _loadFirstPage() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingFirst = true;
       _error = null;
       _hasMoreData = true;
+      _currentPage = 1;
+      _allItems.clear();
     });
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userId = authProvider.user?.id;
-      final list = await LuggageService.getLuggageList(ownerId: userId);
+      final result = await LuggageService.getLuggageList(
+        ownerId: userId,
+        page: _currentPage,
+        pageSize: _pageSize,
+      );
+
+      if (!mounted) return;
       setState(() {
-        _luggageList = list;
-        _filteredList = list;
-        _isLoading = false;
+        _allItems.clear();
+        _allItems.addAll(result.items);
+        _hasMoreData = result.hasMore;
+        _isLoadingFirst = false;
+        _applyFilters();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
-        _isLoading = false;
+        _isLoadingFirst = false;
       });
     }
   }
 
-  /// 加载更多
-  Future<void> _loadMoreLuggage() async {
+  /// 加载更多（下一页）
+  Future<void> _loadMoreItems() async {
     if (_isLoadingMore || !_hasMoreData) return;
 
-    setState(() {
-      _isLoadingMore = true;
-    });
+    setState(() => _isLoadingMore = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userId = authProvider.user?.id;
-      final moreLuggage = await LuggageService.getLuggageList(ownerId: userId);
+      final result = await LuggageService.getLuggageList(
+        ownerId: userId,
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+      );
+
+      if (!mounted) return;
       setState(() {
-        _hasMoreData = false;
-        if (moreLuggage.isNotEmpty) {
-          _luggageList.addAll(moreLuggage);
-          _filteredList = _luggageList;
-          _filterList();
-        }
+        _currentPage++;
+        _allItems.addAll(result.items);
+        _hasMoreData = result.hasMore;
         _isLoadingMore = false;
+        _applyFilters();
       });
     } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
+      if (!mounted) return;
+      setState(() => _isLoadingMore = false);
     }
   }
 
-  void _filterList() {
-    setState(() {
-      _filteredList = _luggageList.where((luggage) {
-        final matchesSearch = _searchQuery.isEmpty ||
-            (luggage.tagNumber.toLowerCase().contains(_searchQuery.toLowerCase())) ||
-            (luggage.passengerName.toLowerCase().contains(_searchQuery.toLowerCase())) ||
-            (luggage.destination.toLowerCase().contains(_searchQuery.toLowerCase()));
-        final matchesStatus = _statusFilter == null || luggage.status.toString().split('.').last == _statusFilter;
-        return matchesSearch && matchesStatus;
-      }).toList();
-    });
+  /// 刷新（回到第 1 页）
+  Future<void> _refresh() async {
+    await _loadFirstPage();
+  }
+
+  /// 在 _allItems 上应用筛选，结果存入 _filteredItems
+  void _applyFilters() {
+    _filteredItems = _allItems.where((luggage) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          luggage.tagNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          luggage.passengerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          luggage.destination.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesStatus = _statusFilter == null ||
+          luggage.status.toString().split('.').last == _statusFilter;
+      return matchesSearch && matchesStatus;
+    }).toList();
   }
 
   void _onSearchChanged(String value) {
-    setState(() {
-      _searchQuery = value;
-    });
-    _filterList();
+    setState(() => _searchQuery = value);
+    _applyFilters();
   }
 
   void _setStatusFilter(String? status) {
-    setState(() {
-      _statusFilter = status;
-    });
-    _filterList();
+    setState(() => _statusFilter = status);
+    _applyFilters();
   }
 
   void _clearFilters() {
     setState(() {
       _searchQuery = '';
       _statusFilter = null;
-      _filteredList = _luggageList;
     });
     _searchController.clear();
+    _applyFilters();
   }
 
+  /// 滚动至底部 200px 时触发加载更多
   void _onScroll() {
-    if (_isLoadingMore || !_hasMoreData) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 100) {
-      _loadMoreLuggage();
+    if (!_hasMoreData || _isLoadingMore) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _loadMoreItems();
     }
   }
 
@@ -153,98 +173,84 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
       role: 'owner',
       extra: {'tagNo': luggage.tagNumber},
     );
-
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => LuggageDetailScreen(
-          qrPayload: qrPayload,
-          raw: luggage.id,
-        ),
+        builder: (_) => LuggageDetailScreen(qrPayload: qrPayload, raw: luggage.id),
       ),
-    ).then((_) {
-      _loadLuggageList();
-    });
+    ).then((_) => _refresh());
   }
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (ctx) => Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
+          color: Theme.of(ctx).brightness == Brightness.dark
               ? AppColors.cardDark
               : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.bottomSheet)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.bottomSheet),
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: EdgeInsets.only(top: Responsive.spacing(context, AppSpacing.sm)),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: EdgeInsets.only(top: Responsive.spacing(ctx, AppSpacing.sm)),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
-            Padding(
-              padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+          Padding(
+            padding: EdgeInsets.all(Responsive.padding(ctx, AppSpacing.md)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('筛选条件',
+                    style: TextStyle(fontSize: Responsive.fontSize(ctx, 18), fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () { Navigator.pop(ctx); _clearFilters(); },
+                  child: Text('清除筛选', style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: Responsive.padding(ctx, AppSpacing.md),
+                vertical: Responsive.spacing(ctx, AppSpacing.sm)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('状态', style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(ctx, 14))),
+              SizedBox(height: Responsive.spacing(ctx, AppSpacing.sm)),
+              Wrap(
+                spacing: Responsive.spacing(ctx, AppSpacing.sm),
+                runSpacing: Responsive.spacing(ctx, AppSpacing.sm),
                 children: [
-                  Text(
-                    '筛选条件',
-                    style: TextStyle(fontSize: Responsive.fontSize(context, 18), fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _clearFilters();
-                    },
-                    child: Text('清除筛选', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                  ),
+                  _buildFilterChip(ctx, '全部', null),
+                  _buildFilterChip(ctx, '已办理托运', 'checkIn'),
+                  _buildFilterChip(ctx, '运输中', 'inTransit'),
+                  _buildFilterChip(ctx, '已到达', 'arrived'),
+                  _buildFilterChip(ctx, '已交付', 'delivered'),
+                  _buildFilterChip(ctx, '已损坏', 'damaged'),
+                  _buildFilterChip(ctx, '已丢失', 'lost'),
                 ],
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, AppSpacing.md), vertical: Responsive.spacing(context, AppSpacing.sm)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('状态', style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(context, 14))),
-                  SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                  Wrap(
-                    spacing: Responsive.spacing(context, AppSpacing.sm),
-                    runSpacing: Responsive.spacing(context, AppSpacing.sm),
-                    children: [
-                      _buildFilterChip('全部', null),
-                      _buildFilterChip('已办理托运', 'checkIn'),
-                      _buildFilterChip('运输中', 'inTransit'),
-                      _buildFilterChip('已到达', 'arrived'),
-                      _buildFilterChip('已交付', 'delivered'),
-                      _buildFilterChip('已损坏', 'damaged'),
-                      _buildFilterChip('已丢失', 'lost'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
-          ],
-        ),
+            ]),
+          ),
+          SizedBox(height: Responsive.spacing(ctx, AppSpacing.lg)),
+        ]),
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String? status) {
+  Widget _buildFilterChip(BuildContext ctx, String label, String? status) {
     final isSelected = _statusFilter == status;
     return FilterChip(
-      label: Text(label, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+      label: Text(label, style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
       selected: isSelected,
-      onSelected: (value) {
-        Navigator.pop(context);
+      onSelected: (_) {
+        Navigator.pop(ctx);
         _setStatusFilter(status);
       },
       selectedColor: AppColors.primary.withValues(alpha: 0.2),
@@ -252,59 +258,42 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     );
   }
 
-  /// 显示长按菜单
-  void _showLongPressMenu(BuildContext context, Luggage luggage) {
+  void _showLongPressMenu(BuildContext ctx, Luggage luggage) {
     showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.edit, size: Responsive.iconSize(context, 20)),
-              title: Text('修改状态', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToDetail(luggage);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.report_problem, size: Responsive.iconSize(context, 20)),
-              title: Text('标记破损', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DamageReportScreen(luggageId: luggage.id),
-                  ),
-                ).then((result) {
-                  if (result == true) {
-                    _loadLuggageList();
-                  }
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, size: Responsive.iconSize(context, 20)),
-              title: Text('查看历史日志', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToDetail(luggage);
-              },
-            ),
-          ],
-        ),
+      context: ctx,
+      builder: (ctx2) => Container(
+        padding: EdgeInsets.all(Responsive.padding(ctx2, AppSpacing.md)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.edit, size: Responsive.iconSize(ctx2, 20)),
+            title: Text('修改状态', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
+          ),
+          ListTile(
+            leading: Icon(Icons.report_problem, size: Responsive.iconSize(ctx2, 20)),
+            title: Text('标记破损', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            onTap: () {
+              Navigator.pop(ctx2);
+              Navigator.of(ctx2).push(
+                MaterialPageRoute(builder: (_) => DamageReportScreen(luggageId: luggage.id)),
+              ).then((result) { if (result == true) _refresh(); });
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, size: Responsive.iconSize(ctx2, 20)),
+            title: Text('查看历史日志', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
+          ),
+        ]),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final paddingMd = Responsive.padding(context, AppSpacing.md);
-    final paddingSm = Responsive.padding(context, AppSpacing.sm);
-    final spacingSm = Responsive.spacing(context, AppSpacing.sm);
-    final spacingXs = Responsive.spacing(context, AppSpacing.xs);
+    final padMd = Responsive.padding(context, AppSpacing.md);
+    final spSm = Responsive.spacing(context, AppSpacing.sm);
+    final spXs = Responsive.spacing(context, AppSpacing.xs);
 
     return Scaffold(
       appBar: AppBar(
@@ -312,142 +301,149 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: _isLoading ? null : _showFilterBottomSheet,
+            onPressed: _isLoadingFirst ? null : _showFilterBottomSheet,
             tooltip: '筛选',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadLuggageList,
+            onPressed: _isLoadingFirst ? null : _refresh,
             tooltip: '刷新',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(paddingMd),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: '搜索行李标签、所有者、位置...',
-                prefixIcon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _clearFilters,
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: paddingMd,
-                  vertical: Responsive.spacing(context, AppSpacing.buttonPadding),
-                ),
-              ),
+      body: Column(children: [
+        // 搜索框
+        Padding(
+          padding: EdgeInsets.all(padMd),
+          child: TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            decoration: InputDecoration(
+              hintText: '搜索行李标签、所有者、位置...',
+              prefixIcon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(icon: const Icon(Icons.clear), onPressed: _clearFilters)
+                  : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.input)),
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: padMd,
+                  vertical: Responsive.spacing(context, AppSpacing.buttonPadding)),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: paddingMd, vertical: spacingXs),
-            child: Row(
-              children: [
-                Text(
-                  '共 ${_filteredList.length} 个行李',
-                  style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
+        ),
+        // 统计行
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: padMd, vertical: spXs),
+          child: Row(children: [
+            Text(
+              '共 ${_filteredItems.length} 个行李',
+              style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
+            ),
+            if (_hasMoreData && !_isLoadingFirst)
+              Padding(
+                padding: EdgeInsets.only(left: spXs),
+                child: Text(
+                  '（下拉加载更多）',
+                  style: TextStyle(color: Colors.grey[400], fontSize: Responsive.fontSize(context, 12)),
                 ),
-              ],
-            ),
-          ),
-          if (_statusFilter != null || _searchQuery.isNotEmpty)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: paddingMd, vertical: spacingSm),
-              child: Row(
-                children: [
-                  if (_statusFilter != null)
-                    Container(
-                      margin: EdgeInsets.only(right: spacingSm),
-                      padding: EdgeInsets.symmetric(horizontal: Responsive.spacing(context, 12), vertical: Responsive.spacing(context, 4)),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          StatusBadge(statusKey: _statusFilter, compact: true),
-                          SizedBox(width: Responsive.spacing(context, 4)),
-                          GestureDetector(
-                            onTap: () => _setStatusFilter(null),
-                            child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: AppColors.primary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_searchQuery.isNotEmpty)
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: Responsive.spacing(context, 12), vertical: Responsive.spacing(context, 4)),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '"$_searchQuery"',
-                            style: TextStyle(fontSize: Responsive.fontSize(context, 12)),
-                          ),
-                          SizedBox(width: Responsive.spacing(context, 4)),
-                          GestureDetector(
-                            onTap: _clearFilters,
-                            child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
               ),
-            ),
-          Expanded(
-            child: _isLoading
-                ? const LoadingState()
-                : _error != null
-                    ? ErrorState(
-                        message: _error!,
-                        onRetry: _loadLuggageList,
-                      )
-                    : _filteredList.isEmpty
-                        ? EmptyState.search(keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
-                        : RefreshIndicator(
-                            onRefresh: _loadLuggageList,
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              padding: EdgeInsets.all(paddingMd),
-                              itemCount: _filteredList.length + (_isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == _filteredList.length) {
+          ]),
+        ),
+        // 筛选标签
+        if (_statusFilter != null || _searchQuery.isNotEmpty)
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: padMd, vertical: spSm),
+            child: Row(children: [
+              if (_statusFilter != null)
+                Container(
+                  margin: EdgeInsets.only(right: spSm),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.spacing(context, 12),
+                      vertical: Responsive.spacing(context, 4)),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    StatusBadge(statusKey: _statusFilter, compact: true),
+                    SizedBox(width: Responsive.spacing(context, 4)),
+                    GestureDetector(
+                      onTap: () => _setStatusFilter(null),
+                      child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: AppColors.primary),
+                    ),
+                  ]),
+                ),
+              if (_searchQuery.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.spacing(context, 12),
+                      vertical: Responsive.spacing(context, 4)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('"$_searchQuery"', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                    SizedBox(width: Responsive.spacing(context, 4)),
+                    GestureDetector(
+                      onTap: _clearFilters,
+                      child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: Colors.grey[600]),
+                    ),
+                  ]),
+                ),
+            ]),
+          ),
+        // 列表主体
+        Expanded(
+          child: _isLoadingFirst
+              ? const LoadingState()
+              : _error != null
+                  ? ErrorState(message: _error!, onRetry: _loadFirstPage)
+                  : _filteredItems.isEmpty
+                      ? EmptyState.search(keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
+                      : RefreshIndicator(
+                          onRefresh: _refresh,
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: EdgeInsets.all(padMd),
+                            // 列表项数 + 底部指示器
+                            itemCount: _filteredItems.length +
+                                ((_isLoadingMore || _hasMoreData) ? 1 : 0),
+                            itemBuilder: (ctx, index) {
+                              if (index == _filteredItems.length) {
+                                if (_isLoadingMore) {
                                   return Container(
-                                    padding: EdgeInsets.all(paddingMd),
+                                    padding: EdgeInsets.all(padMd),
                                     alignment: Alignment.center,
                                     child: const CircularProgressIndicator(),
                                   );
                                 }
-                                final luggage = _filteredList[index];
-                                return Padding(
-                                  padding: EdgeInsets.only(bottom: spacingSm),
-                                  child: LuggageCard(
-                                    luggage: luggage,
-                                    onTap: () => _navigateToDetail(luggage),
-                                    onLongPress: () => _showLongPressMenu(context, luggage),
-                                  ),
-                                );
-                              },
-                            ),
+                                if (!_hasMoreData) {
+                                  return Container(
+                                    padding: EdgeInsets.all(padMd),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '— 已加载全部 ${_allItems.length} 条 —',
+                                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }
+                              final luggage = _filteredItems[index];
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: spSm),
+                                child: LuggageCard(
+                                  luggage: luggage,
+                                  onTap: () => _navigateToDetail(luggage),
+                                  onLongPress: () => _showLongPressMenu(context, luggage),
+                                ),
+                              );
+                            },
                           ),
-          ),
-        ],
-      ),
+                        ),
+        ),
+      ]),
     );
   }
 }

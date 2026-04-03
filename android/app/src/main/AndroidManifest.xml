@@ -16,7 +16,8 @@
     <application
         android:label="my_first_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
             android:name=".MainActivity"
@@ -41,7 +42,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- 高德地图 API Key -->
+        <!-- 高德地图 API Key（请替换为你的真实密钥） -->
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="a67d2d6da70c5b7af6cf1364584201b0" />
@@ -51,6 +52,17 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- image_picker 调起相册 / 系统选图器（Android 11+ 包可见性） -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
     </queries>
 </manifest>

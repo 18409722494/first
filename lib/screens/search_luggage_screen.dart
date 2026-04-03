@@ -4,7 +4,6 @@ import '../models/luggage.dart';
 import '../services/luggage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_radius.dart';
 import '../utils/luggage_utils.dart';
 import '../utils/responsive.dart';
 import 'qr_scan_screen.dart';
@@ -41,9 +40,10 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
     });
     
     try {
-      // 获取所有行李
-      final allLuggage = await LuggageService.getLuggageList();
-      
+      // 客户端筛选：拉取足够多页数据（与列表分页接口一致）
+      final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
+      final allLuggage = result.items;
+
       // 应用搜索和过滤
       final results = allLuggage.where((luggage) {
         // 搜索条件
@@ -89,7 +89,6 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
   @override
   Widget build(BuildContext context) {
     final paddingSm = Responsive.padding(context, AppSpacing.sm);
-    final paddingMd = Responsive.padding(context, AppSpacing.md);
     final spacingSm = Responsive.spacing(context, AppSpacing.sm);
     final spacingXs = Responsive.spacing(context, AppSpacing.xs);
 

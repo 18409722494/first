@@ -48,7 +48,7 @@ class DamageReportService {
         'POST', '/damage-report', requestData, token,
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
         await _saveToLocalQueue({...requestData, 'imageBytes': imageBytes});
@@ -112,11 +112,7 @@ class DamageReportService {
         'POST', '/damage-report', requestData, token,
       );
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        return false;
-      }
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
       return false;
     }

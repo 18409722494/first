@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
-import 'main_screen.dart';
+import 'login_screen.dart';
 
 /// 注册页面
 class RegisterScreen extends StatefulWidget {
@@ -16,6 +16,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _employeeIdController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -24,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _employeeIdController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -34,13 +36,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.register(
+        _employeeIdController.text.trim(),
         _usernameController.text.trim(),
         _passwordController.text,
       );
 
       if (success && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('注册成功，请使用用户名和密码登录'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                   Text(
-                    '填写信息以创建新账户',
+                    '工号须已由航司预置；填写工号与账号信息以激活账户',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                           fontSize: Responsive.fontSize(context, 14),
@@ -92,6 +102,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+                  TextFormField(
+                    controller: _employeeIdController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: '工号',
+                      hintText: '请输入员工工号',
+                      prefixIcon: const Icon(Icons.badge_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return '请输入工号';
+                      }
+                      if (value.trim().length < 4) {
+                        return '工号格式不正确';
+                      }
+                      return null;
+                    },
+                    textInputAction: TextInputAction.next,
+                  ),
+                  SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
 
                   TextFormField(
                     controller: _usernameController,

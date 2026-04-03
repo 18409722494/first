@@ -73,6 +73,46 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     }
   }
 
+  /// 获取当前扫描位置并更新到后端
+  Future<void> _updateLocationToBackend() async {
+    if (_luggage == null || _locationCtrl.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入位置信息')),
+      );
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      final baggageNumber = _luggage!.tagNumber.isNotEmpty
+          ? _luggage!.tagNumber
+          : widget.qrPayload.extra['tagNo']?.toString() ?? widget.qrPayload.luggageId ?? '';
+
+      await LuggageService.updateScanLocation(
+        baggageNumber: baggageNumber,
+        location: _locationCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('位置已更新到后端')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('更新位置失败: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   Future<void> _update() async {
     if (_luggage == null) return;
 
@@ -340,6 +380,14 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
                                         },
                                         fullWidth: true,
                                       ),
+                                    SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
+                                    AppButton(
+                                      text: '更新位置到后端',
+                                      icon: Icons.location_on,
+                                      type: AppButtonType.outline,
+                                      onPressed: _loading ? null : _updateLocationToBackend,
+                                      fullWidth: true,
+                                    ),
                                   ],
                                 ),
                               ),

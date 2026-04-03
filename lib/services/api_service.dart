@@ -6,78 +6,66 @@ import '../models/auth_response.dart';
 
 /// API服务
 class ApiService {
-  static const String baseUrl = AppConstants.apiBaseUrl;
+  static String get baseUrl => AppConstants.apiBaseUrl;
   static const Duration _timeout = Duration(seconds: 15);
 
-  /// 从登录/注册响应 JSON 中解析 token（兼容多种后端字段名与嵌套结构）
-  static String? _extractAuthToken(dynamic decoded) {
-    if (decoded is! Map) return null;
-    final root = Map<String, dynamic>.from(decoded);
-
-    String? fromMap(Map<String, dynamic> map) {
-      const keys = [
-        'token',
-        'accessToken',
-        'access_token',
-        'jwt',
-        'id_token',
-        'bearer',
-      ];
-      for (final k in keys) {
-        final v = map[k];
-        if (v is String && v.isNotEmpty) return v;
-        if (v != null && v is! Map && v is! List && v.toString().isNotEmpty) {
-          return v.toString();
-        }
+  static String? _pickServerMessage(Map<String, dynamic> data) {
+    for (final k in ['message', 'msg', 'error', 'detail']) {
+      final v = data[k];
+      if (v != null && v.toString().trim().isNotEmpty) {
+        return v.toString();
       }
-      return null;
     }
-
-    final direct = fromMap(root);
-    if (direct != null) return direct;
-
-    final data = root['data'];
-    if (data is Map) {
-      final t = fromMap(Map<String, dynamic>.from(data));
-      if (t != null) return t;
-    }
-
-    final user = root['user'];
-    if (user is Map) {
-      final t = fromMap(Map<String, dynamic>.from(user));
-      if (t != null) return t;
-    }
-
     return null;
   }
 
-  /// 登录
-  static Future<AuthResponse> login(String username, String password) async {
+  static String _messageForNonOkResponse(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        final tip = _pickServerMessage(Map<String, dynamic>.from(decoded));
+        if (tip != null) return tip;
+      }
+    } catch (_) {}
+    return '请求失败（HTTP ${response.statusCode}）';
+  }
+
+  /// 登录（只传用户名、密码）
+  static Future<AuthResponse> login({
+    required String username,
+    required String password,
+  }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse('$baseUrl/manager/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username': username,
+          'username': username.trim(),
           'password': password,
         }),
       ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
 
-      final data = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '登录失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
       final result = data['result']?.toString() ?? '';
 
       if (result == 'success') {
-        // 后端约定成功可为 {"result":"success"}，无 token；若有则一并解析（兼容将来扩展）
-        final token = _extractAuthToken(data);
         return AuthResponse(
           success: true,
           message: '登录成功',
-          token: token,
-        );
-      } else if (result == 'username/passwordRequired') {
-        return AuthResponse(
-          success: false,
-          message: '用户名或密码不能为空',
         );
       } else if (result == 'invalidCredentials') {
         return AuthResponse(
@@ -87,7 +75,7 @@ class ApiService {
       } else {
         return AuthResponse(
           success: false,
-          message: '登录失败，请重试',
+          message: _pickServerMessage(data) ?? '登录失败，请重试',
         );
       }
     } on TimeoutException {
@@ -103,44 +91,125 @@ class ApiService {
     }
   }
 
-  /// 注册
-  static Future<AuthResponse> register(String username, String password) async {
+  /// 注册（航司员工：工号须已在后台预置且尚未激活）
+  static Future<AuthResponse> register(
+    String employeeId,
+    String username,
+    String password,
+  ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
+        Uri.parse('$baseUrl/manager/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username': username,
+          'employeeId': employeeId.trim(),
+          'username': username.trim(),
           'password': password,
         }),
       ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
 
-      final data = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '注册失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
       final result = data['result']?.toString() ?? '';
 
       if (result == 'success') {
-        final token = _extractAuthToken(data);
         return AuthResponse(
           success: true,
           message: '注册成功',
-          token: token,
         );
       } else if (result == 'username/passwordRequired') {
         return AuthResponse(
           success: false,
           message: '用户名或密码不能为空',
         );
+      } else if (result == 'employeeIdNotFound') {
+        return AuthResponse(
+          success: false,
+          message: '工号不存在或未在系统中登记',
+        );
+      } else if (result == 'employeeIdAlreadyRegistered') {
+        return AuthResponse(
+          success: false,
+          message: '该工号已注册',
+        );
       } else if (result == 'usernameExists') {
         return AuthResponse(
           success: false,
-          message: '用户名已存在',
+          message: '用户名已被占用',
         );
       } else {
         return AuthResponse(
           success: false,
-          message: '注册失败，请重试',
+          message: _pickServerMessage(data) ?? '注册失败，请重试',
         );
       }
+    } on TimeoutException {
+      return AuthResponse(
+        success: false,
+        message: '请求超时，请检查网络连接',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: '网络错误: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 注销（需传员工工号）
+  static Future<AuthResponse> logout(String employeeId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/manager/logout'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'employeeId': employeeId.trim(),
+        }),
+      ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '注销失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final result = data['result']?.toString() ?? '';
+
+      if (result == 'success') {
+        return AuthResponse(success: true, message: '已注销');
+      }
+      if (result == 'employeeIdNotFound') {
+        return AuthResponse(
+          success: false,
+          message: '工号不存在，无法完成服务端注销',
+        );
+      }
+      return AuthResponse(
+        success: false,
+        message: _pickServerMessage(data) ?? '注销失败，请重试',
+      );
     } on TimeoutException {
       return AuthResponse(
         success: false,

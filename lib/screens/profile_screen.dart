@@ -28,26 +28,75 @@ class ProfileScreen extends StatelessWidget {
           final username = user?.username ?? 'User';
           final email = user?.email ?? 'user@example.com';
 
-          return Column(
-            children: [
-              _buildProfileHeader(context, username, email),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-              _buildSettingsSection(context),
-              const Spacer(),
-              _buildLogoutButton(context, authProvider),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-            ],
+          final hPad = Responsive.padding(context, AppSpacing.md);
+          final spacingSm = Responsive.spacing(context, AppSpacing.sm);
+          final spacingLg = Responsive.spacing(context, AppSpacing.lg);
+          final avatarR = 36.0;
+          final iconSize = 30.0;
+          final vPad = Responsive.spacing(context, AppSpacing.md);
+          final usernameFont = Responsive.fontSize(context, 18);
+          final emailFont = Responsive.fontSize(context, 12);
+          final iconSizeSmall = 14.0;
+          final logoutFont = Responsive.fontSize(context, 15);
+          final logoutIcon = 20.0;
+          final logoutPadV = Responsive.spacing(context, AppSpacing.buttonPadding + 2);
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                hPad,
+                spacingSm,
+                hPad,
+                spacingLg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 160),
+                    child: _buildProfileHeader(
+                      context,
+                      username,
+                      email,
+                      avatarR: avatarR,
+                      iconSize: iconSize,
+                      vPad: vPad,
+                      usernameFont: usernameFont,
+                      emailFont: emailFont,
+                      iconSizeSmall: iconSizeSmall,
+                    ),
+                  ),
+                  SizedBox(height: spacingLg),
+                  _buildSettingsSection(context),
+                  SizedBox(height: spacingLg),
+                  _buildLogoutButton(
+                    context,
+                    authProvider,
+                    fontSize: logoutFont,
+                    iconSize: logoutIcon,
+                    paddingV: logoutPadV,
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, String username, String email) {
-    final avatarR = Responsive.avatarRadius(context, 36);
-    final avatarIconSize = Responsive.iconSize(context, 30);
+  Widget _buildProfileHeader(
+    BuildContext context,
+    String username,
+    String email, {
+    required double avatarR,
+    required double iconSize,
+    required double vPad,
+    required double usernameFont,
+    required double emailFont,
+    required double iconSizeSmall,
+  }) {
     final hPadding = Responsive.padding(context, AppSpacing.md);
-    final vPadding = Responsive.spacing(context, AppSpacing.md);
 
     return Container(
       decoration: BoxDecoration(
@@ -68,11 +117,12 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(horizontal: hPadding, vertical: vPadding),
+      padding: EdgeInsets.symmetric(horizontal: hPadding, vertical: vPad),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: EdgeInsets.all(Responsive.spacing(context, 4)),
+            padding: EdgeInsets.all(vPad * 0.3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.2),
@@ -83,27 +133,30 @@ class ProfileScreen extends StatelessWidget {
               child: Text(
                 username.isNotEmpty ? username.substring(0, 1).toUpperCase() : 'U',
                 style: TextStyle(
-                  fontSize: avatarIconSize,
+                  fontSize: iconSize,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),
               ),
             ),
           ),
-          SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-          Text(
-            username,
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, 18),
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          SizedBox(height: vPad * 0.5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              username,
+              style: TextStyle(
+                fontSize: usernameFont,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
-          SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
+          SizedBox(height: vPad * 0.2),
           Container(
             padding: EdgeInsets.symmetric(
-              horizontal: Responsive.spacing(context, AppSpacing.sm),
-              vertical: Responsive.spacing(context, AppSpacing.xs),
+              horizontal: vPad * 0.6,
+              vertical: vPad * 0.2,
             ),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
@@ -112,20 +165,16 @@ class ProfileScreen extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.email_outlined,
-                  size: Responsive.iconSize(context, 14),
-                  color: Colors.white70,
-                ),
-                SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
+                Icon(Icons.email_outlined, size: iconSizeSmall, color: Colors.white70),
+                SizedBox(width: vPad * 0.3),
                 Flexible(
-                  child: Text(
-                    email,
-                    style: TextStyle(
-                      fontSize: Responsive.fontSize(context, 12),
-                      color: Colors.white70,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      email,
+                      style: TextStyle(fontSize: emailFont, color: Colors.white70),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -137,9 +186,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsSection(BuildContext context) {
-    final iconContainerSize = Responsive.spacing(context, 36);
-    final iconSizeVal = Responsive.iconSize(context, 18);
-    final dividerIndent = iconContainerSize + Responsive.spacing(context, AppSpacing.sm) * 2 + iconSizeVal;
+    const iconContainerSize = 36.0;
+    const iconSizeVal = 18.0;
+    final dividerIndent =
+        iconContainerSize + AppSpacing.sm * 2 + iconSizeVal;
 
     return Card(
       elevation: 1,
@@ -154,6 +204,12 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.primary,
             title: '账户信息',
             onTap: () => _navigateTo(context, const AccountInfoScreen()),
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -162,6 +218,12 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.warning,
             title: '账户安全',
             onTap: () => _navigateTo(context, const AccountSecurityScreen()),
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -170,6 +232,12 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.info,
             title: '个性化设置',
             onTap: () => _navigateTo(context, const PersonalizationScreen()),
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -178,6 +246,12 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.textSecondary,
             title: '系统设置',
             onTap: () => _navigateTo(context, const SystemSettingsScreen()),
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -186,6 +260,12 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.success,
             title: '快捷功能',
             onTap: () => _navigateTo(context, const QuickFunctionsScreen()),
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
@@ -195,6 +275,12 @@ class ProfileScreen extends StatelessWidget {
             title: '帮助与支持',
             onTap: () => _navigateTo(context, const HelpSupportScreen()),
             showDivider: false,
+            iconContainerSize: iconContainerSize,
+            iconSizeVal: iconSizeVal,
+            titleFont: 14,
+            chevronSize: 20,
+            paddingH: AppSpacing.sm,
+            paddingV: AppSpacing.sm,
           ),
         ],
       ),
@@ -208,6 +294,12 @@ class ProfileScreen extends StatelessWidget {
     required String title,
     required VoidCallback onTap,
     bool showDivider = true,
+    double iconContainerSize = 36,
+    double iconSizeVal = 18,
+    double titleFont = 14,
+    double chevronSize = 20,
+    double paddingH = 8,
+    double paddingV = 8,
   }) {
     return Material(
       color: Colors.transparent,
@@ -215,39 +307,30 @@ class ProfileScreen extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: Responsive.spacing(context, AppSpacing.sm),
-            vertical: Responsive.spacing(context, AppSpacing.sm),
-          ),
+          padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
           child: Row(
             children: [
               Container(
-                width: Responsive.spacing(context, 36),
-                height: Responsive.spacing(context, 36),
+                width: iconContainerSize,
+                height: iconContainerSize,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: Responsive.iconSize(context, 18),
-                ),
+                child: Icon(icon, color: iconColor, size: iconSizeVal),
               ),
-              SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+              SizedBox(width: paddingH),
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    fontSize: Responsive.fontSize(context, 14),
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: titleFont, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Icon(
                 Icons.chevron_right,
                 color: AppColors.textSecondary.withValues(alpha: 0.5),
-                size: Responsive.iconSize(context, 20),
+                size: chevronSize,
               ),
             ],
           ),
@@ -256,9 +339,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
+  Widget _buildLogoutButton(
+    BuildContext context,
+    AuthProvider authProvider, {
+    double fontSize = 15,
+    double iconSize = 20,
+    double paddingV = 16,
+  }) {
     return SizedBox(
       width: double.infinity,
+      height: paddingV * 1.8,
       child: ElevatedButton.icon(
         onPressed: () async {
           final confirm = await showDialog<bool>(
@@ -280,8 +370,13 @@ class ProfileScreen extends StatelessWidget {
           );
 
           if (confirm == true && context.mounted) {
-            await authProvider.logout();
+            final serverMsg = await authProvider.logout();
             if (context.mounted) {
+              if (serverMsg != null && serverMsg.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(serverMsg)),
+                );
+              }
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
@@ -289,12 +384,12 @@ class ProfileScreen extends StatelessWidget {
             }
           }
         },
-        icon: Icon(Icons.logout, size: Responsive.iconSize(context, 20)),
-        label: Text('退出登录', style: TextStyle(fontSize: Responsive.fontSize(context, 15))),
+        icon: Icon(Icons.logout, size: iconSize),
+        label: Text('退出登录', style: TextStyle(fontSize: fontSize)),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.error,
           foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: Responsive.buttonHeight(context, AppSpacing.buttonPadding + 2)),
+          padding: EdgeInsets.symmetric(vertical: paddingV),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),
           ),

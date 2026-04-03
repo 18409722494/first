@@ -11,6 +11,7 @@ class StorageService {
   static const String _userIdKey = 'user_id';       // 用户ID的存储键
   static const String _usernameKey = 'username';     // 用户名的存储键
   static const String _emailKey = 'email';           // 邮箱的存储键
+  static const String _employeeIdKey = 'employee_id'; // 航司员工工号
 
   /// 保存认证令牌
   /// [token] 要保存的认证令牌
@@ -41,12 +42,18 @@ class StorageService {
     required String userId,
     required String username,
     required String email,
+    String? employeeId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     // 分别存储用户信息的各个字段
     await prefs.setString(_userIdKey, userId);
     await prefs.setString(_usernameKey, username);
     await prefs.setString(_emailKey, email);
+    if (employeeId != null && employeeId.isNotEmpty) {
+      await prefs.setString(_employeeIdKey, employeeId);
+    } else {
+      await prefs.remove(_employeeIdKey);
+    }
   }
 
   /// 获取保存的用户信息
@@ -59,6 +66,7 @@ class StorageService {
       'userId': prefs.getString(_userIdKey),
       'username': prefs.getString(_usernameKey),
       'email': prefs.getString(_emailKey),
+      'employeeId': prefs.getString(_employeeIdKey),
     };
   }
 
@@ -77,6 +85,7 @@ class StorageService {
     await prefs.remove(_userIdKey);
     await prefs.remove(_usernameKey);
     await prefs.remove(_emailKey);
+    await prefs.remove(_employeeIdKey);
   }
 
   /// 检查用户是否已登录

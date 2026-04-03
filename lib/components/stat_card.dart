@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
@@ -14,6 +13,9 @@ class StatCard extends StatelessWidget {
   final String? trend;
   final VoidCallback? onTap;
   final bool isLoading;
+  /// 紧凑模式：减小内边距和字号（窄屏三列并排时启用）
+  final bool compact;
+  final double compactPadding;
 
   const StatCard({
     super.key,
@@ -25,12 +27,22 @@ class StatCard extends StatelessWidget {
     this.trend,
     this.onTap,
     this.isLoading = false,
+    this.compact = false,
+    this.compactPadding = 16,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // 紧凑模式下使用更小的内边距
+    final pad = compact
+        ? compactPadding
+        : Responsive.padding(context, AppSpacing.cardPadding);
+    final iconPad = compact ? pad * 0.5 : pad * 0.6;
+    final iconSZ = compact ? 14.0 : 16.0;
+    final spacingSm = compact ? pad * 0.5 : pad * 0.75;
 
     return Card(
       elevation: isDark ? 2 : 1,
@@ -42,15 +54,15 @@ class StatCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
-          padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.cardPadding)),
+          padding: EdgeInsets.all(pad),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(context),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              _buildHeader(context, iconPad, iconSZ),
+              SizedBox(height: spacingSm),
               _buildValue(context),
               if (trend != null) ...[
-                SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
+                SizedBox(height: spacingSm * 0.6),
                 _buildTrend(context),
               ],
             ],
@@ -60,22 +72,22 @@ class StatCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, double iconPad, double iconSZ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Container(
-          padding: EdgeInsets.all(Responsive.spacing(context, 6)),
+          padding: EdgeInsets.all(iconPad),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
-          child: Icon(icon, color: color, size: Responsive.iconSize(context, 16)),
+          child: Icon(icon, color: color, size: Responsive.iconSize(context, iconSZ)),
         ),
         if (onTap != null)
           Icon(
             Icons.arrow_forward_ios,
-            size: Responsive.iconSize(context, 14),
+            size: Responsive.iconSize(context, 12),
             color: color.withValues(alpha: 0.6),
           ),
       ],
@@ -96,31 +108,39 @@ class StatCard extends StatelessWidget {
       );
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: Responsive.fontSize(context, 24),
-            fontWeight: FontWeight.w800,
-            color: theme.colorScheme.onSurface,
-            height: 1.1,
-          ),
-        ),
-        if (unit != null) ...[
-          SizedBox(width: Responsive.spacing(context, 4)),
+    // 数值行整体缩放，防止三列并排时横向溢出
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            unit!,
+            value,
             style: TextStyle(
-              fontSize: Responsive.fontSize(context, 14),
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: compact
+                  ? Responsive.fontSize(context, 20)
+                  : Responsive.fontSize(context, 24),
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.onSurface,
+              height: 1.1,
             ),
           ),
+          if (unit != null) ...[
+            SizedBox(width: Responsive.spacing(context, 4)),
+            Text(
+              unit!,
+              style: TextStyle(
+                fontSize: compact ? 12 : 14,
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -129,7 +149,7 @@ class StatCard extends StatelessWidget {
     return Text(
       trend!,
       style: TextStyle(
-        fontSize: Responsive.fontSize(context, 12),
+        fontSize: compact ? 11 : 12,
         fontWeight: FontWeight.w500,
         color: theme.colorScheme.onSurfaceVariant,
       ),

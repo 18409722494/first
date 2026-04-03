@@ -160,38 +160,52 @@ class HomeScreen extends StatelessWidget {
               ),
         ),
         SizedBox(height: spacingMdVal),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                title: '今日处理',
-                value: '${AppConstants.mockTodayProcessed}',
-                unit: '件',
-                icon: Icons.check_circle_outline,
-                color: AppColors.success,
-              ),
-            ),
-            SizedBox(width: spacingSmVal),
-            Expanded(
-              child: StatCard(
-                title: '异常行李',
-                value: '${AppConstants.mockAbnormalLuggage}',
-                unit: '件',
-                icon: Icons.warning_amber_outlined,
-                color: AppColors.warning,
-              ),
-            ),
-            SizedBox(width: spacingSmVal),
-            Expanded(
-              child: StatCard(
-                title: '待办事项',
-                value: '${AppConstants.mockPendingTasks}',
-                unit: '件',
-                icon: Icons.pending_actions_outlined,
-                color: AppColors.error,
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // 屏宽 < 360 时缩小间距和卡内留白
+            final isNarrow = constraints.maxWidth < 360;
+            final gap = isNarrow ? spacingSmVal * 0.4 : spacingSmVal;
+            final cardPad = isNarrow ? spacingSmVal * 0.6 : spacingSmVal;
+            return Row(
+              children: [
+                Expanded(
+                  child: StatCard(
+                    title: '今日处理',
+                    value: '${AppConstants.mockTodayProcessed}',
+                    unit: '件',
+                    icon: Icons.check_circle_outline,
+                    color: AppColors.success,
+                    compact: isNarrow,
+                    compactPadding: cardPad,
+                  ),
+                ),
+                SizedBox(width: gap),
+                Expanded(
+                  child: StatCard(
+                    title: '异常行李',
+                    value: '${AppConstants.mockAbnormalLuggage}',
+                    unit: '件',
+                    icon: Icons.warning_amber_outlined,
+                    color: AppColors.warning,
+                    compact: isNarrow,
+                    compactPadding: cardPad,
+                  ),
+                ),
+                SizedBox(width: gap),
+                Expanded(
+                  child: StatCard(
+                    title: '待办事项',
+                    value: '${AppConstants.mockPendingTasks}',
+                    unit: '件',
+                    icon: Icons.pending_actions_outlined,
+                    color: AppColors.error,
+                    compact: isNarrow,
+                    compactPadding: cardPad,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

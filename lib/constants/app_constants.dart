@@ -5,17 +5,45 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConstants {
   AppConstants._();
 
-  // API配置（当前使用 HTTP）
-  static const String apiBaseUrl = 'http://8.137.145.195:3338';
-  static const String ossUploadEndpoint = '$apiBaseUrl/upload';
-
-  /// 天地图 API Key
-  static String get tiandituApiKey {
-    final key = dotenv.env['TIANDITU_API_KEY'];
-    if (key == null || key.isEmpty) {
-      throw Exception('Missing TIANDITU_API_KEY in .env file');
+  /// 未打包进 APK 的 `.env` 时 [dotenv] 可能未初始化，直接读 [dotenv.env] 会抛 [NotInitializedError]。
+  static String? _tryDotenv(String key) {
+    try {
+      final v = dotenv.env[key];
+      if (v == null || v.trim().isEmpty) return null;
+      return v.trim();
+    } catch (_) {
+      return null;
     }
-    return key;
+  }
+
+  // API 地址解析顺序：编译参数 → 本地 .env（开发机）→ 默认后端（真机未带 .env 时的回退）
+  // 生产环境建议：`flutter build apk --dart-define=API_BASE_URL=https://你的域名`
+  static const String _fallbackApiBaseUrl = 'http://8.137.145.195:3338';
+
+  static String get apiBaseUrl {
+    const fromDefine = String.fromEnvironment('API_BASE_URL');
+    if (fromDefine.isNotEmpty) return fromDefine.trim();
+
+    final fromDot = _tryDotenv('API_BASE_URL');
+    if (fromDot != null) return fromDot;
+
+    return _fallbackApiBaseUrl;
+  }
+
+  static String get ossUploadEndpoint => '$apiBaseUrl/upload';
+
+  /// 天地图 Key：编译参数 → .env；真机若未配置，打开地图相关页会报错（登录不受影响）
+  static String get tiandituApiKey {
+    const fromDefine = String.fromEnvironment('TIANDITU_API_KEY');
+    if (fromDefine.isNotEmpty) return fromDefine.trim();
+
+    final fromDot = _tryDotenv('TIANDITU_API_KEY');
+    if (fromDot != null) return fromDot;
+
+    throw StateError(
+      '未配置天地图密钥：真机 APK 未包含 .env 时，请使用 '
+      'flutter run/build 添加 --dart-define=TIANDITU_API_KEY=你的密钥',
+    );
   }
 
   /// 天地图影像底图瓦片 URL
@@ -42,10 +70,10 @@ class AppConstants {
   // 行李状态颜色
   static const Map<String, Color> luggageStatusColors = {
     'checkIn':    Color(0xFF2196F3),
-    'inTransit':  Color(0xFFFF9800),
+    'inTransit':  Color.fromARGB(255, 5, 13, 34),
     'arrived':    Color(0xFF4CAF50),
-    'delivered':  Color(0xFF9C27B0),
-    'damaged':    Color(0xFFF44336),
+    'delivered':  Color.fromARGB(255, 117, 33, 22),
+    'damaged':    Color.fromARGB(255, 189, 187, 65),
     'lost':       Color(0xFF9E9E9E),
   };
 
