@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import '../components/app_text_field.dart';
 import '../components/app_button.dart';
 import '../services/damage_report_service.dart';
-import '../services/local_queue_service.dart';
 import '../services/permission_service.dart';
 import '../models/permission_type.dart';
 import '../theme/app_colors.dart';
@@ -39,62 +38,80 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
   @override
   void initState() {
     super.initState();
-    _initLocalQueue();
     if (widget.luggageId != null) {
       _luggageIdController.text = widget.luggageId!;
     }
-    _getCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshLocation(showFailureSnack: true);
+    });
   }
 
-  Future<void> _initLocalQueue() async {
-    try {
-      await LocalQueueService.init();
-      await DamageReportService.processLocalQueue();
-    } catch (e) {
-      // 初始化本地队列失败，静默处理
-    }
-  }
+  // ==================== 位置：服务开关 + 最近位置 + 降级精度 ====================
 
-  // ==================== 位置权限 - 使用 PermissionService ====================
-
-  Future<void> _getCurrentLocation() async {
-    // 使用 PermissionService 请求位置权限
-    final hasPermission = await PermissionService.requestLocation(context);
-
-    if (!hasPermission) {
-      return;
-    }
-
-    // 权限获取成功后，尝试获取位置
-    Position? position;
-    for (int i = 0; i < 3; i++) {
-      try {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 10),
+  /// 解析当前坐标。室内/弱 GPS 时 [high] 易超时，故依次尝试最近位置与 medium/low。
+  Future<Position?> _resolvePosition({
+    required bool showPermissionDeniedSnack,
+  }) async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted && showPermissionDeniedSnack) {
+        PermissionService.showSnackBar(
+          context,
+          '请打开手机「定位服务」后重试，或点右上角定位图标',
         );
-        break;
-      } catch (e) {
-        // 位置获取失败，静默处理
-        if (i < 2) {
-          await Future.delayed(const Duration(seconds: 2));
+      }
+      return null;
+    }
+
+    final hasPermission = await PermissionService.requestLocation(
+      context,
+      showDeniedSnackBar: showPermissionDeniedSnack,
+    );
+    if (!hasPermission) return null;
+
+    // 1) 最近已知位置（秒级返回，室内常用）
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        final age = DateTime.now().difference(last.timestamp);
+        if (age.inMinutes <= 60) {
+          return last;
+        }
+      }
+    } catch (_) {}
+
+    // 2) 实时定位：先 medium（室内比 high 容易成功），再 low
+    for (final accuracy in [
+      LocationAccuracy.medium,
+      LocationAccuracy.low,
+    ]) {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          return await Geolocator.getCurrentPosition(
+            desiredAccuracy: accuracy,
+            timeLimit: const Duration(seconds: 25),
+          );
+        } catch (_) {
+          if (attempt < 1) {
+            await Future.delayed(const Duration(seconds: 1));
+          }
         }
       }
     }
 
-    if (position != null) {
-      if (mounted) {
-        setState(() {
-          _position = position;
-        });
-      }
-    } else {
-      if (mounted) {
-        PermissionService.showSnackBar(
-          context,
-          '无法获取位置信息，请检查 GPS 是否开启',
-        );
-      }
+    return null;
+  }
+
+  /// 刷新页面上的 [_position]。
+  Future<void> _refreshLocation({bool showFailureSnack = false}) async {
+    final pos = await _resolvePosition(showPermissionDeniedSnack: showFailureSnack);
+    if (!mounted) return;
+    setState(() => _position = pos);
+    if (pos == null && showFailureSnack) {
+      PermissionService.showSnackBar(
+        context,
+        '无法获取位置：请开启定位/GPS，或到空旷处后点右上角「重新定位」',
+      );
     }
   }
 
@@ -187,67 +204,173 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
   }
 
   Future<void> _submitReport() async {
-    if (_formKey.currentState!.validate()) {
-      if (_imageBytes == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('请选择一张图片')),
-          );
-        }
-        return;
-      }
+    if (!_formKey.currentState!.validate()) return;
 
-      if (_position == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('正在获取位置信息，请稍后再试')),
-          );
-        }
-        return;
-      }
-
+    if (_imageBytes == null) {
       if (mounted) {
-        setState(() {
-          _isLoading = true;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请选择一张图片')),
+        );
+      }
+      return;
+    }
+
+    if (mounted) setState(() => _isLoading = true);
+
+    try {
+      // 进入页时可能未拿到坐标（室内高精度超时等），提交前再完整尝试一次
+      Position? pos = _position;
+      if (pos == null) {
+        pos = await _resolvePosition(showPermissionDeniedSnack: true);
+        if (mounted && pos != null) {
+          setState(() => _position = pos);
+        }
       }
 
-      try {
-        final success = await DamageReportService.submitDamageReport(
-          imageBytes: _imageBytes!,
-          luggageId: _luggageIdController.text.trim(),
-          timestamp: DateTime.now(),
-          latitude: _position!.latitude,
-          longitude: _position!.longitude,
-          damageDescription: _descriptionController.text.trim(),
-        );
-
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('报告提交成功')),
-            );
-            _resetForm();
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('报告提交失败，已保存到本地队列')),
-            );
-          }
-        }
-      } catch (e) {
+      if (pos == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('提交报告失败，请稍后再试')),
+            const SnackBar(
+              content: Text(
+                '未获取到位置：请打开手机定位与 GPS，或到窗边/室外后点右上角「重新定位」再提交',
+              ),
+              duration: Duration(seconds: 5),
+            ),
           );
         }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        return;
       }
+
+      final result = await DamageReportService.submitDamageReport(
+        imageBytes: _imageBytes!,
+        luggageId: _luggageIdController.text.trim(),
+        timestamp: DateTime.now(),
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        damageDescription: _descriptionController.text.trim(),
+      );
+
+      if (!mounted) return;
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('报告提交成功')),
+        );
+        _resetForm();
+      } else {
+        _showDetailedError(result);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('提交报告失败：$e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showDetailedError(DamageReportResult result) {
+    final stage = result.stageLabel;
+    final statusCode = result.statusCode;
+    final body = result.responseBody;
+    final exception = result.exceptionMessage;
+
+    String message;
+    if (exception != null && statusCode == null) {
+      // 网络 / DNS / 超时等底层异常
+      message = '[$stage] 网络异常：$exception';
+    } else if (statusCode == 0) {
+      message = '[$stage] 无法连接服务器（HTTP 0）：$body';
+    } else if (statusCode == 404) {
+      message = '[$stage] 接口不存在（404）：请确认后端已启动并部署';
+    } else if (statusCode == 403 || statusCode == 401) {
+      message = '[$stage] 权限/认证失败（$statusCode）：请检查后端接口权限';
+    } else if (statusCode != null) {
+      // 业务错误（400/409/500 等），展示后端返回的 body
+      final hint = _parseBusinessHint(body);
+      message = '[$stage] HTTP $statusCode${hint.isNotEmpty ? '：$hint' : ''}';
+    } else {
+      message = '[$stage] 未知错误';
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontSize: 13)),
+          duration: Duration(seconds: body != null && body.length > 100 ? 8 : 5),
+          action: SnackBarAction(
+            label: '详情',
+            onPressed: () => _showErrorDetailDialog(result),
+          ),
+        ),
+      );
+    }
+  }
+
+  String _parseBusinessHint(String? body) {
+    if (body == null || body.isEmpty) return '';
+    try {
+      // 尝试解析 JSON，取其中 message/msg/result 等常见字段
+      final lower = body.toLowerCase();
+      if (lower.contains('not found') || lower.contains('不存在')) {
+        return '行李号在系统中不存在';
+      }
+      if (lower.contains('duplicate') || lower.contains('重复')) {
+        return '该行李已存在破损报告（重复提交）';
+      }
+      if (lower.contains('hash')) {
+        return '哈希校验失败';
+      }
+      // 简单返回原始 body 前 80 字符
+      return body.length > 80 ? '${body.substring(0, 80)}…' : body;
+    } catch (_) {
+      return body.length > 80 ? '${body.substring(0, 80)}…' : body;
+    }
+  }
+
+  void _showErrorDetailDialog(DamageReportResult result) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('[${result.stageLabel}] 详细信息'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _detailRow('阶段', result.stageLabel),
+              if (result.statusCode != null)
+                _detailRow('HTTP 状态码', '${result.statusCode}'),
+              if (result.exceptionMessage != null)
+                _detailRow('异常信息', result.exceptionMessage!),
+              if (result.responseBody != null)
+                _detailRow('响应正文', result.responseBody!),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
   }
 
   void _resetForm() {
@@ -275,6 +398,15 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('行李破损报告'),
+        actions: [
+          IconButton(
+            tooltip: '重新获取位置',
+            onPressed: _isLoading
+                ? null
+                : () => _refreshLocation(showFailureSnack: true),
+            icon: const Icon(Icons.my_location),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(paddingMd),
@@ -373,6 +505,41 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
                             color: AppColors.textSecondary,
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: EdgeInsets.all(paddingMd),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_off_outlined,
+                        size: Responsive.iconSize(context, 20),
+                        color: AppColors.textSecondary,
+                      ),
+                      SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+                      Expanded(
+                        child: Text(
+                          '尚未获取到位置。请开启定位/GPS；提交时会自动再试，也可点右上角或下方按钮刷新。',
+                          style: TextStyle(
+                            fontSize: Responsive.fontSize(context, 13),
+                            color: AppColors.textSecondary,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => _refreshLocation(showFailureSnack: true),
+                        child: const Text('获取位置'),
                       ),
                     ],
                   ),

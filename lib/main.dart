@@ -33,7 +33,6 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: '行李管理系统',
         debugShowCheckedModeBanner: false,
-        // 默认中国大陆简体，与天地图底图标注习惯一致（API 返回繁体时在解析时转简体）
         locale: const Locale('zh', 'CN'),
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

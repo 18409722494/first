@@ -55,17 +55,23 @@ class AuthProvider with ChangeNotifier {
         username: username.trim(),
         password: password,
       );
-      
+
       if (response.success) {
         final savedUserInfo = await StorageService.getUserInfo();
         final savedEmployeeId = savedUserInfo['employeeId'];
-        
+
+        // 保存用户信息和token
         await StorageService.saveUserInfo(
           userId: username.trim(),
           username: username.trim(),
           email: '',
           employeeId: savedEmployeeId,
         );
+
+        // 保存token（如果API返回了token）
+        if (response.token != null && response.token!.isNotEmpty) {
+          await StorageService.saveToken(response.token!);
+        }
 
         _user = User(
           id: username.trim(),

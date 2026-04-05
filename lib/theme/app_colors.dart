@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // 主色系
-  static const Color primary = Color(0xFF673AB7);
-  static const Color primaryLight = Color(0xFF9575CD);
-  static const Color primaryDark = Color(0xFF512DA8);
+  // 主色系（淡蓝）
+  static const Color primary = Color(0xFF42A5F5);
+  static const Color primaryLight = Color(0xFF90CAF9);
+  static const Color primaryDark = Color(0xFF1976D2);
 
   // 功能色
   static const Color success = Color(0xFF4CAF50);
@@ -19,7 +19,7 @@ class AppColors {
   static const Color checkIn = Color(0xFF2196F3);
   static const Color inTransit = Color(0xFFFF9800);
   static const Color arrived = Color(0xFF4CAF50);
-  static const Color delivered = Color(0xFF9C27B0);
+  static const Color delivered = Color(0xFF0288D1);
   static const Color damaged = Color(0xFFF44336);
   static const Color lost = Color(0xFF9E9E9E);
 
@@ -27,7 +27,7 @@ class AppColors {
   static const Color checkInBg = Color(0xFFE3F2FD);
   static const Color inTransitBg = Color(0xFFFFF3E0);
   static const Color arrivedBg = Color(0xFFE8F5E9);
-  static const Color deliveredBg = Color(0xFFF3E5F5);
+  static const Color deliveredBg = Color(0xFFE1F5FE);
   static const Color damagedBg = Color(0xFFFFEBEE);
   static const Color lostBg = Color(0xFFF5F5F5);
 

@@ -1,23 +1,107 @@
 import 'dart:typed_data';
-import 'hash_service.dart';
-import 'oss_service.dart';
-import 'local_queue_service.dart';
-import 'api_service.dart';
-import 'storage_service.dart';
+import '../services/evidence_service.dart';
+import '../services/hash_service.dart';
+import '../services/oss_service.dart';
+
+/// 破损报告提交结果（区分阶段）
+enum DamageReportStage {
+  hash,
+  ossSignature,
+  ossUpload,
+  businessApi,
+}
+
+/// 单次提交的详细错误信息
+class DamageReportResult {
+  /// true = 成功
+  final bool success;
+  /// 失败所在的阶段
+  final DamageReportStage? failedStage;
+  /// 失败时的 HTTP 状态码（仅 businessApi / ossSignature / ossUpload 阶段有）
+  final int? statusCode;
+  /// 失败时的响应体原文
+  final String? responseBody;
+  /// 异常消息（网络超时、DNS 失败等底层异常）
+  final String? exceptionMessage;
+
+  const DamageReportResult._({
+    required this.success,
+    this.failedStage,
+    this.statusCode,
+    this.responseBody,
+    this.exceptionMessage,
+  });
+
+  factory DamageReportResult.ok() =>
+      const DamageReportResult._(success: true);
+
+  factory DamageReportResult.fail({
+    required DamageReportStage stage,
+    int? statusCode,
+    String? responseBody,
+    String? exceptionMessage,
+  }) =>
+      DamageReportResult._(
+        success: false,
+        failedStage: stage,
+        statusCode: statusCode,
+        responseBody: responseBody,
+        exceptionMessage: exceptionMessage,
+      );
+
+  /// 人类可读的阶段名称
+  String get stageLabel {
+    switch (failedStage) {
+      case DamageReportStage.hash:
+        return '哈希计算';
+      case DamageReportStage.ossSignature:
+        return 'OSS 签名获取';
+      case DamageReportStage.ossUpload:
+        return 'OSS 图片上传';
+      case DamageReportStage.businessApi:
+        return '业务接口提交';
+      case null:
+        return '未知';
+    }
+  }
+
+  /// 人类可读的错误摘要（用于展示给用户）
+  String get summary {
+    if (success) return '提交成功';
+    final sb = StringBuffer('[$stageLabel] ');
+    if (exceptionMessage != null) {
+      sb.write(exceptionMessage);
+    }
+    if (statusCode != null) {
+      sb.write(' HTTP $statusCode');
+    }
+    if (responseBody != null && responseBody!.isNotEmpty) {
+      // 截断太长的响应体
+      final trimmed = responseBody!.length > 200
+          ? '${responseBody!.substring(0, 200)}…'
+          : responseBody!;
+      sb.write(' | $trimmed');
+    }
+    return sb.toString();
+  }
+}
 
 /// 破损报告服务
+/// 对接新API: http://8.137.145.195:3338/abnormal-baggage/upload
 class DamageReportService {
   /// 提交破损报告
-  static Future<bool> submitDamageReport({
+  /// [onStageDone] 可选回调，每完成一个阶段时通知（用于 UI 进度展示）
+  static Future<DamageReportResult> submitDamageReport({
     required Uint8List imageBytes,
     required String luggageId,
     required DateTime timestamp,
     required double latitude,
     required double longitude,
     required String damageDescription,
+    void Function(String stageLabel)? onStageDone,
   }) async {
     try {
-      // 计算哈希
+      // ── 阶段 1：哈希计算 ──────────────────────────────
       final hash = await HashService.calculateDamageEvidenceHash(
         imageBytes: imageBytes,
         luggageId: luggageId,
@@ -25,122 +109,70 @@ class DamageReportService {
         latitude: latitude,
         longitude: longitude,
       );
+      onStageDone?.call('哈希计算完成');
 
-      // 上传图片
+      // ── 阶段 2：OSS 签名获取 ─────────────────────────
       final photoUrl = await OssService.uploadImage(imageBytes);
+      onStageDone?.call('图片上传完成');
 
-      // 构建请求
-      final requestData = {
-        'luggageId': luggageId.trim(),
-        'timestamp': timestamp.toUtc().toIso8601String(),
-        'location': "${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}",
-        'hash': hash,
-        'photoUrl': photoUrl,
-        'damageDescription': damageDescription,
-      };
-
-      if (!await StorageService.isLoggedIn()) {
-        throw Exception('未登录');
-      }
-      final token = (await StorageService.getToken()) ?? '';
-
-      final response = await ApiService.authenticatedRequest(
-        'POST', '/damage-report', requestData, token,
+      // ── 阶段 3：业务接口提交 ─────────────────────────
+      final apiResult = await EvidenceService.uploadAbnormalBaggageDetailed(
+        baggageNumber: luggageId.trim(),
+        timestamp: timestamp.toUtc().toIso8601String(),
+        location: '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}',
+        imageUrl: photoUrl,
+        damageDescription: damageDescription.trim(),
+        baggageHash: hash,
       );
+      onStageDone?.call('接口调用完成');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
-      } else {
-        await _saveToLocalQueue({...requestData, 'imageBytes': imageBytes});
-        return false;
+      if (apiResult.isSuccess) {
+        return DamageReportResult.ok();
       }
-    } catch (e) {
-      await _saveToLocalQueue({
-        'luggageId': luggageId.trim(),
-        'timestamp': timestamp.toUtc().toIso8601String(),
-        'location': "${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}",
-        'damageDescription': damageDescription,
-        'imageBytes': imageBytes,
-      });
-      return false;
-    }
-  }
-
-  /// 从本地队列提交报告
-  static Future<bool> submitFromLocalQueue(Map<String, dynamic> reportData) async {
-    try {
-      if (!reportData.containsKey('imageBytes') || reportData['imageBytes'] == null) {
-        throw Exception('报告数据缺少图片字节');
-      }
-
-      final imageBytes = reportData['imageBytes'] as Uint8List;
-      final luggageId = reportData['luggageId'] as String;
-      final timestamp = DateTime.parse(reportData['timestamp'] as String);
-      final locationParts = (reportData['location'] as String).split(',');
-      if (locationParts.length < 2) {
-        throw Exception('报告数据中位置信息格式错误: ${reportData['location']}');
-      }
-      final latitude = double.parse(locationParts[0]);
-      final longitude = double.parse(locationParts[1]);
-      final damageDescription = reportData['damageDescription'] as String;
-
-      final hash = await HashService.calculateDamageEvidenceHash(
-        imageBytes: imageBytes,
-        luggageId: luggageId,
-        timestamp: timestamp,
-        latitude: latitude,
-        longitude: longitude,
+      return DamageReportResult.fail(
+        stage: DamageReportStage.businessApi,
+        statusCode: apiResult.statusCode,
+        responseBody: apiResult.body,
       );
-
-      final photoUrl = await OssService.uploadImage(imageBytes);
-
-      final requestData = {
-        'luggageId': luggageId,
-        'timestamp': timestamp.toIso8601String(),
-        'location': reportData['location'] as String,
-        'hash': hash,
-        'photoUrl': photoUrl,
-        'damageDescription': damageDescription,
-      };
-
-      if (!await StorageService.isLoggedIn()) {
-        throw Exception('未登录');
-      }
-      final token = (await StorageService.getToken()) ?? '';
-
-      final response = await ApiService.authenticatedRequest(
-        'POST', '/damage-report', requestData, token,
+    } on OssSignatureException catch (e) {
+      return DamageReportResult.fail(
+        stage: DamageReportStage.ossSignature,
+        statusCode: e.statusCode,
+        responseBody: e.body,
+        exceptionMessage: e.message,
       );
-
-      return response.statusCode >= 200 && response.statusCode < 300;
+    } on OssUploadException catch (e) {
+      return DamageReportResult.fail(
+        stage: DamageReportStage.ossUpload,
+        statusCode: e.statusCode,
+        responseBody: e.body,
+        exceptionMessage: e.message,
+      );
     } catch (e) {
-      return false;
+      return DamageReportResult.fail(
+        stage: DamageReportStage.businessApi,
+        exceptionMessage: e.toString(),
+      );
     }
   }
+}
 
-  /// 处理本地队列
-  static Future<void> processLocalQueue() async {
-    try {
-      final queueItems = await LocalQueueService.getQueueItems();
+/// OSS 签名阶段异常
+class OssSignatureException implements Exception {
+  final String message;
+  final int? statusCode;
+  final String? body;
+  OssSignatureException(this.message, {this.statusCode, this.body});
+  @override
+  String toString() => 'OssSignatureException: $message';
+}
 
-      for (int i = 0; i < queueItems.length; i++) {
-        final success = await submitFromLocalQueue(queueItems[i]);
-        if (success) {
-          await LocalQueueService.removeFromQueue(i);
-        }
-      }
-    } catch (e) {
-      // 保存到本地队列失败，静默处理
-    }
-  }
-
-  /// 保存到本地队列
-  static Future<void> _saveToLocalQueue(Map<String, dynamic> reportData) async {
-    try {
-      final serializableData = Map<String, dynamic>.from(reportData);
-      await LocalQueueService.saveToQueue(serializableData);
-    } catch (e) {
-      // 保存到本地队列失败，静默处理
-    }
-  }
+/// OSS 上传阶段异常
+class OssUploadException implements Exception {
+  final String message;
+  final int? statusCode;
+  final String? body;
+  OssUploadException(this.message, {this.statusCode, this.body});
+  @override
+  String toString() => 'OssUploadException: $message';
 }

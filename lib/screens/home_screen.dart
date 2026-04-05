@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 
-import '../components/stat_card.dart';
 import '../providers/auth_provider.dart';
-import '../constants/app_constants.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import 'qr_scan_screen.dart';
 import 'search_luggage_screen.dart';
+import 'damage_report_screen.dart';
+import 'evidence_list_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -35,17 +34,13 @@ class HomeScreen extends StatelessWidget {
         builder: (context, authProvider, _) {
           return ListView(
             padding: EdgeInsets.symmetric(
-              horizontal: Responsive.padding(context, AppSpacing.pageHorizontal),
+              horizontal: Responsive.padding(context, AppSpacing.sm + 4),
               vertical: Responsive.spacing(context, AppSpacing.sm),
             ),
             children: [
               _buildWelcomeCard(context, authProvider.user),
               SizedBox(height: spacingMd),
-              _buildStartWorkingSection(context),
-              SizedBox(height: spacingMd),
-              _buildStatsSection(context),
-              SizedBox(height: spacingMd),
-              _buildChartSection(context),
+              _buildQuickActionsSection(context),
               SizedBox(height: spacingMd),
               _buildScanButton(context),
               SizedBox(height: spacingMd),
@@ -116,134 +111,126 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStartWorkingSection(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '开始工作',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: Responsive.fontSize(context, 16),
-                  ),
-            ),
-            SizedBox(height: Responsive.spacing(context, 2)),
-            Text(
-              '点击扫描行李二维码',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: Responsive.fontSize(context, 12),
-                  ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsSection(BuildContext context) {
-    final spacingSmVal = Responsive.spacing(context, AppSpacing.sm);
-    final spacingMdVal = Responsive.spacing(context, AppSpacing.md);
+  Widget _buildQuickActionsSection(BuildContext context) {
+    final spacingMd = Responsive.spacing(context, AppSpacing.md);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '今日概览',
+          '快捷操作',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: Responsive.fontSize(context, 15),
+                fontWeight: FontWeight.bold,
+                fontSize: Responsive.fontSize(context, 16),
               ),
         ),
-        SizedBox(height: spacingMdVal),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // 屏宽 < 360 时缩小间距和卡内留白
-            final isNarrow = constraints.maxWidth < 360;
-            final gap = isNarrow ? spacingSmVal * 0.4 : spacingSmVal;
-            final cardPad = isNarrow ? spacingSmVal * 0.6 : spacingSmVal;
-            return Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    title: '今日处理',
-                    value: '${AppConstants.mockTodayProcessed}',
-                    unit: '件',
-                    icon: Icons.check_circle_outline,
-                    color: AppColors.success,
-                    compact: isNarrow,
-                    compactPadding: cardPad,
-                  ),
-                ),
-                SizedBox(width: gap),
-                Expanded(
-                  child: StatCard(
-                    title: '异常行李',
-                    value: '${AppConstants.mockAbnormalLuggage}',
-                    unit: '件',
-                    icon: Icons.warning_amber_outlined,
-                    color: AppColors.warning,
-                    compact: isNarrow,
-                    compactPadding: cardPad,
-                  ),
-                ),
-                SizedBox(width: gap),
-                Expanded(
-                  child: StatCard(
-                    title: '待办事项',
-                    value: '${AppConstants.mockPendingTasks}',
-                    unit: '件',
-                    icon: Icons.pending_actions_outlined,
-                    color: AppColors.error,
-                    compact: isNarrow,
-                    compactPadding: cardPad,
-                  ),
-                ),
-              ],
-            );
-          },
+        SizedBox(height: spacingMd),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: spacingMd,
+          crossAxisSpacing: spacingMd,
+          childAspectRatio: 0.95,
+          children: [
+            _buildActionCard(
+              context,
+              icon: Icons.qr_code_scanner,
+              title: '扫码处理',
+              subtitle: '扫描行李二维码',
+              color: Theme.of(context).colorScheme.primary,
+              onTap: () => _navigateToQrScan(context),
+            ),
+            _buildActionCard(
+              context,
+              icon: Icons.search,
+              title: '查询行李',
+              subtitle: '搜索行李信息',
+              color: AppColors.info,
+              onTap: () => _navigateToSearch(context),
+            ),
+            _buildActionCard(
+              context,
+              icon: Icons.report_problem_outlined,
+              title: '破损登记',
+              subtitle: '登记破损行李',
+              color: AppColors.warning,
+              onTap: () => _navigateToDamageReport(context),
+            ),
+            _buildActionCard(
+              context,
+              icon: Icons.photo_library_outlined,
+              title: '证据查询',
+              subtitle: '查询破损证据',
+              color: AppColors.error,
+              onTap: () => _navigateToEvidence(context),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildChartSection(BuildContext context) {
-    final paddingVal = Responsive.padding(context, AppSpacing.sm);
-    final chartH = Responsive.cardHeight(context, min: 120, max: 200);
-
+  Widget _buildActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
-      child: Padding(
-        padding: EdgeInsets.all(paddingVal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '工作统计',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: Responsive.fontSize(context, 14),
-                  ),
-            ),
-            SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-            SizedBox(
-              height: chartH,
-              // 首帧后再构建图表，减轻主线程卡顿（避免与 FlutterRenderer 首帧尺寸为 0 叠加）
-              child: const _DeferredBarChart(),
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Padding(
+          padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(Responsive.spacing(context, AppSpacing.sm)),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(
+                  icon,
+                  size: Responsive.iconSize(context, 30),
+                  color: color,
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: Responsive.fontSize(context, 16),
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, 2)),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: Responsive.fontSize(context, 12),
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildScanButton(BuildContext context) {
-    final btnH = Responsive.buttonHeight(context, 48);
+    final btnH = Responsive.buttonHeight(context, 54);
 
     return SizedBox(
       width: double.infinity,
@@ -272,158 +259,16 @@ class HomeScreen extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const QrScanScreen()),
     );
   }
-}
 
-/// 首帧结束后再挂载柱状图，降低冷启动时主线程压力
-class _DeferredBarChart extends StatefulWidget {
-  const _DeferredBarChart();
-
-  @override
-  State<_DeferredBarChart> createState() => _DeferredBarChartState();
-}
-
-class _DeferredBarChartState extends State<_DeferredBarChart> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _ready = true);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_ready) {
-      return Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-          ),
-        ),
-      );
-    }
-    return const _WorkStatsBarChart();
-  }
-}
-
-class _WorkStatsBarChart extends StatelessWidget {
-  const _WorkStatsBarChart();
-
-  @override
-  Widget build(BuildContext context) {
-    final peak = [...AppConstants.weekProcessed, ...AppConstants.weekAbnormal]
-        .reduce((a, b) => a > b ? a : b);
-    final maxY = (peak + 4.0).clamp(8.0, 1e9);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _legendDot(AppConstants.chartProcessedColor, '处理行李'),
-            SizedBox(width: Responsive.spacing(context, 16)),
-            _legendDot(AppConstants.chartAbnormalColor, '异常行李'),
-          ],
-        ),
-        SizedBox(height: Responsive.spacing(context, 8)),
-        Expanded(
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: maxY,
-              barTouchData: BarTouchData(enabled: true),
-              titlesData: FlTitlesData(
-                show: true,
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: Responsive.spacing(context, 28),
-                    getTitlesWidget: (value, meta) {
-                      final i = value.toInt();
-                      if (i < 0 || i >= AppConstants.weekDayLabels.length) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: EdgeInsets.only(top: Responsive.spacing(context, 6)),
-                        child: Text(
-                          AppConstants.weekDayLabels[i],
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontSize: Responsive.fontSize(context, 11),
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: Responsive.spacing(context, 32),
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: Responsive.fontSize(context, 11),
-                          ),
-                    ),
-                  ),
-                ),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              ),
-              borderData: FlBorderData(show: false),
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: maxY > 20 ? 5 : 4,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
-                  strokeWidth: 1,
-                ),
-              ),
-              barGroups: List.generate(AppConstants.weekDayLabels.length, (i) {
-                return BarChartGroupData(
-                  x: i,
-                  barsSpace: Responsive.spacing(context, 6).toInt().toDouble(),
-                  barRods: [
-                    BarChartRodData(
-                      toY: AppConstants.weekProcessed[i],
-                      color: AppConstants.chartProcessedColor,
-                      width: Responsive.spacing(context, 10),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                    ),
-                    BarChartRodData(
-                      toY: AppConstants.weekAbnormal[i],
-                      color: AppConstants.chartAbnormalColor,
-                      width: Responsive.spacing(context, 10),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ),
-      ],
+  void _navigateToDamageReport(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DamageReportScreen()),
     );
   }
 
-  Widget _legendDot(Color color, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-        ),
-        const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 11)),
-      ],
+  void _navigateToEvidence(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EvidenceListScreen()),
     );
   }
 }

@@ -81,7 +81,7 @@ class AppConstants {
     'checkIn':    Color(0xFFE3F2FD),
     'inTransit':  Color(0xFFFFF3E0),
     'arrived':    Color(0xFFE8F5E9),
-    'delivered':  Color(0xFFF3E5F5),
+    'delivered':  Color(0xFFE1F5FE),
     'damaged':    Color(0xFFFFEBEE),
     'lost':       Color(0xFFF5F5F5),
   };
