@@ -7,6 +7,7 @@ import '../components/app_text_field.dart';
 import '../components/app_button.dart';
 import '../services/damage_report_service.dart';
 import '../services/permission_service.dart';
+import '../services/luggage_service.dart';
 import '../models/permission_type.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -16,9 +17,12 @@ import '../utils/responsive.dart';
 /// 破损报告界面
 /// 用于提交行李破损报告，包括图片上传、信息填写和哈希计算
 class DamageReportScreen extends StatefulWidget {
+  /// 从扫码页跳转时传入的行李标识（可能是行李号 tagNumber，也可能是数据库 id）
   final String? luggageId;
+  /// 行李的数据库 id（可选），用于提交成功后同步更新行李状态
+  final String? luggageDbId;
 
-  const DamageReportScreen({Key? key, this.luggageId}) : super(key: key);
+  const DamageReportScreen({Key? key, this.luggageId, this.luggageDbId}) : super(key: key);
 
   @override
   State<DamageReportScreen> createState() => _DamageReportScreenState();
@@ -34,6 +38,8 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
   Uint8List? _imageBytes;
   Position? _position;
   bool _isLoading = false;
+  /// 行李的数据库 id，优先用构造器传入的值；若未传入则从行李号查询
+  String? _resolvedLuggageDbId;
 
   @override
   void initState() {
@@ -41,9 +47,26 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     if (widget.luggageId != null) {
       _luggageIdController.text = widget.luggageId!;
     }
+    _resolvedLuggageDbId = widget.luggageDbId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _refreshLocation(showFailureSnack: true);
+      if (mounted) {
+        _refreshLocation(showFailureSnack: true);
+        _resolveLuggageDbId();
+      }
     });
+  }
+
+  /// 若构造器未传 luggageDbId，则通过行李号查询对应的数据库 id
+  Future<void> _resolveLuggageDbId() async {
+    if (_resolvedLuggageDbId != null) return;
+    final tag = _luggageIdController.text.trim();
+    if (tag.isEmpty) return;
+    try {
+      final luggage = await LuggageService.getLuggageForScan(tag);
+      if (mounted && luggage.id.isNotEmpty) {
+        setState(() => _resolvedLuggageDbId = luggage.id);
+      }
+    } catch (_) {}
   }
 
   // ==================== 位置：服务开关 + 最近位置 + 降级精度 ====================
@@ -248,12 +271,13 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
         latitude: pos.latitude,
         longitude: pos.longitude,
         damageDescription: _descriptionController.text.trim(),
+        luggageDbId: _resolvedLuggageDbId,
       );
 
       if (!mounted) return;
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('报告提交成功')),
+          const SnackBar(content: Text('报告提交成功，行李状态已同步为已损坏')),
         );
         _resetForm();
       } else {

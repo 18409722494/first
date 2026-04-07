@@ -30,7 +30,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
 
-  final bool _navigated = false;
+  bool _navigated = false;
   String? _lastRaw;
 
   /// 扫码时是否正在处理（防止重复触发）
@@ -58,69 +58,121 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _processing = true;
     });
 
-    final payload = QrPayload.fromRaw(raw);
-    if (payload.luggageId == null || payload.luggageId!.isEmpty) {
-      if (!mounted) return;
-      _showErrorSnackBar('二维码中未包含行李ID（请检查二维码内容格式）');
-      setState(() => _processing = false);
-      return;
-    }
-
-    // 获取行李信息
-    late Luggage luggage;
     try {
-      luggage = await LuggageService.getLuggageById(payload.luggageId!);
-    } catch (e) {
-      if (!mounted) return;
-      _showErrorSnackBar('获取行李信息失败: $e');
-      setState(() => _processing = false);
-      return;
-    }
-
-    // 获取 GPS 并上传位置
-    String locationName = '';
-    Position? position;
-    try {
-      final hasPermission = await LuggageService.checkLocationPermission();
-      if (hasPermission) {
-        position = await LuggageService.getCurrentDevicePosition();
-        if (position != null) {
-          locationName = '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
-          // 上传到后端
-          final baggageNumber = luggage.tagNumber.isNotEmpty
-              ? luggage.tagNumber
-              : payload.extra['tagNo']?.toString() ?? payload.luggageId ?? '';
-          await LuggageService.updateScanLocation(
-            baggageNumber: baggageNumber,
-            location: locationName,
-          );
-        } else {
-          locationName = luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
-        }
-      } else {
-        locationName = luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+      final payload = QrPayload.fromRaw(raw);
+      if (payload.luggageId == null || payload.luggageId!.isEmpty) {
+        if (!mounted) return;
+        _showErrorSnackBar(
+          '二维码中未包含行李标识（需 JSON/链接参数 luggageId，或多行文本中的「行李号」「行李编号」）',
+        );
+        return;
       }
-    } catch (e) {
-      locationName = luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+
+      // 获取行李信息（支持 id 与行李号 baggageNumber）
+      late Luggage luggage;
+      try {
+        luggage = await LuggageService.getLuggageForScan(payload.luggageId!);
+      } catch (e) {
+        if (!mounted) return;
+        _showErrorSnackBar('获取行李信息失败: $e');
+        return;
+      }
+
+      // 详情页等依赖数据库 id；纯文本码里往往是行李号
+      final payloadResolved = QrPayload(
+        userId: payload.userId,
+        luggageId: luggage.id,
+        role: payload.role,
+        extra: {
+          ...payload.extra,
+          // 扫码原始标识（多为行李号），供 PUT /baggage/location 回退；luggageId 已改为库内 id
+          if (payload.luggageId != null && payload.luggageId!.isNotEmpty)
+            'scannedQrRef': payload.luggageId,
+          if (luggage.tagNumber.isNotEmpty) 'tagNo': luggage.tagNumber,
+        },
+      );
+
+      // 获取 GPS 并上传位置（带完整调试日志）
+      String locationName = '';
+      Position? position;
+      final baggageNumber = luggage.tagNumber.isNotEmpty
+          ? luggage.tagNumber
+          : payload.extra['tagNo']?.toString() ?? payload.luggageId ?? '';
+      try {
+        // ① 检查 GPS 服务开关（与破损登记逻辑一致）
+        final serviceEnabled = await LuggageService.isLocationServiceEnabled();
+
+        if (!serviceEnabled) {
+          locationName =
+              luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+        } else {
+          // ② 多级降级定位（已内置权限检查 + getLastKnownPosition + medium/low 降级）
+          position = await LuggageService.getCurrentDevicePosition();
+
+          if (position != null) {
+            locationName =
+                '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+
+            // ③ 上传到后端
+            await LuggageService.updateScanLocation(
+              baggageNumber: baggageNumber,
+              location: locationName,
+            );
+          } else {
+            locationName =
+                luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+          }
+        }
+      } catch (e) {
+        locationName =
+            luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+      }
+
+      // 停止相机
+      try {
+        await _controller.stop();
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      // 弹出操作选项菜单（作为独立页面推入导航栈，支持返回）
+      final choice = await ScanResultDialog.show(
+        context: context,
+        luggage: luggage,
+        rawQr: raw,
+      );
+
+      if (!mounted) return;
+
+      switch (choice) {
+        case 'confirm_arrived':
+          await _handleConfirmArrived(luggage, raw, payloadResolved, locationName);
+          break;
+        case 'report_damage':
+          await _handleReportDamage(luggage, raw, payloadResolved);
+          break;
+        case 'overweight':
+          await _handleOverweight(luggage, raw, payloadResolved);
+          break;
+        case 'contact_passenger':
+          await _handleContactPassenger(luggage, raw, payloadResolved);
+          break;
+        case 'view_detail':
+          await _handleViewDetail(luggage, raw, payloadResolved);
+          break;
+        default:
+          // null（用户取消/返回）→ 留在扫码页，不做额外操作
+          break;
+      }
+
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        try {
+          await _controller.start();
+        } catch (_) {}
+      }
     }
-
-    await _controller.stop();
-    if (!mounted) return;
-
-    // 弹出操作选项菜单
-    await ScanResultDialog.show(
-      context: context,
-      luggage: luggage,
-      rawQr: raw,
-      onConfirmArrived: () => _handleConfirmArrived(luggage, raw, payload, locationName),
-      onReportDamage: () => _handleReportDamage(luggage, raw, payload),
-      onOverweight: () => _handleOverweight(luggage, raw, payload),
-      onContactPassenger: () => _handleContactPassenger(luggage, raw, payload),
-      onViewDetail: () => _handleViewDetail(luggage, raw, payload),
-    );
-
-    setState(() => _processing = false);
-    await _controller.start();
   }
 
   void _showErrorSnackBar(String msg) {
@@ -131,7 +183,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   // ==================== 操作处理 ====================
 
-  /// 确认到达：更新状态 → arrived
+  /// 确认到达：PUT /baggage/location 写入位置 + 状态「已达」，并同步本地 PUT /luggage
   Future<void> _handleConfirmArrived(
     Luggage luggage,
     String raw,
@@ -139,13 +191,31 @@ class _QrScanScreenState extends State<QrScanScreen> {
     String locationName,
   ) async {
     try {
-      await LuggageService.updateLuggage(luggage.id, {
-        'status': 'arrived',
-        'destination': locationName,
-      });
+      final baggageNumber = luggage.tagNumber.isNotEmpty
+          ? luggage.tagNumber
+          : payload.extra['tagNo']?.toString() ??
+              payload.extra['scannedQrRef']?.toString() ??
+              '';
+      if (baggageNumber.isEmpty) {
+        _showErrorSnackBar('无法同步：缺少行李号 baggageNumber');
+        return;
+      }
+      await LuggageService.updateScanLocation(
+        baggageNumber: baggageNumber,
+        location: locationName.isNotEmpty ? locationName : luggage.destination,
+        status: BaggageStatusMapper.toBackendLocationStatus(LuggageStatus.arrived),
+      );
+      try {
+        await LuggageService.updateLuggage(luggage.id, {
+          'status': LuggageStatus.arrived.name,
+          'destination': locationName,
+        });
+      } catch (_) {
+        // 主数据已在 baggage/location 更新；本地 /luggage 不可用时忽略
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('状态已更新为：已到达')),
+        const SnackBar(content: Text('状态已更新为：已到达（已同步后端）')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -162,7 +232,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DamageReportScreen(luggageId: luggage.id),
+        builder: (_) => DamageReportScreen(
+          luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+          luggageDbId: luggage.id,
+        ),
       ),
     );
   }
@@ -249,7 +322,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                           CircularProgressIndicator(color: Colors.white),
                           SizedBox(height: 16),
                           Text(
-                            '正在获取位置并上传...',
+                            '正在处理...',
                             style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                         ],
@@ -279,7 +352,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           Padding(
             padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
             child: Text(
-              '提示：扫码后系统将自动获取GPS并上传位置，然后弹出操作选项。',
+              '提示：扫码后将弹出操作选项。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[700],
                   ),

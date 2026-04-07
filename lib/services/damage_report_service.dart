@@ -1,6 +1,10 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import '../models/luggage.dart';
 import '../services/evidence_service.dart';
 import '../services/hash_service.dart';
+import '../services/baggage_api_service.dart';
+import '../services/luggage_service.dart';
 import '../services/oss_service.dart';
 
 /// 破损报告提交结果（区分阶段）
@@ -91,6 +95,7 @@ class DamageReportResult {
 class DamageReportService {
   /// 提交破损报告
   /// [onStageDone] 可选回调，每完成一个阶段时通知（用于 UI 进度展示）
+  /// [luggageDbId] 可选；仅当 [luggageId] 无法用于旧版 `PUT /luggage` 回退时保留
   static Future<DamageReportResult> submitDamageReport({
     required Uint8List imageBytes,
     required String luggageId,
@@ -99,6 +104,7 @@ class DamageReportService {
     required double longitude,
     required String damageDescription,
     void Function(String stageLabel)? onStageDone,
+    String? luggageDbId,
   }) async {
     try {
       // ── 阶段 1：哈希计算 ──────────────────────────────
@@ -127,6 +133,53 @@ class DamageReportService {
       onStageDone?.call('接口调用完成');
 
       if (apiResult.isSuccess) {
+        // ── 阶段 4：可选二次校验 GET /abnormal-baggage/verify ────
+        final verifyResult = await EvidenceService.verifyEvidenceHash(hash);
+        if (verifyResult.verified && !verifyResult.matches) {
+          return DamageReportResult.fail(
+            stage: DamageReportStage.businessApi,
+            responseBody:
+                '哈希校验未通过：${verifyResult.message ?? '与后端记录不一致'}（图片或元数据可能被篡改）',
+          );
+        }
+        if (verifyResult.backendUnavailable) {
+          onStageDone?.call('⚠ 跳过二次哈希校验（接口不可用或响应无法解析）');
+        } else if (verifyResult.verified && verifyResult.matches) {
+          onStageDone?.call('哈希验证通过');
+        } else {
+          onStageDone?.call('提交成功（后端未返回明确校验结果，以 upload 成功为准）');
+        }
+
+        // ── 阶段 5：同步主表 baggageStatus（与 GET /baggage/all 同源）────────
+        // 原先 PUT /luggage/{id} 不会更新 baggage 表，故列表里 baggageStatus 仍为 null。
+        final tag = luggageId.trim();
+        if (tag.isNotEmpty) {
+          try {
+            final loc =
+                '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}';
+            await BaggageApiService.updateBaggageLocation(
+              baggageNumber: tag,
+              location: loc,
+              status: BaggageStatusMapper.toBackendLocationStatus(
+                LuggageStatus.damaged,
+              ),
+            );
+            onStageDone?.call('行李状态已同步为已损坏');
+          } catch (e) {
+            debugPrint('POST /baggage/location 同步破损状态失败: $e');
+            if (luggageDbId != null && luggageDbId.isNotEmpty) {
+              try {
+                await LuggageService.updateLuggage(luggageDbId, {
+                  'status': LuggageStatus.damaged.name,
+                });
+                onStageDone?.call('行李状态已同步为已损坏（旧接口）');
+              } catch (e2) {
+                debugPrint('PUT /luggage 同步失败: $e2');
+              }
+            }
+          }
+        }
+
         return DamageReportResult.ok();
       }
       return DamageReportResult.fail(

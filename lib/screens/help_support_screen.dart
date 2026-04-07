@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
+import 'help_page_screen.dart';
 
 /// 帮助与支持详情页面
 /// 显示和管理帮助与支持相关的功能
@@ -110,8 +111,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   title: Text('使用帮助', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('使用帮助功能已启用')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const HelpPageScreen(),
+                      ),
                     );
                   },
                 ),

@@ -97,17 +97,19 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
         title: const Text('查询行李'),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: EdgeInsets.all(paddingSm),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: _searchController,
                   style: TextStyle(fontSize: Responsive.fontSize(context, 14)),
                   decoration: InputDecoration(
-                    labelText: '搜索（标签号、航班号、乘客姓名）',
-                    hintText: '请输入搜索关键词',
+                    labelText: '搜索行李',
+                    hintText: '标签号、航班号、乘客姓名或目的地',
                     isDense: true,
                     border: const OutlineInputBorder(),
                     suffixIcon: Row(
@@ -141,6 +143,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
 
                 DropdownButtonFormField<LuggageStatus?>(
                   value: _selectedStatus,
+                  isExpanded: true,
                   isDense: true,
                   decoration: const InputDecoration(
                     labelText: '状态过滤',
@@ -168,14 +171,19 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                 ),
                 SizedBox(height: spacingXs),
 
+                // 勿用小于主题 padding+字高的固定 height，否则会裁剪按钮导致文字竖排/只显示一半
                 SizedBox(
                   width: double.infinity,
-                  height: Responsive.buttonHeight(context, 42),
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _performSearch,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
+                      minimumSize: Size(
+                        double.infinity,
+                        Responsive.buttonHeight(context, 48)
+                            .clamp(kMinInteractiveDimension, 56),
+                      ),
                     ),
                     child: _isLoading
                         ? SizedBox(
@@ -186,7 +194,10 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text('执行搜索', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                        : Text(
+                            '执行搜索',
+                            style: TextStyle(fontSize: Responsive.fontSize(context, 14)),
+                          ),
                   ),
                 ),
               ],

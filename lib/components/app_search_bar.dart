@@ -6,7 +6,6 @@ import '../models/luggage.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import 'status_badge.dart';
 
 /// 统一搜索栏组件
 /// 支持文本搜索、状态过滤和防抖功能
@@ -210,6 +209,7 @@ class FilterChipGroup extends StatelessWidget {
     }
 
     if (scrollable) {
+      // 固定「全部」Chip，状态 Chip 横向滚动
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: padding ?? const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -227,14 +227,7 @@ class FilterChipGroup extends StatelessWidget {
 
     return Padding(
       padding: padding ?? EdgeInsets.zero,
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        children: [
-          if (showAll) _buildAllChip(context),
-          ..._buildStatusChips(context),
-        ],
-      ),
+      child: chipGroup,
     );
   }
 

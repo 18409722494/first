@@ -34,13 +34,13 @@ class LuggageUtils {
 
   /// 获取行李状态的主颜色（适合标签/文字）
   static Color getStatusColor(LuggageStatus status) {
-    final key = status.toString().split('.').last;
+    final key = status.name;
     return AppConstants.luggageStatusColors[key] ?? Colors.grey;
   }
 
   /// 获取行李状态的浅色背景（适合Chip/Container背景）
   static Color getStatusBgColor(LuggageStatus status) {
-    final key = status.toString().split('.').last;
+    final key = status.name;
     return AppConstants.luggageStatusBgColors[key] ?? Colors.grey.shade100;
   }
 

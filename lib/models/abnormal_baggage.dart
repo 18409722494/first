@@ -27,7 +27,11 @@ class AbnormalBaggage {
     DateTime? parseTime(dynamic v) {
       if (v == null) return null;
       if (v is DateTime) return v;
-      return DateTime.tryParse(v.toString());
+      // DateTime.tryParse 将 ISO 8601 UTC 时间（如 2026-04-06T11:32:00Z）当作本地时间解析，
+      // 故手动先按 UTC 解析再转本地时区，保证显示时间与后端存储一致（均以本地为准）。
+      final parsed = DateTime.tryParse(v.toString());
+      if (parsed == null) return null;
+      return parsed.toLocal();
     }
 
     return AbnormalBaggage(

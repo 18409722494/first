@@ -3,12 +3,26 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 import 'damage_report_service.dart';
+import 'oss_presigned_put.dart';
 
 /// OSS服务类
 /// 流程：Flutter → 后端签名接口 → 拿签名URL PUT上传到OSS
 class OssService {
   /// 后端签名接口地址
   static String get _signatureApi => '${AppConstants.apiBaseUrl}/oss/generate-url';
+
+  /// 预签名 URL 的 query 里 Signature 为 Base64，常含 `+`。
+  /// Dart 的 [Uri] 在解析/序列化时可能把 `+` 当成空格，导致与后端签名不一致 → SignatureDoesNotMatch。
+  static String _fixSignaturePlusInUrl(String url) {
+    return url.replaceAllMapped(
+      RegExp(r'([?&]Signature=)([^&]*)', caseSensitive: false),
+      (m) {
+        final prefix = m.group(1)!;
+        final sig = m.group(2)!;
+        return '$prefix${sig.replaceAll('+', '%2B')}';
+      },
+    );
+  }
 
   /// 生成OSS文件路径（存储在Bucket内的路径）
   static String _generateObjectName({String? fileName}) {
@@ -19,14 +33,18 @@ class OssService {
     return 'damage/$dateStr/$name';
   }
 
-  /// 从后端获取OSS签名上传URL
+  /// 从后端获取OSS签名上传URL（POST）
   static Future<String> _getSignedUrl(String objectName) async {
     try {
       final response = await http
           .post(
             Uri.parse(_signatureApi),
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({'objectName': objectName}),
+            body: json.encode({
+              'objectName': objectName,
+              'contentType': 'image/jpeg',
+              'expiration': 3600,
+            }),
           )
           .timeout(const Duration(seconds: 15));
 
@@ -54,7 +72,8 @@ class OssService {
         );
       }
 
-      return jsonResponse['data'] as String;
+      // 后端返回的 URL 可能是 http://，保持原样使用
+      return _fixSignaturePlusInUrl(jsonResponse['data'] as String);
     } on OssSignatureException {
       rethrow;
     } catch (e) {
@@ -75,13 +94,10 @@ class OssService {
     final signedUrl = await _getSignedUrl(objectName);
 
     try {
-      final putResponse = await http
-          .put(
-            Uri.parse(signedUrl),
-            body: imageBytes,
-            headers: {'Content-Type': 'image/jpeg'},
-          )
-          .timeout(const Duration(seconds: 30));
+      final putResponse = await ossPresignedPut(
+        signedUrl,
+        imageBytes,
+      ).timeout(const Duration(seconds: 30));
 
       if (putResponse.statusCode != 200 && putResponse.statusCode != 204) {
         throw OssUploadException(
@@ -100,6 +116,7 @@ class OssService {
       );
     }
 
+    // 返回可访问的图片URL（使用 https）
     return 'https://gra-duation-project.oss-cn-beijing.aliyuncs.com/$objectName';
   }
 }

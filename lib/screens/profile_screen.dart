@@ -346,9 +346,9 @@ class ProfileScreen extends StatelessWidget {
     double iconSize = 20,
     double paddingV = 16,
   }) {
+    // 勿用固定高度包裹按钮：主题已有较大 vertical padding，height 过小会裁剪图标与文字
     return SizedBox(
       width: double.infinity,
-      height: paddingV * 1.8,
       child: ElevatedButton.icon(
         onPressed: () async {
           final confirm = await showDialog<bool>(
@@ -389,7 +389,11 @@ class ProfileScreen extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.error,
           foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: paddingV),
+          minimumSize: const Size(double.infinity, kMinInteractiveDimension),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: paddingV.clamp(12.0, 18.0),
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),
           ),

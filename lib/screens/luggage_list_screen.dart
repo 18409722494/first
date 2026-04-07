@@ -132,8 +132,9 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
           luggage.tagNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           luggage.passengerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           luggage.destination.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesStatus = _statusFilter == null ||
-          luggage.status.toString().split('.').last == _statusFilter;
+      // 使用 enum.name：LuggageStatus.toString() 返回中文 displayName，不能用于筛选键
+      final matchesStatus =
+          _statusFilter == null || luggage.status.name == _statusFilter;
       return matchesSearch && matchesStatus;
     }).toList();
   }
@@ -275,7 +276,10 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
             onTap: () {
               Navigator.pop(ctx2);
               Navigator.of(ctx2).push(
-                MaterialPageRoute(builder: (_) => DamageReportScreen(luggageId: luggage.id)),
+                MaterialPageRoute(builder: (_) => DamageReportScreen(
+                  luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+                  luggageDbId: luggage.id,
+                )),
               ).then((result) { if (result == true) _refresh(); });
             },
           ),

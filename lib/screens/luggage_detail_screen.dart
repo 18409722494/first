@@ -61,7 +61,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       final luggageId = widget.qrPayload.luggageId!;
       final luggage = await LuggageService.getLuggageById(luggageId);
       _luggage = luggage;
-      _statusCtrl.text = luggage.status.toString().split('.').last;
+      _statusCtrl.text = luggage.status.displayName;
       _locationCtrl.text = luggage.destination;
       _noteCtrl.text = luggage.notes;
     } catch (e) {
@@ -95,11 +95,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: _locationCtrl.text.trim(),
+        status: BaggageStatusMapper.toBackendLocationStatus(_luggage!.status),
       );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('位置已更新到后端')),
+        const SnackBar(content: Text('位置与状态已同步到后端')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -122,24 +123,43 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     });
 
     try {
-      LuggageStatus? status;
-      final statusText = _statusCtrl.text.trim();
-      if (statusText.isNotEmpty) {
-        try {
-          status = LuggageStatus.values.firstWhere(
-            (s) => s.toString().split('.').last == statusText,
-          );
-        } catch (e) {
-          status = LuggageStatus.checkIn;
-        }
+      final status = BaggageStatusMapper.parseFromUserInput(
+        _statusCtrl.text,
+        _luggage!.status,
+      );
+      final baggageNumber = _luggage!.tagNumber.isNotEmpty
+          ? _luggage!.tagNumber
+          : widget.qrPayload.extra['tagNo']?.toString() ?? widget.qrPayload.luggageId ?? '';
+      final locationText = _locationCtrl.text.trim();
+      final locationForApi = locationText.isNotEmpty
+          ? locationText
+          : (_luggage!.destination.isNotEmpty ? _luggage!.destination : '未知位置');
+
+      if (baggageNumber.isNotEmpty) {
+        await LuggageService.updateScanLocation(
+          baggageNumber: baggageNumber,
+          location: locationForApi,
+          status: BaggageStatusMapper.toBackendLocationStatus(status),
+        );
       }
 
-      final updated = await LuggageService.updateLuggage(_luggage!.id, {
-        'status': status?.toString().split('.').last,
-        'destination': _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-        'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      });
-      _luggage = updated;
+      Luggage updated;
+      try {
+        updated = await LuggageService.updateLuggage(_luggage!.id, {
+          'status': status.name,
+          'destination': locationText.isEmpty ? null : locationText,
+          'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        });
+      } catch (_) {
+        updated = _luggage!.copyWith(
+          status: status,
+          destination: locationText.isNotEmpty ? locationText : _luggage!.destination,
+          notes: _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : _luggage!.notes,
+          lastUpdated: DateTime.now(),
+        );
+      }
+      _luggage = updated.copyWith(status: status);
+      _statusCtrl.text = _luggage!.status.displayName;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('更新成功')));
     } catch (e) {

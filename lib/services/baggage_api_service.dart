@@ -135,51 +135,33 @@ class BaggageApiService {
     }
 
     return Luggage(
-      id: json['id']?.toString() ?? '',
+      id: (json['id']?.toString().isNotEmpty ?? false)
+          ? json['id'].toString()
+          : (json['baggageNumber']?.toString().isNotEmpty ?? false)
+              ? json['baggageNumber'].toString()
+              : (json['_id']?.toString().isNotEmpty ?? false)
+                  ? json['_id'].toString()
+                  : '',
       tagNumber: json['baggageNumber']?.toString() ?? json['baggage_no']?.toString() ?? '',
       flightNumber: json['flightNumber']?.toString() ?? json['flight_no']?.toString() ?? '',
       passengerName: json['passengerName']?.toString() ?? json['passenger_name']?.toString() ?? '',
       weight: parseDouble(json['weight'] ?? json['weightKg'] ?? json['weight_kg']) ?? 0.0,
-      status: _parseStatus(json['status']),
+      // 后端表字段为 baggageStatus；旧字段名 status 作回退
+      status: _parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['flightTime'] ?? json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
       lastUpdated: parseTime(json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
       destination: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
-      notes: json['notes']?.toString() ?? json['remark']?.toString() ?? '',
+      notes: json['notes']?.toString() ??
+          json['remark']?.toString() ??
+          json['baggageRemark']?.toString() ??
+          '',
       latitude: parseDouble(json['latitude'] ?? json['lat']),
       longitude: parseDouble(json['longitude'] ?? json['lng'] ?? json['lon']),
     );
   }
 
-  /// 解析行李状态
-  static LuggageStatus _parseStatus(dynamic v) {
-    if (v == null) return LuggageStatus.checkIn;
-    if (v is LuggageStatus) return v;
-    final s = v.toString().toLowerCase();
-    switch (s) {
-      case 'in_transit':
-      case 'intransit':
-      case 'transporting':
-        return LuggageStatus.inTransit;
-      case 'arrived':
-      case 'arrival':
-        return LuggageStatus.arrived;
-      case 'delivered':
-      case 'claimed':
-        return LuggageStatus.delivered;
-      case 'damaged':
-      case 'broken':
-        return LuggageStatus.damaged;
-      case 'lost':
-      case 'missing':
-        return LuggageStatus.lost;
-      case 'checkin':
-      case 'check_in':
-      case 'checked':
-        return LuggageStatus.checkIn;
-      default:
-        return LuggageStatus.checkIn;
-    }
-  }
+  /// 解析行李状态（与 [Luggage.fromJson] 一致，支持中文）
+  static LuggageStatus _parseStatus(dynamic v) => BaggageStatusMapper.parseFromApi(v);
 
   /// 将行李转换为后端需要的格式
   static Map<String, dynamic> toBaggageJson(Luggage luggage) {
@@ -241,23 +223,33 @@ class BaggageApiService {
     }
   }
 
-  /// 更新行李扫码位置
+  /// 更新行李位置与状态（PUT /baggage/location）
   static Future<Map<String, dynamic>> updateBaggageLocation({
     required String baggageNumber,
     required String location,
+    String? status,
   }) async {
     try {
-      final response = await http.put(
+      final body = <String, dynamic>{
+        'baggageNumber': baggageNumber,
+        'location': location,
+        if (status != null && status.isNotEmpty) 'status': status,
+      };
+      final response = await http.post(
         Uri.parse('$_baseUrl/baggage/location'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'baggageNumber': baggageNumber,
-          'location': location,
-        }),
+        body: jsonEncode(body),
       ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final map = jsonDecode(response.body) as Map<String, dynamic>;
+        final ok = map['result']?.toString().toLowerCase() == 'success' ||
+            map['success'] == true ||
+            map['code']?.toString() == '0';
+        if (ok || !map.containsKey('result')) {
+          return map;
+        }
+        throw Exception(map['message']?.toString() ?? '更新行李失败');
       } else {
         throw Exception('更新行李位置失败: ${response.statusCode}');
       }

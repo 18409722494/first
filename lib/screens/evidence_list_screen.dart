@@ -19,7 +19,6 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
   List<AbnormalBaggage> _allItems = [];
   List<AbnormalBaggage> _filteredItems = [];
   bool _isLoading = true;
-  bool _isSearching = false;
   String? _error;
   String _searchQuery = '';
   DateTimeRange? _dateRange;
@@ -134,7 +133,6 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
   @override
   Widget build(BuildContext context) {
     final padMd = Responsive.padding(context, AppSpacing.md);
-    final padSm = Responsive.padding(context, AppSpacing.sm);
     final spSm = Responsive.spacing(context, AppSpacing.sm);
 
     return Scaffold(

@@ -17,70 +17,40 @@ import 'status_badge.dart';
 class ScanResultDialog extends StatelessWidget {
   final Luggage luggage;
   final String rawQr;
-  final VoidCallback onConfirmArrived;
-  final VoidCallback onReportDamage;
-  final VoidCallback onOverweight;
-  final VoidCallback onContactPassenger;
-  final VoidCallback onViewDetail;
-  final VoidCallback onDismiss;
 
   const ScanResultDialog({
     super.key,
     required this.luggage,
     required this.rawQr,
-    required this.onConfirmArrived,
-    required this.onReportDamage,
-    required this.onOverweight,
-    required this.onContactPassenger,
-    required this.onViewDetail,
-    required this.onDismiss,
   });
 
-  static Future<void> show({
+  /// 返回值语义：
+  /// - 'confirm_arrived'   → 留在扫码页，不额外导航
+  /// - 'report_damage'     → 跳转破损报告页
+  /// - 'overweight'        → 跳转超重费用页
+  /// - 'contact_passenger' → 跳转联系方式页
+  /// - 'view_detail'       → 跳转行李详情页
+  /// - null                → 用户按返回/取消，留在扫码页
+  static Future<String?> show({
     required BuildContext context,
     required Luggage luggage,
     required String rawQr,
-    required VoidCallback onConfirmArrived,
-    required VoidCallback onReportDamage,
-    required VoidCallback onOverweight,
-    required VoidCallback onContactPassenger,
-    required VoidCallback onViewDetail,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ScanResultDialog(
-        luggage: luggage,
-        rawQr: rawQr,
-        onConfirmArrived: () {
-          Navigator.pop(context);
-          onConfirmArrived();
-        },
-        onReportDamage: () {
-          Navigator.pop(context);
-          onReportDamage();
-        },
-        onOverweight: () {
-          Navigator.pop(context);
-          onOverweight();
-        },
-        onContactPassenger: () {
-          Navigator.pop(context);
-          onContactPassenger();
-        },
-        onViewDetail: () {
-          Navigator.pop(context);
-          onViewDetail();
-        },
-        onDismiss: () => Navigator.pop(context),
+    return Navigator.of(context).push<String>(
+      _ScanResultDialogRoute(
+        builder: (_) => ScanResultDialog(luggage: luggage, rawQr: rawQr),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) Navigator.of(context).pop<String>(null);
+      },
+      child: Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.vertical(
@@ -103,7 +73,8 @@ class ScanResultDialog extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildHandle(BuildContext context) {
@@ -229,7 +200,7 @@ class ScanResultDialog extends StatelessWidget {
                   icon: Icons.check_circle_outline,
                   label: '确认到达',
                   color: AppColors.success,
-                  onTap: onConfirmArrived,
+                  onTap: () => Navigator.of(context).pop<String>('confirm_arrived'),
                 ),
               ),
               SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
@@ -238,7 +209,7 @@ class ScanResultDialog extends StatelessWidget {
                   icon: Icons.broken_image_outlined,
                   label: '标记破损',
                   color: AppColors.error,
-                  onTap: onReportDamage,
+                  onTap: () => Navigator.of(context).pop<String>('report_damage'),
                 ),
               ),
             ],
@@ -251,7 +222,7 @@ class ScanResultDialog extends StatelessWidget {
                   icon: Icons.scale_outlined,
                   label: '超重处理',
                   color: AppColors.warning,
-                  onTap: onOverweight,
+                  onTap: () => Navigator.of(context).pop<String>('overweight'),
                 ),
               ),
               SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
@@ -260,7 +231,7 @@ class ScanResultDialog extends StatelessWidget {
                   icon: Icons.phone_outlined,
                   label: '联系旅客',
                   color: AppColors.primary,
-                  onTap: onContactPassenger,
+                  onTap: () => Navigator.of(context).pop<String>('contact_passenger'),
                 ),
               ),
             ],
@@ -274,7 +245,7 @@ class ScanResultDialog extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context, AppSpacing.md)),
       child: TextButton(
-        onPressed: onDismiss,
+        onPressed: () => Navigator.of(context).pop<String>(null),
         style: TextButton.styleFrom(
           minimumSize: Size(double.infinity, Responsive.height(context, 44)),
         ),
@@ -332,6 +303,53 @@ class _ActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 自定义路由：将 [ScanResultDialog] 以底部弹页形式推入导航栈
+class _ScanResultDialogRoute<T> extends PopupRoute<T> {
+  final WidgetBuilder builder;
+
+  _ScanResultDialogRoute({required this.builder});
+
+  @override
+  Color? get barrierColor => Colors.black54;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  String? get barrierLabel => 'ScanResultDialog';
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 300);
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return builder(context);
+  }
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      )),
+      child: child,
     );
   }
 }

@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'providers/auth_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/settings_service.dart';
+import 'services/network_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,11 +17,15 @@ void main() async {
   try {
     await dotenv.load(fileName: '.env');
   } catch (e) {
-    debugPrint('Warning: .env 加载失败，将使用 AppConstants 中的 dart-define / 默认回退: $e');
+    debugPrint('Warning: .env 加载失败，将使用 AppConstants 中 dart-define / 默认回退: $e');
   }
 
-  // 初始化Hive本地存储（用于离线队列）
+  // 初始化 Hive 本地存储
   await Hive.initFlutter();
+  // 初始化设置服务
+  await SettingsService.init();
+  // 初始化网络监听（启动离线检测与 OfflineIndicator 联动）
+  NetworkService().initialize();
 
   runApp(const MyApp());
 }
@@ -28,16 +35,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
-      child: MaterialApp(
-        title: '行李管理系统',
-        debugShowCheckedModeBanner: false,
-        locale: const Locale('zh', 'CN'),
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: const AuthWrapper(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+      ],
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, child) {
+          return MaterialApp(
+            title: '行李管理系统',
+            debugShowCheckedModeBanner: false,
+            locale: settings.locale,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }

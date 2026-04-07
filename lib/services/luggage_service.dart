@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:collection/collection.dart';
+import '../constants/app_constants.dart';
 import '../models/luggage.dart';
 import '../data/mock_data.dart';
 import 'api_service.dart';
@@ -69,6 +71,21 @@ class LuggageService {
     return MockData.getLuggageList();
   }
 
+  /// 扫码解析出的可能是数据库 id，也可能是行李号 [baggageNumber]，依次尝试解析。
+  static Future<Luggage> getLuggageForScan(String luggageIdOrBaggageNumber) async {
+    final key = luggageIdOrBaggageNumber.trim();
+    if (key.isEmpty) {
+      throw Exception('缺少行李标识');
+    }
+    try {
+      return await getLuggageById(key);
+    } catch (_) {
+      final byTag = await searchByTagNumber(key);
+      if (byTag != null) return byTag;
+      throw Exception('未找到行李（已按ID与行李号尝试）: $key');
+    }
+  }
+
   /// 获取行李详情
   static Future<Luggage> getLuggageById(String luggageId) async {
     try {
@@ -125,9 +142,9 @@ class LuggageService {
       var luggage = mockLuggage;
       if (patch.containsKey('status')) {
         try {
-          final statusStr = patch['status'] as String;
+          final statusStr = patch['status'].toString();
           final status = LuggageStatus.values.firstWhere(
-            (s) => s.toString().split('.').last == statusStr,
+            (s) => s.name == statusStr,
           );
           luggage = luggage.copyWith(status: status);
         } catch (_) {}
@@ -163,7 +180,7 @@ class LuggageService {
       final statusStr = payload['status']?.toString() ?? '';
       if (statusStr.isNotEmpty) {
         final found = LuggageStatus.values.firstWhereOrNull(
-          (s) => s.toString().split('.').last == statusStr,
+          (s) => s.name == statusStr,
         );
         if (found != null) status = found;
       }
@@ -316,22 +333,50 @@ class LuggageService {
     }
   }
 
-  /// 更新行李扫码位置
+  /// 更新行李扫码位置与状态
   ///
   /// 调用后端接口: PUT /baggage/location
-  /// 请求: { baggageNumber, location }
-  /// 返回: { baggageNumber, location }
+  /// 请求: { baggageNumber, location, status? }（status 为后端中文，如「已达」）
   static Future<Map<String, dynamic>> updateScanLocation({
     required String baggageNumber,
     required String location,
+    String? status,
   }) async {
     try {
       return await BaggageApiService.updateBaggageLocation(
         baggageNumber: baggageNumber,
         location: location,
+        status: status,
       );
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// 获取需要处理的超重行李列表（重量 > 免费额度）
+  static Future<List<Luggage>> getOverweightLuggage() async {
+    try {
+      final result = await getLuggageList(page: 1, pageSize: 9999);
+      return result.items
+          .where((item) => item.weight > AppConstants.freeBaggageWeightKg)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取无人认领行李列表（已到达但超过 [hours] 小时未交付）
+  static Future<List<Luggage>> getUnclaimedLuggage({int hours = 24}) async {
+    try {
+      final result = await getLuggageList(page: 1, pageSize: 9999);
+      final threshold = DateTime.now().subtract(Duration(hours: hours));
+      return result.items
+          .where((item) =>
+              item.status == LuggageStatus.arrived &&
+              item.lastUpdated.isBefore(threshold))
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 
@@ -347,28 +392,51 @@ class LuggageService {
         permission == LocationPermission.always;
   }
 
-  /// 获取设备当前位置
+  /// 获取设备当前位置（多级降级策略，优先保证成功率而非精度）
   ///
-  /// [retryCount] 重试次数，默认3次
-  /// [timeout] 每次获取超时时间，默认10秒
-  /// 返回 Position 或 null（获取失败时）
+  /// 降级顺序：
+  /// 1. 最近已知位置（60 分钟内，室内秒级返回）
+  /// 2. 实时定位：medium 精度（室内适用）
+  /// 3. 实时定位：low 精度（最后兜底）
+  /// 每次精度最多重试 2 次，超时 25 秒/次
   static Future<Position?> getCurrentDevicePosition({
-    int retryCount = 3,
-    Duration timeout = const Duration(seconds: 10),
+    int retryPerAccuracy = 2,
+    Duration timeout = const Duration(seconds: 25),
   }) async {
-    for (int i = 0; i < retryCount; i++) {
-      try {
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: timeout,
-        );
-        return position;
-      } catch (_) {
-        if (i < retryCount - 1) {
-          await Future.delayed(const Duration(seconds: 2));
+    // 1) 最近已知位置（优先，室内/弱 GPS 时秒级返回）
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        final age = DateTime.now().difference(last.timestamp);
+        if (age.inMinutes <= 60) {
+          debugPrint('getCurrentDevicePosition: 使用缓存位置 (${age.inMinutes}分钟前)');
+          return last;
+        }
+      }
+    } catch (e) {
+      debugPrint('getCurrentDevicePosition: 缓存位置获取失败 $e');
+    }
+
+    // 2) 实时定位：精度逐级降级
+    for (final accuracy in [LocationAccuracy.medium, LocationAccuracy.low]) {
+      for (int attempt = 0; attempt < retryPerAccuracy; attempt++) {
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: accuracy,
+            timeLimit: timeout,
+          );
+          debugPrint('getCurrentDevicePosition: 获取成功 (accuracy=$accuracy, 第${attempt + 1}次)');
+          return position;
+        } catch (e) {
+          debugPrint('getCurrentDevicePosition: accuracy=$accuracy 第${attempt + 1}次失败 $e');
+          if (attempt < retryPerAccuracy - 1) {
+            await Future.delayed(const Duration(seconds: 1));
+          }
         }
       }
     }
+
+    debugPrint('getCurrentDevicePosition: 所有策略均失败，返回 null');
     return null;
   }
 
