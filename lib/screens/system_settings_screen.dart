@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
@@ -13,33 +14,57 @@ class SystemSettingsScreen extends StatefulWidget {
 }
 
 class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
+  String _getCurrentLanguageLabel(BuildContext context, Locale locale) {
+    final l10n = AppLocalizations.of(context)!;
+    if (locale.languageCode == 'zh') return l10n.simplifiedChinese;
+    if (locale.languageCode == 'en') return l10n.english;
+    return l10n.simplifiedChinese;
+  }
+
+  String _getCurrentThemeLabel(BuildContext context, ThemeMode mode) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (mode) {
+      case ThemeMode.light:
+        return l10n.lightMode;
+      case ThemeMode.dark:
+        return l10n.darkMode;
+      case ThemeMode.system:
+        return l10n.systemMode;
+    }
+  }
 
   void _showLanguageDialog(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    final locales = [
-      {'code': 'zh_CN', 'label': '简体中文'},
-      {'code': 'en_US', 'label': 'English'},
-    ];
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('语言设置'),
+        title: Text(l10n.languageSettings),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: locales.map((item) {
-            final isSelected = settings.locale.languageCode == item['code']!.split('_')[0];
-            return ListTile(
-              title: Text(item['label'] as String),
-              trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+          children: [
+            ListTile(
+              title: Text(l10n.simplifiedChinese),
+              trailing: settings.locale.languageCode == 'zh'
+                  ? const Icon(Icons.check, color: Colors.green)
+                  : null,
               onTap: () {
-                final code = item['code'] as String;
-                final parts = code.split('_');
-                settings.setLocale(Locale(parts[0], parts.length > 1 ? parts[1] : ''));
+                settings.setLocale(const Locale('zh', 'CN'));
                 Navigator.pop(dialogContext);
               },
-            );
-          }).toList(),
+            ),
+            ListTile(
+              title: Text(l10n.english),
+              trailing: settings.locale.languageCode == 'en'
+                  ? const Icon(Icons.check, color: Colors.green)
+                  : null,
+              onTap: () {
+                settings.setLocale(const Locale('en', 'US'));
+                Navigator.pop(dialogContext);
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -47,37 +72,35 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
 
   void _showThemeDialog(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('主题设置'),
+        title: Text(l10n.themeSettings),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _themeOption(
-              context,
               dialogContext,
               icon: Icons.brightness_5,
-              label: '浅色模式',
+              label: l10n.lightMode,
               mode: ThemeMode.light,
               current: settings.themeMode,
               settings: settings,
             ),
             _themeOption(
-              context,
               dialogContext,
               icon: Icons.brightness_2,
-              label: '深色模式',
+              label: l10n.darkMode,
               mode: ThemeMode.dark,
               current: settings.themeMode,
               settings: settings,
             ),
             _themeOption(
-              context,
               dialogContext,
               icon: Icons.brightness_auto,
-              label: '跟随系统',
+              label: l10n.systemMode,
               mode: ThemeMode.system,
               current: settings.themeMode,
               settings: settings,
@@ -89,7 +112,6 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   }
 
   Widget _themeOption(
-    BuildContext ctx,
     BuildContext dialogCtx, {
     required IconData icon,
     required String label,
@@ -109,56 +131,43 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     );
   }
 
-  void _showClearCacheDialog() {
+  void _showClearCacheDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('清理缓存'),
-        content: const Text('确定要清理应用缓存吗？这将删除应用���临时数据，但不会影响您的个人数据。'),
+        title: Text(l10n.clearCache),
+        content: Text(l10n.clearCacheConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('缓存清理成功')),
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.cacheClearedSuccess)),
                 );
               });
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
     );
   }
 
-  String _getCurrentLanguageLabel(Locale locale) {
-    if (locale.languageCode == 'zh') return '简体中文';
-    if (locale.languageCode == 'en') return 'English';
-    return '简体中文';
-  }
-
-  String _getCurrentThemeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return '浅色模式';
-      case ThemeMode.dark:
-        return '深色模式';
-      case ThemeMode.system:
-        return '跟随系统';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('系统设置'),
+        title: Text(l10n.systemSettingsTitle),
       ),
       body: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
@@ -169,21 +178,27 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                 child: Column(
                   children: [
                     ListTile(
-                      leading: Icon(Icons.notifications_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('通知设置', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      leading: Icon(Icons.notifications_outlined,
+                          size: Responsive.iconSize(context, 24)),
+                      title: Text(l10n.notificationSettings,
+                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                       onTap: () => _showNotificationSettingsDialog(context),
                     ),
                     Divider(height: 1, indent: Responsive.spacing(context, 40)),
                     ListTile(
-                      leading: Icon(Icons.language_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('语言设置', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      leading: Icon(Icons.language_outlined,
+                          size: Responsive.iconSize(context, 24)),
+                      title: Text(l10n.languageSettings,
+                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _getCurrentLanguageLabel(settings.locale),
-                            style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
+                            _getCurrentLanguageLabel(context, settings.locale),
+                            style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: Responsive.fontSize(context, 14)),
                           ),
                           SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
                           Icon(Icons.chevron_right, color: Colors.grey[400]),
@@ -193,14 +208,18 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                     ),
                     Divider(height: 1, indent: Responsive.spacing(context, 40)),
                     ListTile(
-                      leading: Icon(Icons.dark_mode_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('主题设置', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      leading: Icon(Icons.dark_mode_outlined,
+                          size: Responsive.iconSize(context, 24)),
+                      title: Text(l10n.themeSettings,
+                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _getCurrentThemeLabel(settings.themeMode),
-                            style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
+                            _getCurrentThemeLabel(context, settings.themeMode),
+                            style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: Responsive.fontSize(context, 14)),
                           ),
                           SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
                           Icon(Icons.chevron_right, color: Colors.grey[400]),
@@ -210,11 +229,14 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                     ),
                     Divider(height: 1, indent: Responsive.spacing(context, 40)),
                     ListTile(
-                      leading: Icon(Icons.storage_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('清理缓存', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      subtitle: Text('12.3 MB', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                      leading: Icon(Icons.storage_outlined,
+                          size: Responsive.iconSize(context, 24)),
+                      title: Text(l10n.clearCache,
+                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      subtitle: Text('12.3 MB',
+                          style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                      onTap: _showClearCacheDialog,
+                      onTap: () => _showClearCacheDialog(context),
                     ),
                   ],
                 ),
@@ -227,14 +249,14 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '系统设置说明',
+                        l10n.systemSettingsNote,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontSize: Responsive.fontSize(context, 16),
                         ),
                       ),
                       SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                       Text(
-                        '• 通知设置可以控制应用的通知类型\n• 语言设置可以更改应用的显示语言\n• 主题设置可以切换深色/浅色模式\n• 清理缓存可以释放应用占用的存储空间',
+                        l10n.systemSettingsNoteContent,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: Responsive.fontSize(context, 13),
@@ -254,17 +276,19 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
 
   void _showNotificationSettingsDialog(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Text('通知设置'),
+            title: Text(l10n.notificationSettings),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 SwitchListTile(
-                  title: Text('行李状态更新', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.luggageStatusUpdate,
+                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   value: settings.notifyLuggageStatus,
                   onChanged: (value) {
                     settings.setNotifyLuggageStatus(value);
@@ -272,7 +296,8 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                   },
                 ),
                 SwitchListTile(
-                  title: Text('系统通知', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.systemNotification,
+                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   value: settings.notifySystem,
                   onChanged: (value) {
                     settings.setNotifySystem(value);
@@ -280,7 +305,8 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                   },
                 ),
                 SwitchListTile(
-                  title: Text('异常提醒', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.abnormalAlert,
+                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   value: settings.notifyAbnormal,
                   onChanged: (value) {
                     settings.setNotifyAbnormal(value);
@@ -292,7 +318,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('确定'),
+                child: Text(l10n.confirm),
               ),
             ],
           );

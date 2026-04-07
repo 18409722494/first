@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
@@ -16,18 +17,19 @@ class HelpSupportScreen extends StatefulWidget {
 class _HelpSupportScreenState extends State<HelpSupportScreen> {
   /// 显示意见反馈对话框
   void _showFeedbackDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final feedbackController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('意见反馈'),
+        title: Text(l10n.feedback),
         content: TextField(
           controller: feedbackController,
           maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: '请输入您的意见或建议',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.feedbackHint,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -35,26 +37,25 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
             },
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               if (feedbackController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('请输入反馈内容')),
+                  SnackBar(content: Text(l10n.feedbackEmpty)),
                 );
                 return;
               }
               Navigator.pop(dialogContext);
-              // 使用 dialogContext 而非外层 context，避免页面已销毁时崩溃
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('反馈提交成功，感谢您的建议')),
+                  SnackBar(content: Text(l10n.feedbackSuccess)),
                 );
               });
             },
-            child: const Text('提交'),
+            child: Text(l10n.submit),
           ),
         ],
       ),
@@ -63,9 +64,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
   /// 显示关于对话框
   void _showAboutDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showAboutDialog(
       context: context,
-      applicationName: '行李管理系统',
+      applicationName: l10n.appName,
       applicationVersion: '1.0.0',
       applicationIcon: Icon(
         Icons.luggage,
@@ -74,31 +76,33 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       ),
       children: [
         const SizedBox(height: 16),
-        const Text('行李管理系统是一款专为航空地勤人员设计的行李追踪和管理工具。'),
+        Text(l10n.appDesc),
         const SizedBox(height: 8),
-        const Text('© 2026 行李管理系统 版权所有'),
+        Text(l10n.copyright),
       ],
     );
   }
 
   // ==================== 联系我们 - 使用 PermissionService ====================
   void _onContactUs() async {
+    final l10n = AppLocalizations.of(context)!;
     final hasPermission = await PermissionService.requestPhone(context);
 
     if (!mounted) return;
 
     if (hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('联系我们功能已启用')),
+        SnackBar(content: Text(l10n.contactUsEnabled)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('帮助与支持'),
+        title: Text(l10n.helpSupportTitle),
       ),
       body: ListView(
         padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
@@ -108,7 +112,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               children: [
                 ListTile(
                   leading: Icon(Icons.help_outline, size: Responsive.iconSize(context, 24)),
-                  title: Text('使用帮助', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.usageHelp, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
                     Navigator.of(context).push(
@@ -121,14 +125,14 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 ListTile(
                   leading: Icon(Icons.feedback_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text('意见反馈', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.feedback, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _showFeedbackDialog,
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 ListTile(
                   leading: Icon(Icons.info_outline, size: Responsive.iconSize(context, 24)),
-                  title: Text('关于', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.about, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _showAboutDialog,
                 ),
@@ -136,8 +140,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 // ==================== 电话权限 - 使用 PermissionService ====================
                 ListTile(
                   leading: Icon(Icons.phone_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text('联系我们', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  subtitle: Text('400-123-4567', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                  title: Text(l10n.contactUs, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  subtitle: Text(l10n.contactPhone, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _onContactUs,
                 ),
@@ -152,14 +156,14 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '帮助与支持说明',
+                    l10n.helpSupportNote,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontSize: Responsive.fontSize(context, 16),
                     ),
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                   Text(
-                    '• 使用帮助：查看应用的使用指南和常见问题\n• 意见反馈：提交您对应用的意见和建议\n• 关于：查看应用的版本信息和版权声明\n• 联系我们：获取客服支持',
+                    l10n.helpSupportNoteContent,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: Responsive.fontSize(context, 13),

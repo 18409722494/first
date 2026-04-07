@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/abnormal_baggage.dart';
 import '../services/evidence_service.dart';
 import '../theme/app_colors.dart';
@@ -9,7 +10,7 @@ import 'evidence_detail_screen.dart';
 
 /// 证据查询列表页面
 class EvidenceListScreen extends StatefulWidget {
-  const EvidenceListScreen({Key? key}) : super(key: key);
+  const EvidenceListScreen({super.key});
 
   @override
   State<EvidenceListScreen> createState() => _EvidenceListScreenState();
@@ -132,17 +133,18 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final padMd = Responsive.padding(context, AppSpacing.md);
     final spSm = Responsive.spacing(context, AppSpacing.sm);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('证据查询'),
+        title: Text(l10n.evidenceQueryTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _loadData,
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -156,7 +158,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   decoration: InputDecoration(
-                    hintText: '搜索行李号、地点、描述...',
+                    hintText: l10n.searchBaggageNo,
                     prefixIcon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -181,7 +183,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                         label: Text(
                           _dateRange != null
                               ? '${_dateRange!.start.month}/${_dateRange!.start.day} - ${_dateRange!.end.month}/${_dateRange!.end.day}'
-                              : '选择日期范围',
+                              : l10n.selectDateRange,
                           style: TextStyle(fontSize: Responsive.fontSize(context, 13)),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -197,7 +199,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                       IconButton(
                         icon: Icon(Icons.clear, size: Responsive.iconSize(context, 20)),
                         onPressed: _clearDateFilter,
-                        tooltip: '清除日期筛选',
+                        tooltip: l10n.clearDateFilter,
                       ),
                     ],
                   ],
@@ -210,7 +212,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
             child: Row(
               children: [
                 Text(
-                  '共 ${_filteredItems.length} 条记录',
+                  l10n.totalRecords(_filteredItems.length),
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: Responsive.fontSize(context, 13),
@@ -221,7 +223,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                   TextButton(
                     onPressed: _clearAllFilters,
                     child: Text(
-                      '清除筛选',
+                      l10n.clearFilter,
                       style: TextStyle(fontSize: Responsive.fontSize(context, 12)),
                     ),
                   ),
@@ -237,6 +239,8 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context)!;
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -249,7 +253,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
             Icon(Icons.error_outline, size: Responsive.iconSize(context, 48), color: AppColors.error),
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             Text(
-              '加载失败',
+              l10n.loadFailedRetry,
               style: TextStyle(
                 fontSize: Responsive.fontSize(context, 16),
                 fontWeight: FontWeight.bold,
@@ -268,7 +272,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
             ElevatedButton.icon(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
-              label: const Text('重新加载'),
+              label: Text(l10n.reload),
             ),
           ],
         ),
@@ -287,7 +291,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             Text(
-              _searchQuery.isNotEmpty || _dateRange != null ? '未找到匹配的记录' : '暂无破损证据记录',
+              _searchQuery.isNotEmpty || _dateRange != null ? l10n.noMatchingRecords : l10n.noEvidenceRecords,
               style: TextStyle(
                 fontSize: Responsive.fontSize(context, 15),
                 color: Colors.grey[600],
@@ -296,7 +300,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
             if (_searchQuery.isEmpty && _dateRange == null) ...[
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
               Text(
-                '请扫描破损行李并提交报告',
+                l10n.scanDamagedSubmit,
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 13),
                   color: Colors.grey[400],
@@ -322,6 +326,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
   }
 
   Widget _buildEvidenceCard(AbnormalBaggage item) {
+    final l10n = AppLocalizations.of(context)!;
     final padSm = Responsive.padding(context, AppSpacing.sm);
     final spXs = Responsive.spacing(context, AppSpacing.xs);
     final spSm = Responsive.spacing(context, AppSpacing.sm);
@@ -387,7 +392,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            '行李号: ${item.baggageNumber}',
+                            l10n.baggageNo(item.baggageNumber),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: Responsive.fontSize(context, 14),
@@ -406,7 +411,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '破损',
+                            l10n.damaged,
                             style: TextStyle(
                               color: AppColors.error,
                               fontSize: Responsive.fontSize(context, 11),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
@@ -15,14 +16,15 @@ class PersonalizationScreen extends StatefulWidget {
 
 class _PersonalizationScreenState extends State<PersonalizationScreen> {
   void _showChangeAvatarDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('修改头像'),
+        title: Text(l10n.changeAvatar),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('请选择头像来源'),
+            Text(l10n.selectAvatarSource),
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -30,12 +32,14 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                 // ==================== 相册权限 - 使用 PermissionService ====================
                 FilledButton.icon(
                   onPressed: () async {
+                    final navigator = Navigator.of(dialogContext);
+                    final messenger = ScaffoldMessenger.of(context);
                     final hasPermission = await PermissionService.requestPhotos(context);
 
                     if (!mounted) return;
 
                     if (hasPermission) {
-                      Navigator.pop(dialogContext);
+                      navigator.pop();
 
                       try {
                         final ImagePicker picker = ImagePicker();
@@ -47,36 +51,38 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         if (!mounted) return;
 
                         if (image != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('头像选择成功: ${image.name}')),
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.avatarSelected(image.name))),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('已取消选择')),
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.avatarCancelled)),
                           );
                         }
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('选择图片失败: ${e.toString()}')),
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.imageSelectFailed)),
                         );
                       }
                     } else {
-                      Navigator.pop(dialogContext);
+                      navigator.pop();
                     }
                   },
                   icon: Icon(Icons.photo_library_outlined, size: Responsive.iconSize(context, 20)),
-                  label: Text('相册', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                  label: Text(l10n.album, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                 ),
                 // ==================== 相机权限 - 使用 PermissionService ====================
                 FilledButton.icon(
                   onPressed: () async {
+                    final navigator = Navigator.of(dialogContext);
+                    final messenger = ScaffoldMessenger.of(context);
                     final hasPermission = await PermissionService.requestCamera(context);
 
                     if (!mounted) return;
 
                     if (hasPermission) {
-                      Navigator.pop(dialogContext);
+                      navigator.pop();
 
                       try {
                         final ImagePicker picker = ImagePicker();
@@ -88,26 +94,26 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         if (!mounted) return;
 
                         if (image != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('头像拍摄成功: ${image.name}')),
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.avatarCaptureSuccess(image.name))),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('已取消拍摄')),
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.avatarCancelled)),
                           );
                         }
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('拍摄失败: ${e.toString()}')),
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.imageSelectFailed)),
                         );
                       }
                     } else {
-                      Navigator.pop(dialogContext);
+                      navigator.pop();
                     }
                   },
                   icon: Icon(Icons.camera_alt_outlined, size: Responsive.iconSize(context, 20)),
-                  label: Text('拍照', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                  label: Text(l10n.camera, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                 ),
               ],
             ),
@@ -116,7 +122,7 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -124,17 +130,19 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
   }
 
   void _showChangeNicknameDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final nicknameController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('修改昵称'),
+        title: Text(l10n.changeNickname),
         content: TextField(
           controller: nicknameController,
-          decoration: const InputDecoration(
-            labelText: '新昵称',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.newNickname,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -142,25 +150,25 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
             },
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               if (nicknameController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('昵称不能为空')),
+                  SnackBar(content: Text(l10n.nicknameEmpty)),
                 );
                 return;
               }
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('昵称修改成功')),
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.nicknameChangedSuccess)),
                 );
               });
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -169,9 +177,10 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('个性化设置'),
+        title: Text(l10n.personalizationTitle),
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -218,14 +227,14 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   children: [
                     ListTile(
                       leading: Icon(Icons.account_circle_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('修改头像', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      title: Text(l10n.changeAvatar, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                       onTap: _showChangeAvatarDialog,
                     ),
                     Divider(height: 1, indent: Responsive.spacing(context, 40)),
                     ListTile(
                       leading: Icon(Icons.edit_outlined, size: Responsive.iconSize(context, 24)),
-                      title: Text('修改昵称', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                      title: Text(l10n.changeNickname, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                       onTap: _showChangeNicknameDialog,
                     ),
@@ -241,14 +250,14 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '个性化设置说明',
+                        l10n.personalizationNote,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontSize: Responsive.fontSize(context, 16),
                         ),
                       ),
                       SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                       Text(
-                        '• 修改头像可以让您的个人资料更加个性化\n• 修改昵称可以更改您在系统中的显示名称\n• 这些设置仅影响您的个人资料显示，不会影响您的账户安全',
+                        l10n.personalizationNoteContent,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: Responsive.fontSize(context, 13),

@@ -6,7 +6,7 @@ import '../services/network_service.dart';
 /// 离线模式提示组件
 /// 在网络断开时显示提示信息
 class OfflineIndicator extends StatefulWidget {
-  const OfflineIndicator({Key? key}) : super(key: key);
+  const OfflineIndicator({super.key});
 
   @override
   State<OfflineIndicator> createState() => _OfflineIndicatorState();

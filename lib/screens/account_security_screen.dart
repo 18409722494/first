@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
@@ -16,6 +17,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
   /// 显示修改密码对话框
   void _showChangePasswordDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
@@ -23,7 +25,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('修改密码'),
+        title: Text(l10n.passwordChange),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -31,27 +33,27 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               TextField(
                 controller: oldPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '旧密码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.oldPassword,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
               TextField(
                 controller: newPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '新密码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.newPassword,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
               TextField(
                 controller: confirmPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '确认新密码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.confirmNewPassword,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -62,13 +64,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
             },
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               if (newPasswordController.text != confirmPasswordController.text) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('两次输入的密码不一致')),
+                  SnackBar(content: Text(l10n.passwordMismatch)),
                 );
                 return;
               }
@@ -76,11 +78,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('密码修改成功')),
+                  SnackBar(content: Text(l10n.passwordChangedSuccess)),
                 );
               });
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -89,13 +91,14 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
   /// 显示绑定手机对话框
   void _showBindPhoneDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final phoneController = TextEditingController();
     final codeController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('绑定手机'),
+        title: Text(l10n.phoneBind),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -103,9 +106,9 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: '手机号码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.phoneNumber,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
@@ -115,20 +118,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                     child: TextField(
                       controller: codeController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '验证码',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.verifyCode,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
                   SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
                   FilledButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('验证码已发送')),
-                      );
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(content: Text(l10n.verifyCodeSent)),
+                );
                     },
-                    child: Text('获取验证码', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    child: Text(l10n.getVerifyCode, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ),
                 ],
               ),
@@ -140,13 +143,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
             },
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               if (phoneController.text.isEmpty || codeController.text.isEmpty) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('请填写完整信息')),
+                  SnackBar(content: Text(l10n.fillAllFields)),
                 );
                 return;
               }
@@ -154,11 +157,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('手机绑定成功')),
+                  SnackBar(content: Text(l10n.phoneBindSuccess)),
                 );
               });
             },
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -167,9 +170,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('账户安全'),
+        title: Text(l10n.accountSecurityTitle),
       ),
       body: ListView(
         padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
@@ -179,22 +183,22 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               children: [
                 ListTile(
                   leading: Icon(Icons.lock_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text('修改密码', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.passwordChange, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _showChangePasswordDialog,
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 ListTile(
                   leading: Icon(Icons.phone_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text('绑定手机', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  subtitle: Text('未绑定', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                  title: Text(l10n.phoneBind, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  subtitle: Text(l10n.notBound, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _showBindPhoneDialog,
                 ),
                 Divider(height: 1, indent: Responsive.spacing(context, 40)),
                 ListTile(
                   leading: Icon(Icons.two_wheeler_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text('两步验证', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                  title: Text(l10n.twoFactorAuth, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   trailing: Switch(
                     value: _twoFactorEnabled,
                     onChanged: (value) {
@@ -202,7 +206,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                         _twoFactorEnabled = value;
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(_twoFactorEnabled ? '两步验证已开启' : '两步验证已关闭')),
+                        SnackBar(content: Text(l10n.twoFactorEnabled)),
                       );
                     },
                   ),
@@ -218,14 +222,14 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '安全提示',
+                    l10n.securityTips,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontSize: Responsive.fontSize(context, 16),
                     ),
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                   Text(
-                    '• 请定期修改密码，使用强密码\n• 绑定手机可以提高账户安全性\n• 开启两步验证可以防止账户被非法登录',
+                    l10n.securityTipsContent,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: Responsive.fontSize(context, 13),

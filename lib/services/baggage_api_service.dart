@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
 import '../constants/app_constants.dart';
+import '../models/abnormal_baggage.dart';
+import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
 
 /// 后端行李信息 API 服务
@@ -34,18 +36,7 @@ class BaggageApiService {
         throw Exception('获取行李列表失败: ${response.statusCode}');
       }
     } catch (e) {
-      // 网络失败时：用 Mock 数据模拟分页返回
-      final allMock = _buildMockBaggage();
-      final start = (page - 1) * pageSize;
-      if (start >= allMock.length) {
-        return PagedResult(items: [], hasMore: false, page: page);
-      }
-      final end = (start + pageSize).clamp(0, allMock.length);
-      return PagedResult(
-        items: allMock.sublist(start, end),
-        hasMore: end < allMock.length,
-        page: page,
-      );
+      rethrow;
     }
   }
 
@@ -55,25 +46,62 @@ class BaggageApiService {
     return result.items;
   }
 
-  /// 构造 60 条 Mock 数据用于分页演示
-  static List<Luggage> _buildMockBaggage() {
-    return List.generate(60, (i) {
-      final idx = i + 1;
-      return Luggage(
-        id: 'mock_$idx',
-        tagNumber: 'TAG${1000 + idx}',
-        flightNumber: 'CA${100 + idx}',
-        passengerName: '乘客$idx',
-        weight: 15.0 + (idx % 10) * 2,
-        status: LuggageStatus.checkIn,
-        checkInTime: DateTime.now().subtract(Duration(hours: idx)),
-        lastUpdated: DateTime.now().subtract(Duration(hours: idx ~/ 2)),
-        destination: '航站楼${(idx % 3) + 1}',
-        notes: '',
-        latitude: 39.9 + idx * 0.001,
-        longitude: 116.4 + idx * 0.001,
+  /// 行李操作历史（GET `/baggage/operationLogs`）
+  ///
+  /// Query：`baggageNumber`、`id` / `baggageId`（按后端实际字段择一或并存）。
+  /// 响应支持：JSON 数组，或 `{ "data": [...] }` / `{ "logs": [...] }`。
+  /// 接口不存在或失败时返回空列表，不阻塞详情页。
+  static Future<List<BaggageOperationLog>> getOperationLogs({
+    String? baggageNumber,
+    String? baggageId,
+  }) async {
+    final q = <String, String>{};
+    if (baggageNumber != null && baggageNumber.trim().isNotEmpty) {
+      q['baggageNumber'] = baggageNumber.trim();
+    }
+    if (baggageId != null && baggageId.trim().isNotEmpty) {
+      q['id'] = baggageId.trim();
+      q['baggageId'] = baggageId.trim();
+    }
+    if (q.isEmpty) return [];
+
+    try {
+      final uri = Uri.parse('$_baseUrl/baggage/operationLogs').replace(
+        queryParameters: q,
       );
-    });
+      final response = await http
+          .get(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return [];
+      }
+
+      final decoded = jsonDecode(response.body);
+      List<dynamic> rawList;
+      if (decoded is List) {
+        rawList = decoded;
+      } else if (decoded is Map<String, dynamic>) {
+        final d = decoded['data'] ?? decoded['logs'] ?? decoded['records'];
+        if (d is List) {
+          rawList = d;
+        } else {
+          return [];
+        }
+      } else {
+        return [];
+      }
+
+      return rawList
+          .whereType<Map>()
+          .map((m) => BaggageOperationLog.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// 根据行李号查询行李
@@ -85,6 +113,44 @@ class BaggageApiService {
       );
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// 根据行李号获取破损记录（GET /abnormal-baggage/all 再过滤）
+  /// 接口失败时返回空列表，不阻塞详情页。
+  static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) async {
+    try {
+      final all = await getAllAbnormalBaggageRaw();
+      return all
+          .where((r) => r.baggageNumber.trim().toLowerCase() == baggageNumber.trim().toLowerCase())
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 一次性拉取全部破损记录（内部用，与 GET /abnormal-baggage/all 对齐）
+  static Future<List<AbnormalBaggage>> getAllAbnormalBaggageRaw() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/abnormal-baggage/all'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          return decoded
+              .map((item) => AbnormalBaggage.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+        return [];
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../components/app_text_field.dart';
 import '../components/app_button.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -11,7 +12,7 @@ import 'main_screen.dart';
 
 /// 登录页面
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -42,9 +43,10 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       } else if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? '登录失败'),
+            content: Text(authProvider.errorMessage ?? l10n.loginFail),
             backgroundColor: AppColors.error,
           ),
         );
@@ -54,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -73,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
                   Text(
-                    '用户登录',
+                    l10n.userLogin,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: Responsive.fontSize(context, 24),
@@ -82,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                   Text(
-                    '请使用用户名和密码登录账户',
+                    l10n.loginHint,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                           fontSize: Responsive.fontSize(context, 14),
@@ -93,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   AppTextField(
                     controller: _usernameController,
-                    label: '用户名',
-                    hint: '请输入用户名',
+                    label: l10n.username,
+                    hint: l10n.enterUsername,
                     prefixIcon: Icons.person_outline,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return '请输入用户名';
+                        return l10n.enterUsername;
                       }
                       return null;
                     },
@@ -108,16 +112,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   AppTextField(
                     controller: _passwordController,
-                    label: '密码',
-                    hint: '请输入密码',
+                    label: l10n.password,
+                    hint: l10n.enterPassword,
                     prefixIcon: Icons.lock_outline,
                     showPasswordToggle: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return '请输入密码';
+                        return l10n.enterPassword;
                       }
                       if (value.length < 6) {
-                        return '密码长度至少6位';
+                        return l10n.passwordMinLength;
                       }
                       return null;
                     },
@@ -129,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, child) {
                       return AppButton(
-                        text: '登录',
+                        text: l10n.login,
                         size: AppButtonSize.large,
                         fullWidth: true,
                         isLoading: authProvider.isLoading,
@@ -143,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '还没有员工账号？',
+                        l10n.noAccount,
                         style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 13)),
                       ),
                       TextButton(
@@ -154,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: Text('前往员工注册/激活', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                        child: Text(l10n.goToRegister, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                       ),
                     ],
                   ),

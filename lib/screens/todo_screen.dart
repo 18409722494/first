@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/luggage.dart';
 import '../models/todo_item.dart';
 import '../services/evidence_service.dart';
@@ -13,7 +14,7 @@ import 'contact_passenger_screen.dart';
 /// 待办事项页面
 /// 从数据库实时拉取：破损记录、超重行李、无人认领行李
 class TodoScreen extends StatefulWidget {
-  const TodoScreen({Key? key}) : super(key: key);
+  const TodoScreen({super.key});
 
   @override
   State<TodoScreen> createState() => _TodoScreenState();
@@ -109,20 +110,22 @@ class _TodoScreenState extends State<TodoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('待办事项'),
+        title: Text(l10n.todoTitle),
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _loadTodoItems,
             icon: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -131,6 +134,8 @@ class _TodoScreenState extends State<TodoScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (_isLoading && _items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -146,7 +151,7 @@ class _TodoScreenState extends State<TodoScreen> {
             const SizedBox(height: 16),
             TextButton(
               onPressed: _loadTodoItems,
-              child: const Text('重新加载'),
+              child: Text(l10n.reload),
             ),
           ],
         ),
@@ -161,7 +166,7 @@ class _TodoScreenState extends State<TodoScreen> {
             Icon(Icons.check_circle_outline, size: 48, color: AppColors.primary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text(
-              '暂无待办事项',
+              l10n.noTodoItems,
               style: TextStyle(fontSize: Responsive.fontSize(context, 15), color: Colors.grey[600]),
             ),
           ],
@@ -177,7 +182,7 @@ class _TodoScreenState extends State<TodoScreen> {
           Row(
             children: [
               Text(
-                '需要处理的异常行李',
+                l10n.abnormalLuggage,
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 15),
                   fontWeight: FontWeight.bold,
@@ -314,10 +319,12 @@ class _TodoScreenState extends State<TodoScreen> {
     if (id != null && id.isNotEmpty) {
       return LuggageService.getLuggageForScan(id);
     }
-    throw Exception('未找到行李: ${tag.isNotEmpty ? tag : id ?? ''}');
+      throw Exception('未找到行李: ${tag.isNotEmpty ? tag : id ?? ''}');
   }
 
   Future<void> _loadAndNavigateOverweight(BuildContext context, TodoItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final luggage = await _resolveLuggageForNavigation(item);
       if (context.mounted) {
@@ -330,13 +337,15 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载行李失败: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(l10n.loadLuggageFailed(e.toString())), backgroundColor: AppColors.error),
         );
       }
     }
   }
 
   Future<void> _loadAndNavigateContact(BuildContext context, TodoItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final luggage = await _resolveLuggageForNavigation(item);
       if (context.mounted) {
@@ -349,7 +358,7 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载行李失败: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(l10n.loadLuggageFailed(e.toString())), backgroundColor: AppColors.error),
         );
       }
     }

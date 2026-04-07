@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -8,7 +9,7 @@ import 'login_screen.dart';
 
 /// 注册页面
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -35,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final l10n = AppLocalizations.of(context)!;
       final success = await authProvider.register(
         _employeeIdController.text.trim(),
         _usernameController.text.trim(),
@@ -43,8 +45,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('注册成功，请使用用户名和密码登录'),
+          SnackBar(
+            content: Text(l10n.registerSuccess),
             backgroundColor: Colors.green,
           ),
         );
@@ -55,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? '注册失败'),
+            content: Text(authProvider.errorMessage ?? l10n.registerFail),
             backgroundColor: AppColors.error,
           ),
         );
@@ -65,6 +67,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -85,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
                   Text(
-                    '用户账号注册/激活',
+                    l10n.registerTitle,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: Responsive.fontSize(context, 24),
@@ -94,7 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                   Text(
-                    '工号须已由航司预置；填写工号与账号信息以激活账户',
+                    l10n.registerHint,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                           fontSize: Responsive.fontSize(context, 14),
@@ -107,8 +111,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _employeeIdController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: '工号',
-                      hintText: '请输入员工工号',
+                      labelText: l10n.employeeIdLabel,
+                      hintText: l10n.enterEmployeeId,
                       prefixIcon: const Icon(Icons.badge_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -118,10 +122,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return '请输入工号';
+                        return l10n.enterEmployeeIdAgain;
                       }
                       if (value.trim().length < 4) {
-                        return '工号格式不正确';
+                        return l10n.employeeIdFormatWrong;
                       }
                       return null;
                     },
@@ -132,8 +136,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _usernameController,
                     decoration: InputDecoration(
-                      labelText: '用户名',
-                      hintText: '请输入用户名',
+                      labelText: l10n.usernameLabel,
+                      hintText: l10n.enterUsernameLabel,
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -143,10 +147,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return '请输入用户名';
+                        return l10n.enterUsernameLabelAgain;
                       }
                       if (value.length < 3) {
-                        return '用户名长度至少3位';
+                        return l10n.usernameMinLength;
                       }
                       return null;
                     },
@@ -158,8 +162,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: '密码',
-                      hintText: '请输入密码（至少6位）',
+                      labelText: l10n.password,
+                      hintText: l10n.enterPasswordLabel,
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -181,10 +185,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return '请输入密码';
+                        return l10n.enterPasswordAgain;
                       }
                       if (value.length < 6) {
-                        return '密码长度至少6位';
+                        return l10n.passwordMinLength;
                       }
                       return null;
                     },
@@ -196,8 +200,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
-                      labelText: '确认密码',
-                      hintText: '请再次输入密码',
+                      labelText: l10n.confirmPassword,
+                      hintText: l10n.enterConfirmPassword,
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -219,10 +223,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return '请确认密码';
+                        return l10n.enterPasswordAgain;
                       }
                       if (value != _passwordController.text) {
-                        return '两次输入的密码不一致';
+                        return l10n.passwordsMismatch;
                       }
                       return null;
                     },
@@ -254,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               )
                             : Text(
-                                '注册',
+                                l10n.register,
                                 style: TextStyle(
                                   fontSize: Responsive.fontSize(context, 16),
                                   fontWeight: FontWeight.bold,
@@ -269,14 +273,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '已有账户？',
+                        l10n.hasAccount,
                         style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 13)),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: Text('立即登录', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                        child: Text(l10n.loginNow, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                       ),
                     ],
                   ),

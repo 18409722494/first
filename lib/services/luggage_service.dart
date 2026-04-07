@@ -4,8 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:collection/collection.dart';
 import '../constants/app_constants.dart';
+import '../models/abnormal_baggage.dart';
+import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
-import '../data/mock_data.dart';
+import '../models/luggage_detail_info.dart';
+import '../models/qr_payload.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 import 'baggage_api_service.dart';
@@ -62,13 +65,103 @@ class LuggageService {
       final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
       throw Exception(msg ?? '获取行李列表失败(${res.statusCode})');
     } catch (e) {
-      // 最终回退到 Mock 分页
-      return BaggageApiService.getAllBaggage(page: page, pageSize: pageSize);
+      rethrow;
     }
   }
 
-  static List<Luggage> _getMockLuggageData() {
-    return MockData.getLuggageList();
+  /// 行李操作历史（后端 `/baggage/operationLogs`；无数据或接口未实现时返回空列表）
+  static Future<List<BaggageOperationLog>> getBaggageOperationLogs({
+    String? baggageNumber,
+    String? baggageId,
+  }) =>
+      BaggageApiService.getOperationLogs(
+        baggageNumber: baggageNumber,
+        baggageId: baggageId,
+      );
+
+  /// 获取指定行李的破损记录（按行李号过滤）
+  static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) =>
+      BaggageApiService.getAbnormalRecords(baggageNumber);
+
+  /// 根据行李 ID 优先查接口；无数据时基于扫码 [qrPayload] 构造基础信息。
+  /// 同时并发拉取操作日志和破损记录，三者聚合成 [LuggageDetailInfo]。
+  /// 破损记录和操作日志拉取失败时不阻塞，只返回空列表。
+  static Future<LuggageDetailInfo> getBaggageDetail({
+    required QrPayload qrPayload,
+    required String rawQr,
+  }) async {
+    final luggageId = qrPayload.luggageId?.trim() ?? '';
+
+    // 1. 行李基础信息
+    Luggage luggage;
+    if (luggageId.isNotEmpty) {
+      try {
+        luggage = await getLuggageById(luggageId);
+        luggage = _mergeApiAndQr(luggage, qrPayload);
+      } catch (e) {
+        luggage = _buildFromQrOnly(qrPayload, rawQr);
+      }
+    } else {
+      luggage = _buildFromQrOnly(qrPayload, rawQr);
+    }
+
+    // 2. 并发拉取操作日志和破损记录
+    final tagNo = luggage.tagNumber.trim().isNotEmpty
+        ? luggage.tagNumber.trim()
+        : (qrPayload.extra['tagNo']?.toString() ?? qrPayload.luggageId ?? '');
+    final logFuture = getBaggageOperationLogs(
+      baggageNumber: tagNo.isNotEmpty ? tagNo : null,
+      baggageId: luggage.id.trim().isNotEmpty ? luggage.id.trim() : luggageId,
+    );
+    final abnormalFuture = tagNo.isNotEmpty
+        ? getAbnormalRecords(tagNo)
+        : Future.value(<AbnormalBaggage>[]);
+
+    final results = await Future.wait(
+      [logFuture, abnormalFuture],
+    );
+    final logs = (results[0] as List<BaggageOperationLog>)
+      ..sort((a, b) => b.time.compareTo(a.time));
+    final abnormalRecords = (results[1] as List<AbnormalBaggage>)
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return LuggageDetailInfo(
+      luggage: luggage,
+      abnormalRecords: abnormalRecords,
+      operationLogs: logs,
+    );
+  }
+
+  static Luggage _mergeApiAndQr(Luggage api, QrPayload p) {
+    final tagQr = '${p.extra['tagNo'] ?? p.extra['tag_no'] ?? p.luggageId ?? ''}';
+    final passHint = '${p.extra['passenger_hint'] ?? p.extra['旅客'] ?? p.extra['passengerName'] ?? ''}';
+    final flightHint = '${p.extra['flight_hint'] ?? p.extra['航班'] ?? p.extra['flightNumber'] ?? ''}';
+    return api.copyWith(
+      tagNumber: api.tagNumber.trim().isNotEmpty ? api.tagNumber : tagQr,
+      passengerName: api.passengerName.trim().isNotEmpty ? api.passengerName : passHint,
+      flightNumber: api.flightNumber.trim().isNotEmpty ? api.flightNumber : flightHint,
+    );
+  }
+
+  static Luggage _buildFromQrOnly(QrPayload p, String rawQr) {
+    final id = (p.luggageId != null && p.luggageId!.trim().isNotEmpty)
+        ? p.luggageId!.trim()
+        : (rawQr.trim().isNotEmpty ? rawQr.trim() : 'unknown');
+    final tag = '${p.extra['tagNo'] ?? p.extra['tag_no'] ?? p.luggageId ?? ''}';
+    final passenger = '${p.extra['passenger_hint'] ?? p.extra['旅客'] ?? p.extra['passengerName'] ?? ''}';
+    final flight = '${p.extra['flight_hint'] ?? p.extra['航班'] ?? p.extra['flightNumber'] ?? ''}';
+    return Luggage(
+      id: id,
+      tagNumber: tag,
+      flightNumber: flight,
+      passengerName: passenger,
+      weight: 0,
+      status: LuggageStatus.checkIn,
+      checkInTime: DateTime.now(),
+      lastUpdated: DateTime.now(),
+      destination: '',
+      notes: '',
+    );
   }
 
   /// 扫码解析出的可能是数据库 id，也可能是行李号 [baggageNumber]，依次尝试解析。
@@ -105,12 +198,7 @@ class LuggageService {
       final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
       throw Exception(msg ?? '查询行李失败(${res.statusCode})');
     } catch (e) {
-      final mockData = _getMockLuggageData();
-      final luggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
-      if (luggage == null) {
-        throw Exception('未找到行李: $luggageId');
-      }
-      return luggage;
+      throw Exception('查询行李失败: $e');
     }
   }
 
@@ -133,27 +221,7 @@ class LuggageService {
       final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
       throw Exception(msg ?? '更新行李失败(${res.statusCode})');
     } catch (e) {
-      final mockData = _getMockLuggageData();
-      final mockLuggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
-      if (mockLuggage == null) {
-        throw Exception('未找到行李: $luggageId');
-      }
-
-      var luggage = mockLuggage;
-      if (patch.containsKey('status')) {
-        try {
-          final statusStr = patch['status'].toString();
-          final status = LuggageStatus.values.firstWhere(
-            (s) => s.name == statusStr,
-          );
-          luggage = luggage.copyWith(status: status);
-        } catch (_) {}
-      }
-      if (patch.containsKey('destination')) luggage = luggage.copyWith(destination: patch['destination']);
-      if (patch.containsKey('latitude')) luggage = luggage.copyWith(latitude: patch['latitude']);
-      if (patch.containsKey('longitude')) luggage = luggage.copyWith(longitude: patch['longitude']);
-      if (patch.containsKey('notes')) luggage = luggage.copyWith(notes: patch['notes']);
-      return luggage.copyWith(lastUpdated: DateTime.now());
+      throw Exception('更新行李失败: $e');
     }
   }
 
@@ -176,30 +244,7 @@ class LuggageService {
       final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
       throw Exception(msg ?? '上传行李失败(${res.statusCode})');
     } catch (e) {
-      LuggageStatus status = LuggageStatus.checkIn;
-      final statusStr = payload['status']?.toString() ?? '';
-      if (statusStr.isNotEmpty) {
-        final found = LuggageStatus.values.firstWhereOrNull(
-          (s) => s.name == statusStr,
-        );
-        if (found != null) status = found;
-      }
-
-      final mockLuggage = Luggage(
-        id: 'new_${DateTime.now().millisecondsSinceEpoch}',
-        tagNumber: payload['tagNumber']?.toString() ?? payload['tagNo']?.toString() ?? 'TAG${DateTime.now().millisecondsSinceEpoch}',
-        flightNumber: payload['flightNumber']?.toString() ?? '',
-        passengerName: payload['passengerName']?.toString() ?? '未知用户',
-        weight: payload['weight'] ?? payload['weightKg'] ?? 20.0,
-        status: status,
-        checkInTime: DateTime.now(),
-        lastUpdated: DateTime.now(),
-        destination: payload['destination']?.toString() ?? payload['location']?.toString() ?? '未知位置',
-        notes: payload['notes']?.toString() ?? payload['note']?.toString() ?? '',
-        latitude: payload['latitude'] ?? 39.9042,
-        longitude: payload['longitude'] ?? 116.4074,
-      );
-      return mockLuggage;
+      throw Exception('上传行李失败: $e');
     }
   }
 
@@ -234,16 +279,7 @@ class LuggageService {
       final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
       throw Exception(msg ?? '更新行李位置失败(${res.statusCode})');
     } catch (e) {
-      final mockData = _getMockLuggageData();
-      var luggage = mockData.firstWhereOrNull((item) => item.id == luggageId);
-      if (luggage == null) {
-        throw Exception('未找到行李: $luggageId');
-      }
-      return luggage.copyWith(
-        latitude: latitude,
-        longitude: longitude,
-        lastUpdated: DateTime.now(),
-      );
+      throw Exception('更新行李位置失败: $e');
     }
   }
 
@@ -392,49 +428,101 @@ class LuggageService {
         permission == LocationPermission.always;
   }
 
-  /// 获取设备当前位置（多级降级策略，优先保证成功率而非精度）
+  static bool _isPlausibleCoordinate(Position p) {
+    final lat = p.latitude;
+    final lng = p.longitude;
+    if (lat.isNaN || lng.isNaN) return false;
+    if (lat.abs() < 1e-7 && lng.abs() < 1e-7) return false;
+    if (lat.abs() > 90 || lng.abs() > 180) return false;
+    return true;
+  }
+
+  static Duration _locationTimeoutForAccuracy(LocationAccuracy a) {
+    switch (a) {
+      case LocationAccuracy.lowest:
+        return const Duration(seconds: 22);
+      case LocationAccuracy.low:
+        return const Duration(seconds: 22);
+      case LocationAccuracy.medium:
+        return const Duration(seconds: 14);
+      default:
+        return const Duration(seconds: 12);
+    }
+  }
+
+  /// 获取设备当前位置（优先「能拿到」，不追求高精度）
   ///
-  /// 降级顺序：
-  /// 1. 最近已知位置（60 分钟内，室内秒级返回）
-  /// 2. 实时定位：medium 精度（室内适用）
-  /// 3. 实时定位：low 精度（最后兜底）
-  /// 每次精度最多重试 2 次，超时 25 秒/次
+  /// 策略：
+  /// 1. [getLastKnownPosition]：7 天内缓存直接用；实时全失败后再用更旧缓存兜底
+  /// 2. 实时定位顺序：**lowest → low → medium**（网络/基站优先，弱 GPS 室内更易成功）
+  /// 3. 不使用 high/best，避免长时间等卫星
   static Future<Position?> getCurrentDevicePosition({
     int retryPerAccuracy = 2,
-    Duration timeout = const Duration(seconds: 25),
+    Duration? timeout,
   }) async {
-    // 1) 最近已知位置（优先，室内/弱 GPS 时秒级返回）
+    Position? oldButPlausibleLast;
+
+    // 1) 最近已知位置
     try {
       final last = await Geolocator.getLastKnownPosition();
-      if (last != null) {
+      if (last != null && _isPlausibleCoordinate(last)) {
+        oldButPlausibleLast = last;
         final age = DateTime.now().difference(last.timestamp);
-        if (age.inMinutes <= 60) {
-          debugPrint('getCurrentDevicePosition: 使用缓存位置 (${age.inMinutes}分钟前)');
+        if (age.inDays <= 7) {
+          debugPrint(
+            'getCurrentDevicePosition: 使用最近已知位置（约 ${age.inHours} 小时前，精度不限）',
+          );
           return last;
         }
       }
     } catch (e) {
-      debugPrint('getCurrentDevicePosition: 缓存位置获取失败 $e');
+      debugPrint('getCurrentDevicePosition: lastKnown 失败 $e');
     }
 
-    // 2) 实时定位：精度逐级降级
-    for (final accuracy in [LocationAccuracy.medium, LocationAccuracy.low]) {
+    // 2) 实时：从最低精度到 medium
+    const order = <LocationAccuracy>[
+      LocationAccuracy.lowest,
+      LocationAccuracy.low,
+      LocationAccuracy.medium,
+    ];
+
+    for (final accuracy in order) {
+      final t = timeout ?? _locationTimeoutForAccuracy(accuracy);
       for (int attempt = 0; attempt < retryPerAccuracy; attempt++) {
         try {
           final position = await Geolocator.getCurrentPosition(
             desiredAccuracy: accuracy,
-            timeLimit: timeout,
+            timeLimit: t,
           );
-          debugPrint('getCurrentDevicePosition: 获取成功 (accuracy=$accuracy, 第${attempt + 1}次)');
-          return position;
+          if (_isPlausibleCoordinate(position)) {
+            debugPrint(
+              'getCurrentDevicePosition: 实时成功 accuracy=$accuracy 第${attempt + 1}次',
+            );
+            return position;
+          }
         } catch (e) {
-          debugPrint('getCurrentDevicePosition: accuracy=$accuracy 第${attempt + 1}次失败 $e');
+          debugPrint(
+            'getCurrentDevicePosition: accuracy=$accuracy 第${attempt + 1}次失败 $e',
+          );
           if (attempt < retryPerAccuracy - 1) {
-            await Future.delayed(const Duration(seconds: 1));
+            await Future.delayed(const Duration(milliseconds: 700));
           }
         }
       }
     }
+
+    // 3) 兜底：超过 7 天的 lastKnown 仍优于无坐标
+    if (oldButPlausibleLast != null) {
+      debugPrint('getCurrentDevicePosition: 使用较旧的缓存位置作为兜底');
+      return oldButPlausibleLast;
+    }
+
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null && _isPlausibleCoordinate(last)) {
+        return last;
+      }
+    } catch (_) {}
 
     debugPrint('getCurrentDevicePosition: 所有策略均失败，返回 null');
     return null;

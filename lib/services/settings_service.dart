@@ -43,17 +43,6 @@ class SettingsService {
     await _box.put(_themeModeKey, value);
   }
 
-  static String getThemeModeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return '浅色模式';
-      case ThemeMode.dark:
-        return '深色模式';
-      case ThemeMode.system:
-        return '跟随系统';
-    }
-  }
-
   // ==================== 语言 ====================
 
   static Locale getLocale() {
@@ -73,21 +62,10 @@ class SettingsService {
     await _box.put(_localeKey, value);
   }
 
-  static String getLocaleLabel(String localeCode) {
-    switch (localeCode) {
-      case 'zh_CN':
-        return '简体中文';
-      case 'en_US':
-        return 'English';
-      default:
-        return '简体中文';
-    }
-  }
-
   static List<Map<String, dynamic>> getSupportedLocales() {
     return [
-      {'code': 'zh_CN', 'label': '简体中文', 'locale': const Locale('zh', 'CN')},
-      {'code': 'en_US', 'label': 'English', 'locale': const Locale('en', 'US')},
+      {'code': 'zh_CN', 'locale': const Locale('zh', 'CN')},
+      {'code': 'en_US', 'locale': const Locale('en', 'US')},
     ];
   }
 

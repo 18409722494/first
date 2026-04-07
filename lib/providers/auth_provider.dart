@@ -21,16 +21,15 @@ class AuthProvider with ChangeNotifier {
     try {
       final isLoggedIn = await StorageService.isLoggedIn();
       if (isLoggedIn) {
-        final userInfo = await StorageService.getUserInfo();
-        final token = await StorageService.getToken();
-        
-        if (userInfo['userId'] != null) {
+        // 一次异步读取所有字段
+        final data = await StorageService.readAuthData();
+        if (data['userId'] != null) {
           _user = User(
-            id: userInfo['userId']!,
-            username: userInfo['username'] ?? '',
-            email: userInfo['email'] ?? '',
-            token: token,
-            employeeId: userInfo['employeeId'],
+            id: data['userId']!,
+            username: data['username'] ?? '',
+            email: data['email'] ?? '',
+            token: data['token'],
+            employeeId: data['employeeId'],
           );
         }
       }
@@ -57,10 +56,9 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.success) {
-        final savedUserInfo = await StorageService.getUserInfo();
-        final savedEmployeeId = savedUserInfo['employeeId'];
+        final data = await StorageService.readAuthData();
+        final savedEmployeeId = data['employeeId'];
 
-        // 保存用户信息和token
         await StorageService.saveUserInfo(
           userId: username.trim(),
           username: username.trim(),
@@ -68,7 +66,6 @@ class AuthProvider with ChangeNotifier {
           employeeId: savedEmployeeId,
         );
 
-        // 保存token（如果API返回了token）
         if (response.token != null && response.token!.isNotEmpty) {
           await StorageService.saveToken(response.token!);
         }
@@ -98,8 +95,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// 注册（航司员工：工号须已在后台预置且尚未激活）
-  /// 注册成功返回 true，但用户仍需调用登录接口
   Future<bool> register(
     String employeeId,
     String username,
@@ -113,9 +108,8 @@ class AuthProvider with ChangeNotifier {
       final empId = employeeId.trim();
       final name = username.trim();
       final response = await ApiService.register(empId, name, password);
-      
+
       if (response.success) {
-        // 注册成功，保存员工工号到本地（用于后续登录后关联）
         await StorageService.saveUserInfo(
           userId: name,
           username: name,
@@ -140,7 +134,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// 先请求服务端注销，再清除本地会话。返回非 null 表示服务端提示（本地仍会清除）。
   Future<String?> logout() async {
     final id = _user?.employeeId?.trim();
     String? serverMessage;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../components/empty_state.dart';
 import '../components/luggage_card.dart';
 import '../components/status_badge.dart';
@@ -16,7 +17,7 @@ import '../models/qr_payload.dart';
 
 /// 行李列表页面
 class LuggageListScreen extends StatefulWidget {
-  const LuggageListScreen({Key? key}) : super(key: key);
+  const LuggageListScreen({super.key});
 
   @override
   State<LuggageListScreen> createState() => _LuggageListScreenState();
@@ -182,6 +183,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   }
 
   void _showFilterBottomSheet() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -208,11 +210,11 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('筛选条件',
+                Text(l10n.filterConditions,
                     style: TextStyle(fontSize: Responsive.fontSize(ctx, 18), fontWeight: FontWeight.bold)),
                 TextButton(
                   onPressed: () { Navigator.pop(ctx); _clearFilters(); },
-                  child: Text('清除筛选', style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
+                  child: Text(l10n.clearFilter, style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
                 ),
               ],
             ),
@@ -222,19 +224,19 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
                 horizontal: Responsive.padding(ctx, AppSpacing.md),
                 vertical: Responsive.spacing(ctx, AppSpacing.sm)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('状态', style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(ctx, 14))),
+              Text(l10n.status, style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(ctx, 14))),
               SizedBox(height: Responsive.spacing(ctx, AppSpacing.sm)),
               Wrap(
                 spacing: Responsive.spacing(ctx, AppSpacing.sm),
                 runSpacing: Responsive.spacing(ctx, AppSpacing.sm),
                 children: [
-                  _buildFilterChip(ctx, '全部', null),
-                  _buildFilterChip(ctx, '已办理托运', 'checkIn'),
-                  _buildFilterChip(ctx, '运输中', 'inTransit'),
-                  _buildFilterChip(ctx, '已到达', 'arrived'),
-                  _buildFilterChip(ctx, '已交付', 'delivered'),
-                  _buildFilterChip(ctx, '已损坏', 'damaged'),
-                  _buildFilterChip(ctx, '已丢失', 'lost'),
+                  _buildFilterChip(ctx, l10n.all, null),
+                  _buildFilterChip(ctx, l10n.checkIn, 'checkIn'),
+                  _buildFilterChip(ctx, l10n.inTransit, 'inTransit'),
+                  _buildFilterChip(ctx, l10n.arrived, 'arrived'),
+                  _buildFilterChip(ctx, l10n.delivered, 'delivered'),
+                  _buildFilterChip(ctx, l10n.damaged, 'damaged'),
+                  _buildFilterChip(ctx, l10n.lost, 'lost'),
                 ],
               ),
             ]),
@@ -260,6 +262,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   }
 
   void _showLongPressMenu(BuildContext ctx, Luggage luggage) {
+    final l10n = AppLocalizations.of(ctx)!;
     showModalBottomSheet(
       context: ctx,
       builder: (ctx2) => Container(
@@ -267,12 +270,12 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: Icon(Icons.edit, size: Responsive.iconSize(ctx2, 20)),
-            title: Text('修改状态', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            title: Text(l10n.changeStatus, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
             onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
           ),
           ListTile(
             leading: Icon(Icons.report_problem, size: Responsive.iconSize(ctx2, 20)),
-            title: Text('标记破损', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            title: Text(l10n.markDamaged, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
             onTap: () {
               Navigator.pop(ctx2);
               Navigator.of(ctx2).push(
@@ -285,7 +288,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
           ),
           ListTile(
             leading: Icon(Icons.history, size: Responsive.iconSize(ctx2, 20)),
-            title: Text('查看历史日志', style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
+            title: Text(l10n.viewHistoryLog, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
             onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
           ),
         ]),
@@ -295,23 +298,24 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final padMd = Responsive.padding(context, AppSpacing.md);
     final spSm = Responsive.spacing(context, AppSpacing.sm);
     final spXs = Responsive.spacing(context, AppSpacing.xs);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('行李管理'),
+        title: Text(l10n.luggageManagement),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _isLoadingFirst ? null : _showFilterBottomSheet,
-            tooltip: '筛选',
+            tooltip: l10n.filter,
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _isLoadingFirst ? null : _refresh,
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -323,7 +327,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
             controller: _searchController,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: '搜索行李标签、所有者、位置...',
+              hintText: l10n.searchLuggageTag,
               prefixIcon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(icon: const Icon(Icons.clear), onPressed: _clearFilters)
@@ -340,14 +344,14 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
           padding: EdgeInsets.symmetric(horizontal: padMd, vertical: spXs),
           child: Row(children: [
             Text(
-              '共 ${_filteredItems.length} 个行李',
+              l10n.totalLuggage(_filteredItems.length),
               style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
             ),
             if (_hasMoreData && !_isLoadingFirst)
               Padding(
                 padding: EdgeInsets.only(left: spXs),
                 child: Text(
-                  '（下拉加载更多）',
+                  l10n.loadMore,
                   style: TextStyle(color: Colors.grey[400], fontSize: Responsive.fontSize(context, 12)),
                 ),
               ),
@@ -404,7 +408,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
               : _error != null
                   ? ErrorState(message: _error!, onRetry: _loadFirstPage)
                   : _filteredItems.isEmpty
-                      ? EmptyState.search(keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
+                      ? EmptyState.search(context, keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
                       : RefreshIndicator(
                           onRefresh: _refresh,
                           child: ListView.builder(
@@ -427,7 +431,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
                                     padding: EdgeInsets.all(padMd),
                                     alignment: Alignment.center,
                                     child: Text(
-                                      '— 已加载全部 ${_allItems.length} 条 —',
+                                      l10n.allLoaded(_allItems.length),
                                       style: TextStyle(color: Colors.grey[400], fontSize: 13),
                                     ),
                                   );

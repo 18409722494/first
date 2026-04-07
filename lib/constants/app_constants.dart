@@ -94,17 +94,4 @@ class AppConstants {
     return luggageStatusBgColors[statusKey] ?? Colors.grey.shade100;
   }
 
-  // 首页统计数据
-  static const int mockTodayProcessed = 12;
-  static const int mockAbnormalLuggage = 3;
-  static const int mockPendingTasks = 2;
-
-  // 图表数据
-  static const List<String> weekDayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-  static const List<double> weekProcessed = [12.0, 19.0, 15.0, 17.0, 20.0, 8.0, 12.0];
-  static const List<double> weekAbnormal = [2.0, 3.0, 1.0, 4.0, 2.0, 1.0, 3.0];
-
-  // 图表颜色
-  static const Color chartProcessedColor = Color(0xFF3498db);
-  static const Color chartAbnormalColor = Color(0xFFf39c12);
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -17,16 +18,17 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacingMd = Responsive.spacing(context, AppSpacing.md);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('行李管理工作台'),
+        title: Text(l10n.homeTitle),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: () => _navigateToSearch(context),
             icon: Icon(Icons.search, size: Responsive.iconSize(context, 24)),
-            tooltip: '查询行李',
+            tooltip: l10n.searchLuggage,
           ),
         ],
       ),
@@ -52,6 +54,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildWelcomeCard(BuildContext context, user) {
+    final l10n = AppLocalizations.of(context)!;
     final avatarR = Responsive.avatarRadius(context, 22);
     final iconSizeVal = Responsive.iconSize(context, 22);
     final hPadding = Responsive.padding(context, AppSpacing.md);
@@ -87,7 +90,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '欢迎回来，航司工作人员',
+                    l10n.welcomeBack,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                           fontSize: Responsive.fontSize(context, 12),
@@ -95,7 +98,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   SizedBox(height: Responsive.spacing(context, 2)),
                   Text(
-                    user?.username.isNotEmpty == true ? user!.username : '员工',
+                    user?.username.isNotEmpty == true ? user!.username : l10n.employee,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -112,13 +115,14 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildQuickActionsSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final spacingMd = Responsive.spacing(context, AppSpacing.md);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '快捷操作',
+          l10n.quickActions,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 fontSize: Responsive.fontSize(context, 16),
@@ -131,37 +135,38 @@ class HomeScreen extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: spacingMd,
           crossAxisSpacing: spacingMd,
-          childAspectRatio: 0.95,
+          // 略增高单元格，避免英文副标题两行 + 图标区在窄屏下底部溢出
+          childAspectRatio: 0.88,
           children: [
             _buildActionCard(
               context,
               icon: Icons.qr_code_scanner,
-              title: '扫码处理',
-              subtitle: '扫描行李二维码',
+              title: l10n.scanProcess,
+              subtitle: l10n.scanProcessDesc,
               color: Theme.of(context).colorScheme.primary,
               onTap: () => _navigateToQrScan(context),
             ),
             _buildActionCard(
               context,
               icon: Icons.search,
-              title: '查询行李',
-              subtitle: '搜索行李信息',
+              title: l10n.searchLuggage,
+              subtitle: l10n.searchLuggageDesc,
               color: AppColors.info,
               onTap: () => _navigateToSearch(context),
             ),
             _buildActionCard(
               context,
               icon: Icons.report_problem_outlined,
-              title: '破损登记',
-              subtitle: '登记破损行李',
+              title: l10n.damageRegistration,
+              subtitle: l10n.damageRegistrationDesc,
               color: AppColors.warning,
               onTap: () => _navigateToDamageReport(context),
             ),
             _buildActionCard(
               context,
               icon: Icons.photo_library_outlined,
-              title: '证据查询',
-              subtitle: '查询破损证据',
+              title: l10n.evidenceQuery,
+              subtitle: l10n.evidenceQueryDesc,
               color: AppColors.error,
               onTap: () => _navigateToEvidence(context),
             ),
@@ -189,7 +194,7 @@ class HomeScreen extends StatelessWidget {
           padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Container(
                 padding: EdgeInsets.all(Responsive.spacing(context, AppSpacing.sm)),
@@ -199,27 +204,34 @@ class HomeScreen extends StatelessWidget {
                 ),
                 child: Icon(
                   icon,
-                  size: Responsive.iconSize(context, 30),
+                  size: Responsive.iconSize(context, 28),
                   color: color,
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
               Text(
                 title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: Responsive.fontSize(context, 16),
-                ),
-              ),
-              SizedBox(height: Responsive.spacing(context, 2)),
-              Text(
-                subtitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: Responsive.fontSize(context, 12),
-                  height: 1.25,
+                  fontWeight: FontWeight.bold,
+                  fontSize: Responsive.fontSize(context, 15),
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, 2)),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: Responsive.fontSize(context, 12),
+                      height: 1.25,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -230,6 +242,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildScanButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final btnH = Responsive.buttonHeight(context, 54);
 
     return SizedBox(
@@ -238,7 +251,7 @@ class HomeScreen extends StatelessWidget {
       child: FilledButton.icon(
         onPressed: () => _navigateToQrScan(context),
         icon: Icon(Icons.qr_code_scanner, size: Responsive.iconSize(context, 20)),
-        label: Text('扫描行李二维码', style: TextStyle(fontSize: Responsive.fontSize(context, 15))),
+        label: Text(l10n.scanQRCode, style: TextStyle(fontSize: Responsive.fontSize(context, 15))),
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),

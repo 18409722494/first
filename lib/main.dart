@@ -2,32 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'theme/app_theme.dart';
 import 'services/settings_service.dart';
+import 'services/storage_service.dart';
 import 'services/network_service.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 加载环境变量：开发机用根目录 .env；真机随 assets 中的 .env 一并打包
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('Warning: .env 加载失败，将使用 AppConstants 中 dart-define / 默认回退: $e');
-  }
+  // 并行初始化所有基础服务
+  await Future.wait([
+    // 加载环境变量
+    _loadEnv(),
+    // 初始化 Hive 本地存储
+    Hive.initFlutter(),
+    // 初始化 SharedPreferences 缓存
+    StorageService.init(),
+  ]);
 
-  // 初始化 Hive 本地存储
-  await Hive.initFlutter();
-  // 初始化设置服务
+  // SettingsService 内部也会打开 Hive 盒子，Hiv e已 init，顺序无关
   await SettingsService.init();
-  // 初始化网络监听（启动离线检测与 OfflineIndicator 联动）
+  // 初始化网络监听
   NetworkService().initialize();
 
   runApp(const MyApp());
+}
+
+Future<void> _loadEnv() async {
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('Warning: .env 加载失败，将使用默认值: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -46,6 +57,8 @@ class MyApp extends StatelessWidget {
             title: '行李管理系统',
             debugShowCheckedModeBanner: false,
             locale: settings.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: settings.themeMode,
@@ -57,8 +70,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// 认证状态路由封装
-/// 根据用户登录状态决定显示登录页或主页
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 

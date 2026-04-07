@@ -15,7 +15,7 @@ import '../utils/responsive.dart';
 /// 添加行李页面
 /// 用于手动录入行李信息
 class AddLuggageScreen extends StatefulWidget {
-  const AddLuggageScreen({Key? key}) : super(key: key);
+  const AddLuggageScreen({super.key});
 
   @override
   State<AddLuggageScreen> createState() => _AddLuggageScreenState();
@@ -33,7 +33,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
   final _notesController = TextEditingController();
 
   // 图片上传
-  List<String> _images = [];
+  final List<String> _images = [];
   bool _isUploading = false;
 
   // 选择的状态
@@ -66,6 +66,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
   /// 上传图片
   Future<void> _uploadImage() async {
     if (_images.length >= 3) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('最多只能上传3张照片')),
       );
@@ -81,14 +82,17 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
       final mockImageUrl = 'https://picsum.photos/seed/${Random().nextInt(1000)}/300/300';
 
+      if (!mounted) return;
       setState(() {
         _images.add(mockImageUrl);
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('照片上传成功')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('上传失败：$e')),
       );
@@ -129,6 +133,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
       }
     }
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -154,6 +159,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
       await LuggageService.addLuggage(luggage);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('行李信息添加成功！'),
@@ -161,8 +167,10 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
         ),
       );
 
+      if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('添加失败：${e.toString()}'),
@@ -170,9 +178,11 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

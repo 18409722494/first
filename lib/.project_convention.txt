@@ -2,8 +2,6 @@ lib/
 ├── main.dart                    # 应用入口
 ├── constants/                   # 全局常量（勿硬编码）
 │   └── app_constants.dart       # API地址、超重规则、行李状态颜色等
-├── data/                        # 数据层
-│   └── mock_data.dart          # 所有模拟/测试数据（勿散落各处）
 ├── models/                      # 数据模型
 │   ├── luggage.dart
 │   ├── user.dart
@@ -27,6 +25,5 @@ lib/
 - 常量文件：xxx_constants.dart
 
 禁止：
-- 在 screens/ 中定义静态模拟数据 → 统一放到 lib/data/mock_data.dart
 - 在 screens/ 中硬编码 API 地址、颜色值等 → 统一提取到 lib/constants/
 - 重复的状态工具函数 → 统一放到 lib/utils/luggage_utils.dart

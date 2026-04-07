@@ -11,7 +11,7 @@ import 'qr_scan_screen.dart';
 /// 查询行李页面
 /// 用于通过条件搜索行李信息
 class SearchLuggageScreen extends StatefulWidget {
-  const SearchLuggageScreen({Key? key}) : super(key: key);
+  const SearchLuggageScreen({super.key});
 
   @override
   State<SearchLuggageScreen> createState() => _SearchLuggageScreenState();
@@ -42,6 +42,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
     try {
       // 客户端筛选：拉取足够多页数据（与列表分页接口一致）
       final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
+      if (!mounted) return;
       final allLuggage = result.items;
 
       // 应用搜索和过滤
@@ -71,9 +72,11 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
   
@@ -142,7 +145,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                 SizedBox(height: spacingSm),
 
                 DropdownButtonFormField<LuggageStatus?>(
-                  value: _selectedStatus,
+                  initialValue: _selectedStatus,
                   isExpanded: true,
                   isDense: true,
                   decoration: const InputDecoration(
@@ -160,7 +163,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                         value: status,
                         child: Text(_getStatusText(status), style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                       );
-                    }).toList(),
+                    }),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -272,11 +275,11 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
               children: [
                 Icon(Icons.flight, size: Responsive.iconSize(context, 14), color: Colors.grey),
                 SizedBox(width: Responsive.spacing(context, 6)),
-                Text('${luggage.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                Text(luggage.flightNumber, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                 SizedBox(width: spacingSm),
                 Icon(Icons.person, size: Responsive.iconSize(context, 14), color: Colors.grey),
                 SizedBox(width: Responsive.spacing(context, 6)),
-                Text('${luggage.passengerName}', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                Text(luggage.passengerName, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
               ],
             ),
             SizedBox(height: spacingXs),
@@ -285,7 +288,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
               children: [
                 Icon(Icons.location_on, size: Responsive.iconSize(context, 14), color: Colors.grey),
                 SizedBox(width: Responsive.spacing(context, 6)),
-                Text('${luggage.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
+                Text(luggage.destination, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
                 SizedBox(width: spacingSm),
                 Icon(Icons.scale, size: Responsive.iconSize(context, 14), color: Colors.grey),
                 SizedBox(width: Responsive.spacing(context, 6)),

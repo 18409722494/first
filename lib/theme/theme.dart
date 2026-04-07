@@ -1,5 +1,5 @@
-/// 应用主题模块
-/// 导出所有主题相关的类和常量
+// 应用主题模块
+// 导出所有主题相关的类和常量
 export 'app_colors.dart';
 export 'app_radius.dart';
 export 'app_spacing.dart';

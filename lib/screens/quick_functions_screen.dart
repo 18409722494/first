@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
@@ -26,22 +27,24 @@ class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
 
   // ==================== 快速扫描 - 使用 PermissionService ====================
   void _onQuickScan() async {
+    final l10n = AppLocalizations.of(context)!;
     final hasPermission = await PermissionService.requestCamera(context);
 
     if (!mounted) return;
 
     if (hasPermission) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('快速扫描功能已启用')),
+        SnackBar(content: Text(l10n.quickScanEnabled)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('快捷功能'),
+        title: Text(l10n.quickFunctionsTitle),
       ),
       body: ListView(
         padding: EdgeInsets.all(Responsive.padding(context, 16)),
@@ -51,8 +54,8 @@ class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.map_outlined),
-                  title: const Text('行李地图'),
-                  subtitle: const Text('查看行李位置分布'),
+                  title: Text(l10n.luggageMap),
+                  subtitle: Text(l10n.luggageMapDesc),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
                     Navigator.of(context).push(
@@ -65,8 +68,8 @@ class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.qr_code_scanner_outlined),
-                  title: const Text('快速扫描'),
-                  subtitle: const Text('直接进入扫描界面'),
+                  title: Text(l10n.quickScan),
+                  subtitle: Text(l10n.quickScanDesc),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: _onQuickScan,
                 ),
@@ -81,14 +84,14 @@ class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '快捷功能说明',
+                    l10n.quickFunctionsNote,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontSize: Responsive.fontSize(context, 15),
                     ),
                   ),
                   SizedBox(height: Responsive.spacing(context, 6)),
                   Text(
-                    '• 行李地图：查看行李的实时位置分布\n• 快速扫描：直接进入二维码扫描界面，方便快速处理行李',
+                    l10n.quickFunctionsNoteContent,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: Responsive.fontSize(context, 12),

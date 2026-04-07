@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'luggage_list_screen.dart';
@@ -7,7 +8,7 @@ import 'todo_screen.dart';
 
 /// 主界面：底部导航 + 四个页面
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -15,39 +16,39 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  
+
   // 硬编码待办数量，用于演示badge显示
   final int _pendingTaskCount = 3;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      // 明确占满 Scaffold 的 body 区域，避免部分机型/模拟器在嵌套 Scaffold 时出现
-      // 约束异常（日志里可能出现 FlutterRenderer: Width is zero）
       body: SizedBox.expand(child: _buildBody()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: '首页',
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: l10n.homeTab,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.luggage_outlined),
-            selectedIcon: Icon(Icons.luggage),
-            label: '行李',
+          NavigationDestination(
+            icon: const Icon(Icons.luggage_outlined),
+            selectedIcon: const Icon(Icons.luggage),
+            label: l10n.luggageTab,
           ),
           NavigationDestination(
             icon: _buildBadge(Icons.task_outlined, false),
             selectedIcon: _buildBadge(Icons.task, true),
-            label: '待办',
+            label: l10n.todoTab,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: '我的',
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: l10n.myTab,
           ),
         ],
       ),

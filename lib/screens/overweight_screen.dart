@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/luggage.dart';
 import '../constants/app_constants.dart';
 import '../components/app_text_field.dart';
@@ -15,7 +14,7 @@ import '../utils/responsive.dart';
 class OverweightScreen extends StatefulWidget {
   final Luggage luggage;
 
-  const OverweightScreen({Key? key, required this.luggage}) : super(key: key);
+  const OverweightScreen({super.key, required this.luggage});
 
   @override
   State<OverweightScreen> createState() => _OverweightScreenState();

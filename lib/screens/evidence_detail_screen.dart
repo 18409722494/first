@@ -10,7 +10,7 @@ import '../utils/responsive.dart';
 class EvidenceDetailScreen extends StatefulWidget {
   final AbnormalBaggage baggage;
 
-  const EvidenceDetailScreen({Key? key, required this.baggage}) : super(key: key);
+  const EvidenceDetailScreen({super.key, required this.baggage});
 
   @override
   State<EvidenceDetailScreen> createState() => _EvidenceDetailScreenState();

@@ -5,7 +5,6 @@ import '../constants/app_constants.dart';
 import '../models/luggage.dart';
 import '../models/qr_payload.dart';
 import '../models/search_result.dart';
-import '../data/mock_data.dart';
 import '../services/luggage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -21,7 +20,7 @@ import 'luggage_detail_screen.dart';
 /// 瓦片：天地图影像底图（img_w）+ 影像标注层（cia_w）
 /// 支持地图缩放、拖拽、点击行李查看详情
 class LuggageMapScreen extends StatefulWidget {
-  const LuggageMapScreen({Key? key}) : super(key: key);
+  const LuggageMapScreen({super.key});
 
   @override
   State<LuggageMapScreen> createState() => _LuggageMapScreenState();
@@ -63,21 +62,19 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     try {
       final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
       final list = result.items;
-      final loaded = list.isNotEmpty ? list : MockData.getLuggageList();
       setState(() {
-        _luggages = loaded;
+        _luggages = list;
         _isLoading = false;
         _error = null;
       });
-      _rebuildMarkerCache(loaded);
+      _rebuildMarkerCache(list);
     } catch (e) {
-      final fallback = MockData.getLuggageList();
       setState(() {
-        _luggages = fallback;
+        _luggages = [];
         _isLoading = false;
-        _error = '加载失败，使用演示数据';
+        _error = '加载行李数据失败: $e';
       });
-      _rebuildMarkerCache(fallback);
+      _rebuildMarkerCache([]);
     }
   }
 

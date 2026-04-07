@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 
 /// 空状态占位组件
@@ -25,27 +25,32 @@ class EmptyState extends StatelessWidget {
     this.accentColor,
   });
 
-  factory EmptyState.luggage() {
-    return const EmptyState(
+  static EmptyState luggage(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return EmptyState(
       icon: Icons.luggage_outlined,
-      title: '暂无行李',
-      subtitle: '扫码或手动添加行李',
+      title: l10n.noLuggage,
+      subtitle: l10n.scanOrAddLuggage,
     );
   }
 
-  factory EmptyState.search({String? keyword}) {
+  static EmptyState search(BuildContext context, {String? keyword}) {
+    final l10n = AppLocalizations.of(context)!;
     return EmptyState(
       icon: Icons.search_off,
-      title: '未找到相关结果',
-      subtitle: keyword != null ? '未找到包含 "$keyword" 的行李' : '尝试更换搜索条件',
+      title: l10n.noSearchResults,
+      subtitle: keyword != null
+          ? l10n.noLuggageWithKeyword(keyword)
+          : l10n.tryOtherCondition,
     );
   }
 
-  factory EmptyState.networkError() {
-    return const EmptyState(
+  static EmptyState networkError(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return EmptyState(
       icon: Icons.wifi_off,
-      title: '网络连接失败',
-      subtitle: '请检查网络设置后重试',
+      title: l10n.networkFailed,
+      subtitle: l10n.checkNetworkRetry,
       iconColor: AppColors.error,
     );
   }
@@ -115,6 +120,8 @@ class LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -131,6 +138,15 @@ class LoadingState extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.loading,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ],
       ),
@@ -139,17 +155,19 @@ class LoadingState extends StatelessWidget {
 }
 
 class ErrorState extends StatelessWidget {
-  final String message;
+  final String? message;
   final VoidCallback? onRetry;
 
   const ErrorState({
     super.key,
-    this.message = '加载失败，请重试',
+    this.message,
     this.onRetry,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -162,7 +180,7 @@ class ErrorState extends StatelessWidget {
             const Icon(Icons.error_outline, size: 56, color: AppColors.error),
             const SizedBox(height: AppSpacing.md),
             Text(
-              message,
+              message ?? l10n.loadFailedRetry,
               style: TextStyle(
                 fontSize: 15,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -174,7 +192,7 @@ class ErrorState extends StatelessWidget {
               TextButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('重试'),
+                label: Text(l10n.retry),
               ),
             ],
           ],

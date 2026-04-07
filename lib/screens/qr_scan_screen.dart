@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:geolocator/geolocator.dart';
+import '../l10n/app_localizations.dart';
 import '../models/qr_payload.dart';
 import '../models/luggage.dart';
 import '../services/luggage_service.dart';
@@ -30,7 +31,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
 
-  bool _navigated = false;
+  final bool _navigated = false;
   String? _lastRaw;
 
   /// 扫码时是否正在处理（防止重复触发）
@@ -48,6 +49,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   /// 1. 解析二维码 → 2. 获取行李信息 → 3. 获取GPS → 4. 上传位置 → 5. 弹出操作菜单
   void _onDetected(BarcodeCapture capture) async {
     if (_navigated || _processing) return;
+    final l10n = AppLocalizations.of(context)!;
 
     final barcode = capture.barcodes.firstOrNull;
     final raw = barcode?.rawValue?.trim();
@@ -62,9 +64,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       final payload = QrPayload.fromRaw(raw);
       if (payload.luggageId == null || payload.luggageId!.isEmpty) {
         if (!mounted) return;
-        _showErrorSnackBar(
-          '二维码中未包含行李标识（需 JSON/链接参数 luggageId，或多行文本中的「行李号」「行李编号」）',
-        );
+        _showErrorSnackBar(l10n.qrCodeNoLuggageId);
         return;
       }
 
@@ -74,7 +74,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
         luggage = await LuggageService.getLuggageForScan(payload.luggageId!);
       } catch (e) {
         if (!mounted) return;
-        _showErrorSnackBar('获取行李信息失败: $e');
+        _showErrorSnackBar(l10n.getLuggageFailed(e.toString()));
         return;
       }
 
@@ -104,7 +104,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
         if (!serviceEnabled) {
           locationName =
-              luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+              luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
         } else {
           // ② 多级降级定位（已内置权限检查 + getLastKnownPosition + medium/low 降级）
           position = await LuggageService.getCurrentDevicePosition();
@@ -120,12 +120,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
             );
           } else {
             locationName =
-                luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+                luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
           }
         }
       } catch (e) {
         locationName =
-            luggage.destination.isNotEmpty ? luggage.destination : '未知位置';
+            luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
       }
 
       // 停止相机
@@ -190,6 +190,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     QrPayload payload,
     String locationName,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final baggageNumber = luggage.tagNumber.isNotEmpty
           ? luggage.tagNumber
@@ -197,7 +198,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
               payload.extra['scannedQrRef']?.toString() ??
               '';
       if (baggageNumber.isEmpty) {
-        _showErrorSnackBar('无法同步：缺少行李号 baggageNumber');
+        _showErrorSnackBar(l10n.cannotSyncMissingNo);
         return;
       }
       await LuggageService.updateScanLocation(
@@ -215,11 +216,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('状态已更新为：已到达（已同步后端）')),
+        SnackBar(content: Text(l10n.statusUpdatedArrived)),
       );
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('更新状态失败: $e');
+      _showErrorSnackBar(l10n.updateStatusFailed(e.toString()));
     }
   }
 
@@ -287,17 +288,18 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('扫码'),
+        title: Text(l10n.scan),
         actions: [
           IconButton(
-            tooltip: '切换闪光灯',
+            tooltip: l10n.toggleFlash,
             onPressed: () => _controller.toggleTorch(),
             icon: const Icon(Icons.flash_on),
           ),
           IconButton(
-            tooltip: '切换摄像头',
+            tooltip: l10n.switchCamera,
             onPressed: () => _controller.switchCamera(),
             icon: const Icon(Icons.cameraswitch),
           ),
@@ -315,14 +317,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 if (_processing)
                   Container(
                     color: Colors.black.withValues(alpha: 0.4),
-                    child: const Center(
+                    child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircularProgressIndicator(color: Colors.white),
                           SizedBox(height: 16),
                           Text(
-                            '正在处理...',
+                            l10n.processing,
                             style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                         ],
@@ -336,7 +338,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     padding: const EdgeInsets.all(12),
                     color: Colors.black.withValues(alpha: 0.5),
                     child: Text(
-                      _lastRaw == null ? '对准二维码进行识别' : '已识别：$_lastRaw',
+                      _lastRaw == null ? l10n.alignQRCode : l10n.identified(_lastRaw!),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: Responsive.fontSize(context, 13),
@@ -352,7 +354,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           Padding(
             padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
             child: Text(
-              '提示：扫码后将弹出操作选项。',
+              l10n.scanTip,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[700],
                   ),

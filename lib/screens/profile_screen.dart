@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -14,13 +15,15 @@ import 'quick_functions_screen.dart';
 import 'help_support_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('员工中心'),
+        title: Text(l10n.profileTitle),
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -31,29 +34,36 @@ class ProfileScreen extends StatelessWidget {
           final hPad = Responsive.padding(context, AppSpacing.md);
           final spacingSm = Responsive.spacing(context, AppSpacing.sm);
           final spacingLg = Responsive.spacing(context, AppSpacing.lg);
-          final avatarR = 36.0;
-          final iconSize = 30.0;
+          final spacingXl = Responsive.spacing(context, AppSpacing.xl);
+          final viewPadBottom = MediaQuery.viewPaddingOf(context).bottom;
+          final avatarR = Responsive.avatarRadius(context, 36);
+          final iconSize = Responsive.iconSize(context, 30);
           final vPad = Responsive.spacing(context, AppSpacing.md);
           final usernameFont = Responsive.fontSize(context, 18);
           final emailFont = Responsive.fontSize(context, 12);
-          final iconSizeSmall = 14.0;
+          final iconSizeSmall = Responsive.iconSize(context, 14);
           final logoutFont = Responsive.fontSize(context, 15);
-          final logoutIcon = 20.0;
-          final logoutPadV = Responsive.spacing(context, AppSpacing.buttonPadding + 2);
+          final logoutIcon = Responsive.iconSize(context, 20);
+          // 底部导航 + 安全区 + 额外呼吸空间，避免列表与按钮贴边
+          final scrollBottomPad =
+              spacingXl + viewPadBottom + Responsive.spacing(context, AppSpacing.sm);
 
           return SafeArea(
+            bottom: false,
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(
                 hPad,
                 spacingSm,
                 hPad,
-                spacingLg,
+                scrollBottomPad,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 160),
+                    constraints: BoxConstraints(
+                      minHeight: Responsive.height(context, 140).clamp(120.0, 200.0),
+                    ),
                     child: _buildProfileHeader(
                       context,
                       username,
@@ -68,13 +78,12 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: spacingLg),
                   _buildSettingsSection(context),
-                  SizedBox(height: spacingLg),
+                  SizedBox(height: spacingXl),
                   _buildLogoutButton(
                     context,
                     authProvider,
                     fontSize: logoutFont,
                     iconSize: logoutIcon,
-                    paddingV: logoutPadV,
                   ),
                 ],
               ),
@@ -186,10 +195,14 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsSection(BuildContext context) {
-    const iconContainerSize = 36.0;
-    const iconSizeVal = 18.0;
-    final dividerIndent =
-        iconContainerSize + AppSpacing.sm * 2 + iconSizeVal;
+    final l10n = AppLocalizations.of(context)!;
+    final iconContainerSize = Responsive.spacing(context, 40).clamp(36.0, 44.0);
+    final iconSizeVal = Responsive.iconSize(context, 20);
+    final tilePadH = Responsive.padding(context, AppSpacing.md);
+    final tilePadV = Responsive.spacing(context, AppSpacing.md);
+    final titleFont = Responsive.fontSize(context, 14);
+    final chevronSize = Responsive.iconSize(context, 22);
+    final dividerIndent = iconContainerSize + tilePadH * 2 + iconSizeVal * 0.5;
 
     return Card(
       elevation: 1,
@@ -202,85 +215,85 @@ class ProfileScreen extends StatelessWidget {
             context: context,
             icon: Icons.badge_outlined,
             iconColor: AppColors.primary,
-            title: '账户信息',
+            title: l10n.accountInfo,
             onTap: () => _navigateTo(context, const AccountInfoScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
             context: context,
             icon: Icons.lock_outlined,
             iconColor: AppColors.warning,
-            title: '账户安全',
+            title: l10n.accountSecurity,
             onTap: () => _navigateTo(context, const AccountSecurityScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
             context: context,
             icon: Icons.account_circle_outlined,
             iconColor: AppColors.info,
-            title: '个性化设置',
+            title: l10n.personalization,
             onTap: () => _navigateTo(context, const PersonalizationScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
             context: context,
             icon: Icons.settings_outlined,
             iconColor: AppColors.textSecondary,
-            title: '系统设置',
+            title: l10n.systemSettings,
             onTap: () => _navigateTo(context, const SystemSettingsScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
             context: context,
             icon: Icons.speed_outlined,
             iconColor: AppColors.success,
-            title: '快捷功能',
+            title: l10n.quickFunctions,
             onTap: () => _navigateTo(context, const QuickFunctionsScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
           Divider(height: 1, indent: dividerIndent),
           _buildSettingsTile(
             context: context,
             icon: Icons.help_outline,
             iconColor: AppColors.primaryLight,
-            title: '帮助与支持',
+            title: l10n.helpSupport,
             onTap: () => _navigateTo(context, const HelpSupportScreen()),
             showDivider: false,
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
-            titleFont: 14,
-            chevronSize: 20,
-            paddingH: AppSpacing.sm,
-            paddingV: AppSpacing.sm,
+            titleFont: titleFont,
+            chevronSize: chevronSize,
+            paddingH: tilePadH,
+            paddingV: tilePadV,
           ),
         ],
       ),
@@ -298,8 +311,8 @@ class ProfileScreen extends StatelessWidget {
     double iconSizeVal = 18,
     double titleFont = 14,
     double chevronSize = 20,
-    double paddingH = 8,
-    double paddingV = 8,
+    double paddingH = 12,
+    double paddingV = 14,
   }) {
     return Material(
       color: Colors.transparent,
@@ -323,7 +336,12 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: titleFont, fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: titleFont,
+                    fontWeight: FontWeight.w500,
+                    height: 1.35,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -344,26 +362,29 @@ class ProfileScreen extends StatelessWidget {
     AuthProvider authProvider, {
     double fontSize = 15,
     double iconSize = 20,
-    double paddingV = 16,
   }) {
-    // 勿用固定高度包裹按钮：主题已有较大 vertical padding，height 过小会裁剪图标与文字
+    final l10n = AppLocalizations.of(context)!;
+    // 使用固定最小高度，避免窄屏上 spacing 缩小导致按钮高度仅 20px+ 挤压文字
+    final btnHeight = Responsive.buttonHeight(context, 52).clamp(48.0, 56.0);
+
     return SizedBox(
       width: double.infinity,
+      height: btnHeight,
       child: ElevatedButton.icon(
         onPressed: () async {
           final confirm = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('确认退出'),
-              content: const Text('确定要退出登录吗？'),
+              title: Text(l10n.confirmLogout),
+              content: Text(l10n.logoutConfirmMsg),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('退出'),
+                  child: Text(l10n.logout),
                 ),
               ],
             ),
@@ -385,14 +406,15 @@ class ProfileScreen extends StatelessWidget {
           }
         },
         icon: Icon(Icons.logout, size: iconSize),
-        label: Text('退出登录', style: TextStyle(fontSize: fontSize)),
+        label: Text(l10n.logoutBtn, style: TextStyle(fontSize: fontSize)),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.error,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, kMinInteractiveDimension),
+          minimumSize: Size(double.infinity, btnHeight),
+          tapTargetSize: MaterialTapTargetSize.padded,
           padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: paddingV.clamp(12.0, 18.0),
+            horizontal: Responsive.padding(context, AppSpacing.md),
+            vertical: Responsive.spacing(context, AppSpacing.sm),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),

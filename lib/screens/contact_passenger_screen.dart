@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/luggage.dart';
-import '../data/mock_data.dart';
 import '../theme/app_spacing.dart';
+import '../components/empty_state.dart';
 import '../utils/responsive.dart';
 
 /// 旅客联系/认领页
@@ -9,7 +9,7 @@ import '../utils/responsive.dart';
 class ContactPassengerScreen extends StatefulWidget {
   final Luggage luggage;
 
-  const ContactPassengerScreen({Key? key, required this.luggage}) : super(key: key);
+  const ContactPassengerScreen({super.key, required this.luggage});
 
   @override
   State<ContactPassengerScreen> createState() => _ContactPassengerScreenState();
@@ -74,12 +74,11 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
             Card(
               child: Padding(
                 padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  for (final record in MockData.callRecords)
-                    _buildCallRecord(record['time']!, record['status']!, record['description']!),
-                  ],
+                child: EmptyState(
+                  icon: Icons.call_end_outlined,
+                  title: '暂无通话记录',
+                  subtitle: '话务/外呼记录需对接后端后展示，当前无本地模拟数据。',
+                  iconSize: Responsive.iconSize(context, 40),
                 ),
               ),
             ),
@@ -145,30 +144,6 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// 构建通话记录项
-  Widget _buildCallRecord(String time, String status, String description) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: Responsive.spacing(context, 6)),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(time, style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: Colors.grey)),
-              Text(status, style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: Colors.red)),
-            ],
-          ),
-          SizedBox(height: Responsive.spacing(context, 2)),
-          Text(description, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-        ],
       ),
     );
   }

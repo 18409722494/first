@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-
+import '../models/abnormal_baggage.dart';
+import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
+import '../models/luggage_detail_info.dart';
 import '../models/qr_payload.dart';
 import '../services/luggage_service.dart';
-import '../data/mock_data.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -12,7 +13,6 @@ import '../components/app_button.dart';
 import '../components/status_badge.dart';
 import '../components/empty_state.dart';
 import '../utils/responsive.dart';
-import 'luggage_map_screen.dart';
 
 /// 行李详情页面
 class LuggageDetailScreen extends StatefulWidget {
@@ -20,10 +20,10 @@ class LuggageDetailScreen extends StatefulWidget {
   final String raw;
 
   const LuggageDetailScreen({
-    Key? key,
+    super.key,
     required this.qrPayload,
     required this.raw,
-  }) : super(key: key);
+  });
 
   @override
   State<LuggageDetailScreen> createState() => _LuggageDetailScreenState();
@@ -32,7 +32,8 @@ class LuggageDetailScreen extends StatefulWidget {
 class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   bool _loading = true;
   String? _error;
-  Luggage? _luggage;
+  LuggageDetailInfo? _detail;
+
   final TextEditingController _statusCtrl = TextEditingController();
   final TextEditingController _locationCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
@@ -58,14 +59,16 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     });
 
     try {
-      final luggageId = widget.qrPayload.luggageId!;
-      final luggage = await LuggageService.getLuggageById(luggageId);
-      _luggage = luggage;
-      _statusCtrl.text = luggage.status.displayName;
-      _locationCtrl.text = luggage.destination;
-      _noteCtrl.text = luggage.notes;
+      final detail = await LuggageService.getBaggageDetail(
+        qrPayload: widget.qrPayload,
+        rawQr: widget.raw,
+      );
+      _detail = detail;
+      _statusCtrl.text = detail.luggage.status.displayName;
+      _locationCtrl.text = detail.luggage.destination;
+      _noteCtrl.text = detail.luggage.notes;
     } catch (e) {
-      _error = e.toString();
+      _error = '加载异常: $e';
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -73,9 +76,22 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     }
   }
 
+  Luggage get _luggage => _detail?.luggage ?? Luggage(
+        id: widget.qrPayload.luggageId ?? widget.raw,
+        tagNumber: '${widget.qrPayload.extra['tagNo'] ?? widget.qrPayload.extra['tag_no'] ?? ''}',
+        flightNumber: '${widget.qrPayload.extra['flight_hint'] ?? widget.qrPayload.extra['航班'] ?? ''}',
+        passengerName: '${widget.qrPayload.extra['passenger_hint'] ?? widget.qrPayload.extra['旅客'] ?? ''}',
+        weight: 0,
+        status: LuggageStatus.checkIn,
+        checkInTime: DateTime.now(),
+        lastUpdated: DateTime.now(),
+        destination: '',
+        notes: '',
+      );
+
   /// 获取当前扫描位置并更新到后端
   Future<void> _updateLocationToBackend() async {
-    if (_luggage == null || _locationCtrl.text.trim().isEmpty) {
+    if (_locationCtrl.text.trim().isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请先输入位置信息')),
@@ -83,19 +99,18 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
-      final baggageNumber = _luggage!.tagNumber.isNotEmpty
-          ? _luggage!.tagNumber
-          : widget.qrPayload.extra['tagNo']?.toString() ?? widget.qrPayload.luggageId ?? '';
+      final bag = _luggage;
+      final baggageNumber = bag.tagNumber.isNotEmpty
+          ? bag.tagNumber
+          : widget.qrPayload.luggageId ?? '';
 
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: _locationCtrl.text.trim(),
-        status: BaggageStatusMapper.toBackendLocationStatus(_luggage!.status),
+        status: BaggageStatusMapper.toBackendLocationStatus(bag.status),
       );
 
       if (!mounted) return;
@@ -108,32 +123,29 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
         SnackBar(content: Text('更新位置失败: $e')),
       );
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _update() async {
-    if (_luggage == null) return;
-
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
+      final bag = _luggage;
       final status = BaggageStatusMapper.parseFromUserInput(
         _statusCtrl.text,
-        _luggage!.status,
+        bag.status,
       );
-      final baggageNumber = _luggage!.tagNumber.isNotEmpty
-          ? _luggage!.tagNumber
-          : widget.qrPayload.extra['tagNo']?.toString() ?? widget.qrPayload.luggageId ?? '';
+      final baggageNumber = bag.tagNumber.isNotEmpty
+          ? bag.tagNumber
+          : widget.qrPayload.luggageId ?? '';
       final locationText = _locationCtrl.text.trim();
       final locationForApi = locationText.isNotEmpty
           ? locationText
-          : (_luggage!.destination.isNotEmpty ? _luggage!.destination : '未知位置');
+          : (bag.destination.isNotEmpty ? bag.destination : '未知位置');
 
       if (baggageNumber.isNotEmpty) {
         await LuggageService.updateScanLocation(
@@ -145,51 +157,30 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
 
       Luggage updated;
       try {
-        updated = await LuggageService.updateLuggage(_luggage!.id, {
+        updated = await LuggageService.updateLuggage(bag.id, {
           'status': status.name,
           'destination': locationText.isEmpty ? null : locationText,
           'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         });
       } catch (_) {
-        updated = _luggage!.copyWith(
+        updated = bag.copyWith(
           status: status,
-          destination: locationText.isNotEmpty ? locationText : _luggage!.destination,
-          notes: _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : _luggage!.notes,
+          destination: locationText.isNotEmpty ? locationText : bag.destination,
+          notes: _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : bag.notes,
           lastUpdated: DateTime.now(),
         );
       }
-      _luggage = updated.copyWith(status: status);
-      _statusCtrl.text = _luggage!.status.displayName;
+
+      // 同步更新本地状态
+      _detail = LuggageDetailInfo(
+        luggage: updated,
+        abnormalRecords: _detail?.abnormalRecords ?? [],
+        operationLogs: _detail?.operationLogs ?? [],
+      );
+      _statusCtrl.text = updated.status.displayName;
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('更新成功')));
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _uploadPlaceholder() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final created = await LuggageService.uploadLuggage({
-        'tagNumber': widget.qrPayload.extra['tagNo'] ?? widget.qrPayload.extra['tag_no'] ?? '',
-        'flightNumber': '',
-        'passengerName': '',
-        'weight': 0.0,
-        'status': _statusCtrl.text.trim(),
-        'checkInTime': DateTime.now().toIso8601String(),
-        'lastUpdated': DateTime.now().toIso8601String(),
-        'destination': _locationCtrl.text.trim(),
-        'notes': _noteCtrl.text.trim(),
-      });
-      _luggage = created;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('上传/创建成功')));
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -216,262 +207,22 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       body: _loading
           ? const LoadingState()
           : DefaultTabController(
-              length: 2,
+              length: 3,
               child: Column(
                 children: [
                   const TabBar(
                     tabs: [
                       Tab(text: '基本信息'),
-                      Tab(text: '历史日志'),
+                      Tab(text: '破损记录'),
+                      Tab(text: '操作日志'),
                     ],
                   ),
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // 基本信息标签页
-                        ListView(
-                          padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
-                          children: [
-                            // 二维码解析结果卡片
-                            Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(Responsive.spacing(context, 6)),
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.primaryContainer,
-                                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                                          ),
-                                          child: Icon(
-                                            Icons.qr_code_2,
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                            size: Responsive.iconSize(context, 18),
-                                          ),
-                                        ),
-                                        SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                                        Text(
-                                          '二维码解析结果',
-                                          style: theme.textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: Responsive.fontSize(context, 14),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    const Divider(height: 1),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    _kv('raw', widget.raw),
-                                    _kv('userId', payload.userId ?? '-'),
-                                    _kv('luggageId', payload.luggageId ?? '-'),
-                                    _kv('role', payload.role ?? '-'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                            if (_error != null)
-                              Padding(
-                                padding: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.sm)),
-                                child: Text(
-                                  _error!,
-                                  style: TextStyle(color: AppColors.error, fontSize: 12),
-                                ),
-                              ),
-                            // 行李详情卡片
-                            Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(Responsive.spacing(context, 6)),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                                          ),
-                                          child: Icon(
-                                            Icons.luggage,
-                                            color: AppColors.primary,
-                                            size: Responsive.iconSize(context, 18),
-                                          ),
-                                        ),
-                                        SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                                        Text(
-                                          '行李详情',
-                                          style: theme.textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: Responsive.fontSize(context, 14),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    const Divider(height: 1),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    _kv('id', _luggage?.id ?? payload.luggageId ?? '-'),
-                                    _kv('tagNumber', _luggage?.tagNumber ?? (payload.extra['tagNo']?.toString() ?? '-')),
-                                    _kv('flightNumber', _luggage?.flightNumber ?? '-'),
-                                    _kv('passengerName', _luggage?.passengerName ?? '-'),
-                                    _kv('weight', _luggage?.weight.toString() ?? '-'),
-                                    _kvStatus('status', _luggage?.status),
-                                    _kv('destination', _luggage?.destination ?? '-'),
-                                    _kv('lastUpdated', _luggage?.lastUpdated.toIso8601String() ?? '-'),
-                                    _kv('latitude', _luggage?.latitude?.toString() ?? '-'),
-                                    _kv('longitude', _luggage?.longitude?.toString() ?? '-'),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    AppTextField(
-                                      controller: _statusCtrl,
-                                      label: '状态 status',
-                                      prefixIcon: Icons.flag_outlined,
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                                    AppTextField(
-                                      controller: _locationCtrl,
-                                      label: '位置 location',
-                                      prefixIcon: Icons.location_on_outlined,
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                                    AppTextField(
-                                      controller: _noteCtrl,
-                                      label: '备注 note',
-                                      prefixIcon: Icons.note_outlined,
-                                      maxLines: 2,
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: AppButton(
-                                            text: '更新(PUT)',
-                                            type: AppButtonType.primary,
-                                            onPressed: _loading ? null : _update,
-                                            fullWidth: true,
-                                          ),
-                                        ),
-                                        SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
-                                        Expanded(
-                                          child: AppButton(
-                                            text: '上传/创建(POST)',
-                                            type: AppButtonType.outline,
-                                            onPressed: _loading ? null : _uploadPlaceholder,
-                                            fullWidth: true,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                                    if (_luggage?.latitude != null && _luggage?.longitude != null)
-                                      AppButton(
-                                        text: '在地图上查看',
-                                        icon: Icons.map,
-                                        type: AppButtonType.primary,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => const LuggageMapScreen(),
-                                            ),
-                                          );
-                                        },
-                                        fullWidth: true,
-                                      ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                                    AppButton(
-                                      text: '更新位置到后端',
-                                      icon: Icons.location_on,
-                                      type: AppButtonType.outline,
-                                      onPressed: _loading ? null : _updateLocationToBackend,
-                                      fullWidth: true,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // 历史日志标签页
-                        ListView(
-                          padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-                          children: [
-                            Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(Responsive.spacing(context, 6)),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.info.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                                          ),
-                                          child: Icon(
-                                            Icons.history,
-                                            color: AppColors.info,
-                                            size: Responsive.iconSize(context, 18),
-                                          ),
-                                        ),
-                                        SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                                        Text(
-                                          '操作历史日志',
-                                          style: theme.textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: Responsive.fontSize(context, 14),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    const Divider(height: 1),
-                                    SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                                    for (final log in MockData.luggageHistoryLogs)
-                                      _buildLogItem(
-                                        log['operator']!,
-                                        log['action']!,
-                                        log['time']!,
-                                        log['details']!,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        _buildBasicTab(context, payload, theme),
+                        _buildDamageTab(context, theme),
+                        _buildLogsTab(context, theme),
                       ],
                     ),
                   ),
@@ -481,74 +232,281 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     );
   }
 
-  Widget _kv(String k, String v) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: Responsive.spacing(context, 2)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: Responsive.spacing(context, 90),
-            child: Text(
-              '$k:',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-                fontSize: Responsive.fontSize(context, 13),
-              ),
+  // ─────────────────────────────────────────────
+  // 基本信息
+  // ─────────────────────────────────────────────
+  Widget _buildBasicTab(BuildContext context, QrPayload payload, ThemeData theme) {
+    final bag = _luggage;
+
+    return ListView(
+      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
+      children: [
+        // 扫码原始数据
+        _buildQrCard(context, payload, theme),
+        SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+
+        // 接口提示（有融合扫码数据时显示）
+        if (_error != null)
+          Container(
+            margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.sm)),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.padding(context, AppSpacing.md),
+              vertical: Responsive.spacing(context, AppSpacing.sm),
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.warning, size: Responsive.iconSize(context, 18)),
+                SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: AppColors.warning, fontSize: Responsive.fontSize(context, 13)),
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Text(
-              v,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: Responsive.fontSize(context, 13),
-              ),
+
+        // 行李基础信息
+        _buildLuggageCard(context, bag, theme),
+      ],
+    );
+  }
+
+  Widget _buildQrCard(BuildContext context, QrPayload payload, ThemeData theme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(Responsive.spacing(context, 6)),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(Icons.qr_code_2,
+                      color: theme.colorScheme.onPrimaryContainer,
+                      size: Responsive.iconSize(context, 18)),
+                ),
+                SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+                Text('扫码信息', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              ],
             ),
-          ),
-        ],
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            const Divider(height: 1),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            _kv('行李号', '${payload.extra['tagNo'] ?? payload.extra['tag_no'] ?? payload.luggageId ?? '-'}'),
+            _kv('旅客', '${payload.extra['passenger_hint'] ?? payload.extra['旅客'] ?? '-'}'),
+            _kv('航班', '${payload.extra['flight_hint'] ?? payload.extra['航班'] ?? '-'}'),
+            _kv('原始数据', widget.raw),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _kvStatus(String k, LuggageStatus? status) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: Responsive.spacing(context, 2)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: Responsive.spacing(context, 90),
-            child: Text(
-              '$k:',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-                fontSize: Responsive.fontSize(context, 13),
-              ),
+  Widget _buildLuggageCard(BuildContext context, Luggage bag, ThemeData theme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(Responsive.spacing(context, 6)),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(Icons.luggage, color: AppColors.primary, size: Responsive.iconSize(context, 18)),
+                ),
+                SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+                Text('行李详情', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              ],
             ),
-          ),
-          StatusBadge(status: status),
-        ],
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            const Divider(height: 1),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            _kv('行李号', bag.tagNumber.isNotEmpty ? bag.tagNumber : '-'),
+            _kv('航班', bag.flightNumber.isNotEmpty ? bag.flightNumber : '-'),
+            _kv('旅客', bag.passengerName.isNotEmpty ? bag.passengerName : '-'),
+            _kv('重量', bag.weight > 0 ? '${bag.weight} kg' : '-'),
+            _kv('状态', '', status: bag.status),
+            _kv('当前位置', bag.destination.isNotEmpty ? bag.destination : '-'),
+            _kv('最后更新', _formatDateTime(bag.lastUpdated)),
+            _kv('备注', bag.notes.isNotEmpty ? bag.notes : '-'),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+
+            // 可编辑区
+            AppTextField(
+              controller: _statusCtrl,
+              label: '状态 status',
+              prefixIcon: Icons.flag_outlined,
+            ),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
+            AppTextField(
+              controller: _locationCtrl,
+              label: '位置 location',
+              prefixIcon: Icons.location_on_outlined,
+            ),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
+            AppTextField(
+              controller: _noteCtrl,
+              label: '备注 note',
+              prefixIcon: Icons.note_outlined,
+              maxLines: 2,
+            ),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    text: '更新(PUT)',
+                    type: AppButtonType.primary,
+                    onPressed: _loading ? null : _update,
+                    fullWidth: true,
+                  ),
+                ),
+                SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
+                Expanded(
+                  child: AppButton(
+                    text: '更新位置',
+                    icon: Icons.location_on,
+                    type: AppButtonType.outline,
+                    onPressed: _loading ? null : _updateLocationToBackend,
+                    fullWidth: true,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildLogItem(String operator, String action, String time, String details) {
-    final theme = Theme.of(context);
+  // ─────────────────────────────────────────────
+  // 破损记录
+  // ─────────────────────────────────────────────
+  Widget _buildDamageTab(BuildContext context, ThemeData theme) {
+    final records = _detail?.abnormalRecords ?? [];
+
+    if (records.isEmpty) {
+      return Center(
+        child: EmptyState(
+          icon: Icons.broken_image_outlined,
+          title: '暂无破损记录',
+          subtitle: '来自后端 GET /abnormal-baggage/all',
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+      itemCount: records.length,
+      itemBuilder: (context, index) {
+        final r = records[index];
+        return _buildDamageCard(context, r, theme);
+      },
+    );
+  }
+
+  Widget _buildDamageCard(BuildContext context, AbnormalBaggage r, ThemeData theme) {
+    return Card(
+      margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.sm)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        side: BorderSide(color: AppColors.damaged.withValues(alpha: 0.4), width: 1),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.broken_image_outlined, color: AppColors.damaged, size: Responsive.iconSize(context, 20)),
+                SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+                Expanded(
+                  child: Text(
+                    r.baggageNumber,
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: Responsive.fontSize(context, 14)),
+                  ),
+                ),
+                Text(
+                  r.formattedTime,
+                  style: TextStyle(fontSize: Responsive.fontSize(context, 12), color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+            _kv('破损描述', r.damageDescription),
+            _kv('上报位置', r.location),
+            _kv('行李哈希', r.baggageHash.isNotEmpty ? r.baggageHash : '-'),
+            _kv('图片', r.imageUrl.isNotEmpty ? r.imageUrl : '-'),
+            _kv('上报时间', r.formattedDate),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // 操作日志
+  // ─────────────────────────────────────────────
+  Widget _buildLogsTab(BuildContext context, ThemeData theme) {
+    final logs = _detail?.operationLogs ?? [];
+
+    if (logs.isEmpty) {
+      return Center(
+        child: EmptyState(
+          icon: Icons.history,
+          title: '暂无操作日志',
+          subtitle: '来自后端 GET /baggage/operationLogs',
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+      itemCount: logs.length,
+      itemBuilder: (context, index) {
+        final log = logs[index];
+        return _buildLogItem(context, log, theme);
+      },
+    );
+  }
+
+  Widget _buildLogItem(BuildContext context, BaggageOperationLog log, ThemeData theme) {
     return Container(
       margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.xs)),
-      padding: EdgeInsets.all(Responsive.spacing(context, AppSpacing.xs)),
+      padding: EdgeInsets.all(Responsive.spacing(context, AppSpacing.sm)),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border(
-          left: BorderSide(
-            color: AppColors.primary,
-            width: 3,
-          ),
-        ),
+        border: Border(left: BorderSide(color: AppColors.primary, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,39 +516,77 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
             children: [
               Expanded(
                 child: Text(
-                  action,
+                  log.action.isNotEmpty ? log.action : '操作',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: Responsive.fontSize(context, 13)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
               Text(
-                time,
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 11),
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                _formatDateTime(log.time),
+                style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
-          SizedBox(height: 2),
+          SizedBox(height: Responsive.spacing(context, 2)),
           Text(
-            '操作人: $operator',
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, 11),
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            '操作人: ${log.operatorName}',
+            style: TextStyle(fontSize: Responsive.fontSize(context, 12), color: theme.colorScheme.onSurfaceVariant),
           ),
-          SizedBox(height: 2),
-          Text(
-            details,
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, 11),
-              color: theme.colorScheme.onSurfaceVariant,
+          if (log.details.isNotEmpty)
+            Text(
+              log.details,
+              style: TextStyle(fontSize: Responsive.fontSize(context, 12), color: theme.colorScheme.onSurfaceVariant),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────
+  // 通用工具
+  // ─────────────────────────────────────────────
+  double get _kvLabelWidth {
+    final w = MediaQuery.sizeOf(context).width;
+    return (w * 0.38).clamp(112.0, 168.0);
+  }
+
+  Widget _kv(String k, String v, {LuggageStatus? status}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: Responsive.spacing(context, 2)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: _kvLabelWidth,
+            child: Text(
+              '$k:',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+                fontSize: Responsive.fontSize(context, 13),
+              ),
+            ),
+          ),
+          if (status != null)
+            StatusBadge(status: status)
+          else
+            Expanded(
+              child: Text(
+                v,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: Responsive.fontSize(context, 13),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime t) {
+    return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} '
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
 }

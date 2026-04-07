@@ -33,28 +33,47 @@ class StatusBadge extends StatelessWidget {
     this.text,
     this.compact = false,
     this.radius,
-  }) : assert(status != null || statusKey != null || text != null,
-            'StatusBadge requires at least one of status, statusKey, or text');
+  });
+
+  bool get _hasRenderableContent {
+    if (text != null && text!.trim().isNotEmpty) return true;
+    if (status != null) return true;
+    if (statusKey != null && statusKey!.trim().isNotEmpty) return true;
+    return false;
+  }
 
   String get _displayText {
-    if (text != null) return text!;
+    if (text != null && text!.trim().isNotEmpty) return text!;
     if (status != null) return LuggageUtils.getStatusText(status!);
-    return LuggageUtils.getStatusTextByKey(statusKey!);
+    if (statusKey != null && statusKey!.trim().isNotEmpty) {
+      return LuggageUtils.getStatusTextByKey(statusKey!);
+    }
+    return '';
   }
 
   Color get _textColor {
     if (status != null) return LuggageUtils.getStatusColor(status!);
-    return LuggageUtils.getStatusColorByKey(statusKey!);
+    if (statusKey != null && statusKey!.trim().isNotEmpty) {
+      return LuggageUtils.getStatusColorByKey(statusKey!);
+    }
+    return Colors.grey;
   }
 
   Color get _bgColor {
     if (compact) return Colors.transparent;
     if (status != null) return LuggageUtils.getStatusBgColor(status!);
-    return LuggageUtils.getStatusBgColorByKey(statusKey!);
+    if (statusKey != null && statusKey!.trim().isNotEmpty) {
+      return LuggageUtils.getStatusBgColorByKey(statusKey!);
+    }
+    return Colors.grey.shade100;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasRenderableContent) {
+      return const SizedBox.shrink();
+    }
+
     final effectiveRadius = radius ?? (compact ? 4.0 : 999.0);
 
     if (compact) {

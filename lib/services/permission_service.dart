@@ -8,62 +8,17 @@ import '../models/permission_type.dart';
 class PermissionService {
   PermissionService._();
 
-  /// 请求单个权限
-  ///
-  /// [type] 权限类型
-  /// [context] BuildContext，用于显示对话框
-  /// 返回 true 表示权限已授权，false 表示未授权
-  static Future<bool> request(
-    PermissionType type, {
-    BuildContext? context,
-  }) async {
-    final status = await type.permission.request();
-    return _handleStatus(type, status, context);
-  }
-
-  /// 批量请求多个权限
-  ///
-  /// [types] 权限类型列表
-  /// [context] BuildContext，用于显示对话框
-  /// 返回授权成功的权限类型列表
-  static Future<List<PermissionType>> requestMultiple(
-    List<PermissionType> types, {
-    BuildContext? context,
-  }) async {
-    // 批量请求权限
-    final permissions = types.map((t) => t.permission).toList();
-    final results = await permissions.request();
-
-    // 处理结果
-    final granted = <PermissionType>[];
-    for (var i = 0; i < types.length; i++) {
-      final status = results[permissions[i]] ?? PermissionStatus.denied;
-      if (await _handleStatus(types[i], status, context)) {
-        granted.add(types[i]);
-      }
-    }
-    return granted;
-  }
-
-  /// 检查权限状态
-  ///
-  /// [type] 权限类型
-  /// 返回权限状态
-  static Future<PermissionStatus> check(PermissionType type) async {
-    return await type.permission.status;
-  }
-
-  /// 打开应用设置页面
-  ///
-  /// 返回是否成功打开
-  static Future<bool> openSettings() async {
-    return await openAppSettings();
+  /// 显示 SnackBar 提示（内部用，提前捕获 messenger）
+  static void _showSnackBar(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   /// 显示权限被拒绝的对话框
-  ///
-  /// [context] BuildContext
-  /// [type] 权限类型
   static Future<void> showDeniedDialog(
     BuildContext context,
     PermissionType type,
@@ -90,51 +45,104 @@ class PermissionService {
     );
   }
 
-  /// 显示 SnackBar 提示
+  /// 打开应用设置页面
+  static Future<bool> openSettings() async {
+    return await openAppSettings();
+  }
+
+  /// 请求单个权限
   ///
-  /// [context] BuildContext
-  /// [message] 提示消息
-  static void showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+  /// [type] 权限类型
+  /// [context] BuildContext，用于显示对话框
+  /// 返回 true 表示权限已授权，false 表示未授权
+  static Future<bool> request(
+    PermissionType type, {
+    required BuildContext context,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final status = await type.permission.request();
+
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      // ignore: use_build_context_synchronously — 静态方法无 mounted，调用方需确保 widget 未卸载
+      await showDeniedDialog(context, type);
+      return false;
+    }
+
+    _showSnackBar(messenger, type.deniedMessage);
+    return false;
+  }
+
+  /// 批量请求多个权限
+  ///
+  /// [types] 权限类型列表
+  /// [context] BuildContext，用于显示对话框
+  /// 返回授权成功的权限类型列表
+  static Future<List<PermissionType>> requestMultiple(
+    List<PermissionType> types, {
+    required BuildContext context,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final permissions = types.map((t) => t.permission).toList();
+    final results = await permissions.request();
+
+    final granted = <PermissionType>[];
+    for (var i = 0; i < types.length; i++) {
+      final status = results[permissions[i]] ?? PermissionStatus.denied;
+
+      if (status.isGranted) {
+        granted.add(types[i]);
+        continue;
+      }
+
+      if (status.isPermanentlyDenied) {
+        // ignore: use_build_context_synchronously
+        await showDeniedDialog(context, types[i]);
+        continue;
+      }
+
+      _showSnackBar(messenger, types[i].deniedMessage);
+    }
+    return granted;
+  }
+
+  /// 检查权限状态
+  static Future<PermissionStatus> check(PermissionType type) async {
+    return await type.permission.status;
   }
 
   /// 请求相机权限
-  /// 简化调用方式
   static Future<bool> requestCamera(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final granted = await request(PermissionType.camera, context: context);
     if (!granted) {
-      showSnackBar(context, PermissionType.camera.deniedMessage);
+      _showSnackBar(messenger, PermissionType.camera.deniedMessage);
     }
     return granted;
   }
 
   /// 请求相册权限
-  /// 简化调用方式
   static Future<bool> requestPhotos(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final granted = await request(PermissionType.photos, context: context);
     if (!granted) {
-      showSnackBar(context, PermissionType.photos.deniedMessage);
+      _showSnackBar(messenger, PermissionType.photos.deniedMessage);
     }
     return granted;
   }
 
   /// 请求电话权限
-  /// 简化调用方式
   static Future<bool> requestPhone(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final granted = await request(PermissionType.phone, context: context);
     if (!granted) {
-      showSnackBar(context, PermissionType.phone.deniedMessage);
+      _showSnackBar(messenger, PermissionType.phone.deniedMessage);
     }
     return granted;
   }
 
   /// 请求位置权限 (使用 Geolocator)
-  /// 包含位置权限的特殊处理逻辑
   ///
   /// [context] BuildContext
   /// [showDeniedSnackBar] 是否显示被拒绝的 SnackBar
@@ -143,6 +151,7 @@ class PermissionService {
     BuildContext context, {
     bool showDeniedSnackBar = true,
   }) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       LocationPermission permission = await Geolocator.checkPermission();
 
@@ -151,6 +160,7 @@ class PermissionService {
       }
 
       if (permission == LocationPermission.deniedForever) {
+        // ignore: use_build_context_synchronously
         await showDeniedDialog(context, PermissionType.location);
         return false;
       }
@@ -161,39 +171,14 @@ class PermissionService {
       }
 
       if (showDeniedSnackBar) {
-        showSnackBar(context, PermissionType.location.deniedMessage);
+        _showSnackBar(messenger, PermissionType.location.deniedMessage);
       }
       return false;
     } catch (e) {
       if (showDeniedSnackBar) {
-        showSnackBar(context, '获取位置信息失败，请稍后重试');
+        _showSnackBar(messenger, '获取位置信息失败，请稍后重试');
       }
       return false;
     }
-  }
-
-  /// 处理权限状态
-  /// 返回 true 表示已授权
-  static Future<bool> _handleStatus(
-    PermissionType type,
-    PermissionStatus status,
-    BuildContext? context,
-  ) async {
-    if (status.isGranted) {
-      return true;
-    }
-
-    if (status.isPermanentlyDenied) {
-      if (context != null) {
-        await showDeniedDialog(context, type);
-      }
-      return false;
-    }
-
-    // 被拒绝但不是永久拒绝
-    if (context != null) {
-      showSnackBar(context, type.deniedMessage);
-    }
-    return false;
   }
 }
