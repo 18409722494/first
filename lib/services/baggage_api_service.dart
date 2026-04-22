@@ -223,6 +223,7 @@ class BaggageApiService {
           '',
       latitude: parseDouble(json['latitude'] ?? json['lat']),
       longitude: parseDouble(json['longitude'] ?? json['lng'] ?? json['lon']),
+      contact: json['contact']?.toString(),
     );
   }
 
@@ -241,6 +242,7 @@ class BaggageApiService {
       'notes': luggage.notes,
       'latitude': luggage.latitude,
       'longitude': luggage.longitude,
+      'contact': luggage.contact,
     };
   }
 
@@ -294,12 +296,14 @@ class BaggageApiService {
     required String baggageNumber,
     required String location,
     String? status,
+    String? employeeId,
   }) async {
     try {
       final body = <String, dynamic>{
         'baggageNumber': baggageNumber,
         'location': location,
         if (status != null && status.isNotEmpty) 'status': status,
+        if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
       };
       final response = await http.post(
         Uri.parse('$_baseUrl/baggage/location'),
@@ -321,6 +325,79 @@ class BaggageApiService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// 写入操作日志（POST /baggage/history）
+  /// 必填：baggageNumber、phone（来自行李的 contact 字段）
+  /// 选填：action、location、employeeId、details
+  static Future<bool> addOperationLog({
+    required String baggageNumber,
+    required String phone,
+    String? action,
+    String? location,
+    String? employeeId,
+    String? details,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'baggageNumber': baggageNumber,
+        'phone': phone,
+        if (action != null && action.isNotEmpty) 'action': action,
+        if (location != null && location.isNotEmpty) 'location': location,
+        if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
+        if (details != null && details.isNotEmpty) 'details': details,
+      };
+      final response = await http.post(
+        Uri.parse('$_baseUrl/baggage/history'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      if (response.statusCode == 200) {
+        final map = jsonDecode(response.body) as Map<String, dynamic>;
+        return map['result']?.toString().toLowerCase() == 'success';
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 读取操作日志（POST /baggage/history）
+  /// 必填：baggageNumber、phone（来自行李的 contact 字段）
+  static Future<List<BaggageOperationLog>> getOperationHistory({
+    required String baggageNumber,
+    required String phone,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'baggageNumber': baggageNumber,
+        'phone': phone,
+      };
+      final response = await http.post(
+        Uri.parse('$_baseUrl/baggage/history'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      if (response.statusCode == 200) {
+        final map = jsonDecode(response.body) as Map<String, dynamic>;
+        final result = map['result']?.toString().toLowerCase();
+        if (result != 'success') return [];
+
+        final data = map['data'];
+        if (data == null) return [];
+        if (data is List) {
+          return data
+              .whereType<Map>()
+              .map((m) => BaggageOperationLog.fromJson(Map<String, dynamic>.from(m)))
+              .toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

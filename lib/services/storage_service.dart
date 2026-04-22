@@ -31,6 +31,10 @@ class StorageService {
     return _p.getString(_tokenKey);
   }
 
+  static Future<String?> getEmployeeId() async {
+    return _p.getString(_employeeIdKey);
+  }
+
   static Future<void> saveUserInfo({
     required String userId,
     required String username,

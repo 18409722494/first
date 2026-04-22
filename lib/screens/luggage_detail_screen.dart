@@ -5,6 +5,7 @@ import '../models/luggage.dart';
 import '../models/luggage_detail_info.dart';
 import '../models/qr_payload.dart';
 import '../services/luggage_service.dart';
+import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -87,6 +88,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
         lastUpdated: DateTime.now(),
         destination: '',
         notes: '',
+        contact: widget.qrPayload.extra['contact']?.toString(),
       );
 
   /// 获取当前扫描位置并更新到后端
@@ -106,11 +108,13 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       final baggageNumber = bag.tagNumber.isNotEmpty
           ? bag.tagNumber
           : widget.qrPayload.luggageId ?? '';
+      final employeeId = await StorageService.getEmployeeId();
 
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: _locationCtrl.text.trim(),
         status: BaggageStatusMapper.toBackendLocationStatus(bag.status),
+        employeeId: employeeId,
       );
 
       if (!mounted) return;
@@ -148,10 +152,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           : (bag.destination.isNotEmpty ? bag.destination : '未知位置');
 
       if (baggageNumber.isNotEmpty) {
+        final employeeId = await StorageService.getEmployeeId();
         await LuggageService.updateScanLocation(
           baggageNumber: baggageNumber,
           location: locationForApi,
           status: BaggageStatusMapper.toBackendLocationStatus(status),
+          employeeId: employeeId,
         );
       }
 
@@ -241,10 +247,6 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
     return ListView(
       padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
       children: [
-        // 扫码原始数据
-        _buildQrCard(context, payload, theme),
-        SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-
         // 接口提示（有融合扫码数据时显示）
         if (_error != null)
           Container(
@@ -275,47 +277,6 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
         // 行李基础信息
         _buildLuggageCard(context, bag, theme),
       ],
-    );
-  }
-
-  Widget _buildQrCard(BuildContext context, QrPayload payload, ThemeData theme) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(Responsive.spacing(context, 6)),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Icon(Icons.qr_code_2,
-                      color: theme.colorScheme.onPrimaryContainer,
-                      size: Responsive.iconSize(context, 18)),
-                ),
-                SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                Text('扫码信息', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            const Divider(height: 1),
-            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            _kv('行李号', '${payload.extra['tagNo'] ?? payload.extra['tag_no'] ?? payload.luggageId ?? '-'}'),
-            _kv('旅客', '${payload.extra['passenger_hint'] ?? payload.extra['旅客'] ?? '-'}'),
-            _kv('航班', '${payload.extra['flight_hint'] ?? payload.extra['航班'] ?? '-'}'),
-            _kv('原始数据', widget.raw),
-          ],
-        ),
-      ),
     );
   }
 
@@ -354,6 +315,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
             _kv('重量', bag.weight > 0 ? '${bag.weight} kg' : '-'),
             _kv('状态', '', status: bag.status),
             _kv('当前位置', bag.destination.isNotEmpty ? bag.destination : '-'),
+            _kv('联系手机', bag.contact != null && bag.contact!.isNotEmpty ? bag.contact! : '-'),
             _kv('最后更新', _formatDateTime(bag.lastUpdated)),
             _kv('备注', bag.notes.isNotEmpty ? bag.notes : '-'),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),

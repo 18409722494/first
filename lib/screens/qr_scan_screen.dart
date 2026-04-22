@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../models/qr_payload.dart';
 import '../models/luggage.dart';
 import '../services/luggage_service.dart';
+import '../services/storage_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import '../components/scan_result_dialog.dart';
@@ -98,6 +99,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       final baggageNumber = luggage.tagNumber.isNotEmpty
           ? luggage.tagNumber
           : payload.extra['tagNo']?.toString() ?? payload.luggageId ?? '';
+      final employeeId = await StorageService.getEmployeeId();
       try {
         // ① 检查 GPS 服务开关（与破损登记逻辑一致）
         final serviceEnabled = await LuggageService.isLocationServiceEnabled();
@@ -117,6 +119,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             await LuggageService.updateScanLocation(
               baggageNumber: baggageNumber,
               location: locationName,
+              employeeId: employeeId,
             );
           } else {
             locationName =
@@ -201,10 +204,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
         _showErrorSnackBar(l10n.cannotSyncMissingNo);
         return;
       }
+      final employeeId = await StorageService.getEmployeeId();
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: locationName.isNotEmpty ? locationName : luggage.destination,
         status: BaggageStatusMapper.toBackendLocationStatus(LuggageStatus.arrived),
+        employeeId: employeeId,
       );
       try {
         await LuggageService.updateLuggage(luggage.id, {

@@ -83,47 +83,111 @@ class LuggageService {
   static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) =>
       BaggageApiService.getAbnormalRecords(baggageNumber);
 
-  /// 根据行李 ID 优先查接口；无数据时基于扫码 [qrPayload] 构造基础信息。
-  /// 同时并发拉取操作日志和破损记录，三者聚合成 [LuggageDetailInfo]。
-  /// 破损记录和操作日志拉取失败时不阻塞，只返回空列表。
+  /// 写入操作日志（扫码时调用）
+  /// 从行李信息中获取 contact 作为 phone 参数
+  static Future<bool> addScanOperationLog({
+    required Luggage luggage,
+    required String action,
+    String? location,
+    String? employeeId,
+    String? details,
+  }) async {
+    // 优先使用行李的 contact 字段作为 phone
+    final phone = luggage.contact?.trim();
+    if (phone == null || phone.isEmpty) {
+      return false;
+    }
+    return BaggageApiService.addOperationLog(
+      baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+      phone: phone,
+      action: action,
+      location: location,
+      employeeId: employeeId,
+      details: details,
+    );
+  }
+
+  /// 获取行李操作历史（使用 POST /baggage/history 接口）
+  /// 需提供 baggageNumber 和 phone（来自行李的 contact 字段）
+  static Future<List<BaggageOperationLog>> getBaggageOperationHistory({
+    required String baggageNumber,
+    required String phone,
+  }) =>
+      BaggageApiService.getOperationHistory(
+        baggageNumber: baggageNumber,
+        phone: phone,
+      );
+
+  /// 优先从 /baggage/all 接口获取行李详情，同时并发拉取操作日志和破损记录。
+  /// 全部失败时基于扫码 [qrPayload] 构造基础信息。
   static Future<LuggageDetailInfo> getBaggageDetail({
     required QrPayload qrPayload,
     required String rawQr,
   }) async {
-    final luggageId = qrPayload.luggageId?.trim() ?? '';
+    // 从 QR 中提取行李号
+    final tagNo = (qrPayload.extra['tagNo'] ??
+            qrPayload.extra['tag_no'] ??
+            qrPayload.luggageId ??
+            '')
+        .toString()
+        .trim();
 
-    // 1. 行李基础信息
-    Luggage luggage;
-    if (luggageId.isNotEmpty) {
+    // 1. 优先从 /baggage/all 获取行李信息
+    Luggage? luggage;
+    if (tagNo.isNotEmpty) {
       try {
-        luggage = await getLuggageById(luggageId);
-        luggage = _mergeApiAndQr(luggage, qrPayload);
-      } catch (e) {
-        luggage = _buildFromQrOnly(qrPayload, rawQr);
+        final found = await BaggageApiService.getBaggageByNumber(tagNo);
+        if (found != null) {
+          luggage = _mergeApiAndQr(found, qrPayload);
+        }
+      } catch (_) {}
+    }
+
+    // 2. 尝试旧接口兜底
+    if (luggage == null) {
+      final luggageId = qrPayload.luggageId?.trim() ?? '';
+      if (luggageId.isNotEmpty) {
+        try {
+          luggage = await getLuggageById(luggageId);
+          luggage = _mergeApiAndQr(luggage, qrPayload);
+        } catch (_) {}
       }
-    } else {
+    }
+
+    // 3. 完全兜底：仅用扫码数据构造
+    if (luggage == null) {
       luggage = _buildFromQrOnly(qrPayload, rawQr);
     }
 
-    // 2. 并发拉取操作日志和破损记录
-    final tagNo = luggage.tagNumber.trim().isNotEmpty
+    // 4. 并发拉取操作日志和破损记录
+    final effectiveTagNo = luggage.tagNumber.trim().isNotEmpty
         ? luggage.tagNumber.trim()
-        : (qrPayload.extra['tagNo']?.toString() ?? qrPayload.luggageId ?? '');
-    final logFuture = getBaggageOperationLogs(
-      baggageNumber: tagNo.isNotEmpty ? tagNo : null,
-      baggageId: luggage.id.trim().isNotEmpty ? luggage.id.trim() : luggageId,
-    );
-    final abnormalFuture = tagNo.isNotEmpty
-        ? getAbnormalRecords(tagNo)
+        : tagNo;
+
+    final phone = luggage.contact?.trim();
+
+    List<BaggageOperationLog> logs = [];
+    if (effectiveTagNo.isNotEmpty && phone != null && phone.isNotEmpty) {
+      logs = await getBaggageOperationHistory(
+        baggageNumber: effectiveTagNo,
+        phone: phone,
+      );
+    }
+    if (logs.isEmpty) {
+      logs = await getBaggageOperationLogs(
+        baggageNumber: effectiveTagNo.isNotEmpty ? effectiveTagNo : null,
+        baggageId: luggage.id.trim().isNotEmpty ? luggage.id.trim() : null,
+      );
+    }
+
+    final abnormalFuture = effectiveTagNo.isNotEmpty
+        ? getAbnormalRecords(effectiveTagNo)
         : Future.value(<AbnormalBaggage>[]);
 
-    final results = await Future.wait(
-      [logFuture, abnormalFuture],
-    );
-    final logs = (results[0] as List<BaggageOperationLog>)
-      ..sort((a, b) => b.time.compareTo(a.time));
-    final abnormalRecords = (results[1] as List<AbnormalBaggage>)
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final abnormalRecords = await abnormalFuture;
+
+    logs.sort((a, b) => b.time.compareTo(a.time));
+    abnormalRecords.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     return LuggageDetailInfo(
       luggage: luggage,
@@ -150,6 +214,7 @@ class LuggageService {
     final tag = '${p.extra['tagNo'] ?? p.extra['tag_no'] ?? p.luggageId ?? ''}';
     final passenger = '${p.extra['passenger_hint'] ?? p.extra['旅客'] ?? p.extra['passengerName'] ?? ''}';
     final flight = '${p.extra['flight_hint'] ?? p.extra['航班'] ?? p.extra['flightNumber'] ?? ''}';
+    final contact = p.extra['contact']?.toString();
     return Luggage(
       id: id,
       tagNumber: tag,
@@ -161,6 +226,7 @@ class LuggageService {
       lastUpdated: DateTime.now(),
       destination: '',
       notes: '',
+      contact: contact,
     );
   }
 
@@ -372,17 +438,19 @@ class LuggageService {
   /// 更新行李扫码位置与状态
   ///
   /// 调用后端接口: PUT /baggage/location
-  /// 请求: { baggageNumber, location, status? }（status 为后端中文，如「已达」）
+  /// 请求: { baggageNumber, location, status?, employeeId? }（status 为后端中文，如「已达」）
   static Future<Map<String, dynamic>> updateScanLocation({
     required String baggageNumber,
     required String location,
     String? status,
+    String? employeeId,
   }) async {
     try {
       return await BaggageApiService.updateBaggageLocation(
         baggageNumber: baggageNumber,
         location: location,
         status: status,
+        employeeId: employeeId,
       );
     } catch (e) {
       rethrow;

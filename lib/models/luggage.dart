@@ -44,6 +44,7 @@ class Luggage {
   final String notes;
   final double? latitude;
   final double? longitude;
+  final String? contact;
 
   const Luggage({
     required this.id,
@@ -58,6 +59,7 @@ class Luggage {
     required this.notes,
     this.latitude,
     this.longitude,
+    this.contact,
   });
 
   factory Luggage.fromJson(Map<String, dynamic> json) {
@@ -96,6 +98,7 @@ class Luggage {
           '',
       latitude: parseDouble(json['latitude'] ?? json['lat']),
       longitude: parseDouble(json['longitude'] ?? json['lng'] ?? json['lon']),
+      contact: json['contact']?.toString(),
     );
   }
 
@@ -112,6 +115,7 @@ class Luggage {
         'notes': notes,
         'latitude': latitude,
         'longitude': longitude,
+        'contact': contact,
       };
 
   Luggage copyWith({
@@ -127,6 +131,7 @@ class Luggage {
     String? notes,
     double? latitude,
     double? longitude,
+    String? contact,
   }) {
     return Luggage(
       id: id ?? this.id,
@@ -141,6 +146,7 @@ class Luggage {
       notes: notes ?? this.notes,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      contact: contact ?? this.contact,
     );
   }
 }
