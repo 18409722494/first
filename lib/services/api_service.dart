@@ -30,18 +30,20 @@ class ApiService {
     return '请求失败（HTTP ${response.statusCode}）';
   }
 
-  /// 登录（只传用户名、密码）
+  /// 登录（使用工号+用户名+密码）
   static Future<AuthResponse> login({
     required String username,
     required String password,
+    required String employeeId,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/manager/login'),
+        Uri.parse('$baseUrl/manager/login-with-employee-id'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username.trim(),
           'password': password,
+          'employeeId': employeeId.trim(),
         }),
       ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
 
@@ -72,6 +74,11 @@ class ApiService {
           success: false,
           message: '用户名或密码错误',
         );
+      } else if (result == 'employeeIdNotFound') {
+        return AuthResponse(
+          success: false,
+          message: '工号不存在',
+        );
       } else {
         return AuthResponse(
           success: false,
@@ -92,10 +99,12 @@ class ApiService {
   }
 
   /// 注册（航司员工：工号须已在后台预置且尚未激活）
+  /// [airport] 所属机场名称，如 "首都国际机场"
   static Future<AuthResponse> register(
     String employeeId,
     String username,
     String password,
+    String airport,
   ) async {
     try {
       final response = await http.post(
@@ -105,6 +114,7 @@ class ApiService {
           'employeeId': employeeId.trim(),
           'username': username.trim(),
           'password': password,
+          'airport': airport,
         }),
       ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
 

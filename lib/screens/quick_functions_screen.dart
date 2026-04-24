@@ -4,6 +4,7 @@ import '../services/permission_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import 'luggage_map_screen.dart';
+import 'qr_scan_screen.dart';
 
 /// 快捷功能详情页面
 /// 显示和管理快捷功能
@@ -15,26 +16,17 @@ class QuickFunctionsScreen extends StatefulWidget {
 }
 
 class _QuickFunctionsScreenState extends State<QuickFunctionsScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  // ==================== 快速扫描 - 使用 PermissionService ====================
+  /// 快速扫描
   void _onQuickScan() async {
-    final l10n = AppLocalizations.of(context)!;
     final hasPermission = await PermissionService.requestCamera(context);
 
     if (!mounted) return;
 
     if (hasPermission) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.quickScanEnabled)),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const QrScanScreen(),
+        ),
       );
     }
   }

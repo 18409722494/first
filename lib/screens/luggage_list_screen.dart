@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../components/empty_state.dart';
 import '../components/luggage_card.dart';
+import '../components/luggage_filter_sheet.dart';
 import '../components/status_badge.dart';
 import '../models/luggage.dart';
 import '../services/luggage_service.dart';
@@ -15,7 +16,7 @@ import 'luggage_detail_screen.dart';
 import 'damage_report_screen.dart';
 import '../models/qr_payload.dart';
 
-/// 行李列表页面
+/// 行李列表页面 - 基于 UI 设计风格
 class LuggageListScreen extends StatefulWidget {
   const LuggageListScreen({super.key});
 
@@ -24,7 +25,6 @@ class LuggageListScreen extends StatefulWidget {
 }
 
 class _LuggageListScreenState extends State<LuggageListScreen> {
-  // 数据
   final List<Luggage> _allItems = [];
   List<Luggage> _filteredItems = [];
   bool _isLoadingFirst = true;
@@ -34,7 +34,6 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   int _currentPage = 1;
   static const int _pageSize = 20;
 
-  // 筛选
   String _searchQuery = '';
   String? _statusFilter;
   final TextEditingController _searchController = TextEditingController();
@@ -56,7 +55,6 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     super.dispose();
   }
 
-  /// 首次加载（第 1 页）
   Future<void> _loadFirstPage() async {
     setState(() {
       _isLoadingFirst = true;
@@ -92,7 +90,6 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     }
   }
 
-  /// 加载更多（下一页）
   Future<void> _loadMoreItems() async {
     if (_isLoadingMore || !_hasMoreData) return;
 
@@ -121,19 +118,16 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     }
   }
 
-  /// 刷新（回到第 1 页）
   Future<void> _refresh() async {
     await _loadFirstPage();
   }
 
-  /// 在 _allItems 上应用筛选，结果存入 _filteredItems
   void _applyFilters() {
     _filteredItems = _allItems.where((luggage) {
       final matchesSearch = _searchQuery.isEmpty ||
           luggage.tagNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           luggage.passengerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           luggage.destination.toLowerCase().contains(_searchQuery.toLowerCase());
-      // 使用 enum.name：LuggageStatus.toString() 返回中文 displayName，不能用于筛选键
       final matchesStatus =
           _statusFilter == null || luggage.status.name == _statusFilter;
       return matchesSearch && matchesStatus;
@@ -159,7 +153,6 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
     _applyFilters();
   }
 
-  /// 滚动至底部 200px 时触发加载更多
   void _onScroll() {
     if (!_hasMoreData || _isLoadingMore) return;
     final pos = _scrollController.position;
@@ -183,115 +176,97 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   }
 
   void _showFilterBottomSheet() {
-    final l10n = AppLocalizations.of(context)!;
-    showModalBottomSheet(
+    showModalBottomSheet<String?>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(ctx).brightness == Brightness.dark
-              ? AppColors.cardDark
-              : Colors.white,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.bottomSheet),
-          ),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            margin: EdgeInsets.only(top: Responsive.spacing(ctx, AppSpacing.sm)),
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(Responsive.padding(ctx, AppSpacing.md)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(l10n.filterConditions,
-                    style: TextStyle(fontSize: Responsive.fontSize(ctx, 18), fontWeight: FontWeight.bold)),
-                TextButton(
-                  onPressed: () { Navigator.pop(ctx); _clearFilters(); },
-                  child: Text(l10n.clearFilter, style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: Responsive.padding(ctx, AppSpacing.md),
-                vertical: Responsive.spacing(ctx, AppSpacing.sm)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l10n.status, style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(ctx, 14))),
-              SizedBox(height: Responsive.spacing(ctx, AppSpacing.sm)),
-              Wrap(
-                spacing: Responsive.spacing(ctx, AppSpacing.sm),
-                runSpacing: Responsive.spacing(ctx, AppSpacing.sm),
-                children: [
-                  _buildFilterChip(ctx, l10n.all, null),
-                  _buildFilterChip(ctx, l10n.checkIn, 'checkIn'),
-                  _buildFilterChip(ctx, l10n.inTransit, 'inTransit'),
-                  _buildFilterChip(ctx, l10n.arrived, 'arrived'),
-                  _buildFilterChip(ctx, l10n.delivered, 'delivered'),
-                  _buildFilterChip(ctx, l10n.damaged, 'damaged'),
-                  _buildFilterChip(ctx, l10n.lost, 'lost'),
-                ],
-              ),
-            ]),
-          ),
-          SizedBox(height: Responsive.spacing(ctx, AppSpacing.lg)),
-        ]),
+      builder: (ctx) => LuggageFilterSheet(
+        currentStatus: _statusFilter,
+        l10n: (key) {
+          final l10n = AppLocalizations.of(ctx)!;
+          switch (key) {
+            case 'filterConditions': return l10n.filterConditions;
+            case 'clearFilter': return l10n.clearFilter;
+            case 'status': return l10n.status;
+            case 'all': return l10n.all;
+            case 'checkIn': return l10n.checkIn;
+            case 'inTransit': return l10n.inTransit;
+            case 'arrived': return l10n.arrived;
+            case 'delivered': return l10n.delivered;
+            case 'damaged': return l10n.damaged;
+            case 'lost': return l10n.lost;
+            default: return key;
+          }
+        },
       ),
-    );
-  }
-
-  Widget _buildFilterChip(BuildContext ctx, String label, String? status) {
-    final isSelected = _statusFilter == status;
-    return FilterChip(
-      label: Text(label, style: TextStyle(fontSize: Responsive.fontSize(ctx, 13))),
-      selected: isSelected,
-      onSelected: (_) {
-        Navigator.pop(ctx);
-        _setStatusFilter(status);
-      },
-      selectedColor: AppColors.primary.withValues(alpha: 0.2),
-      checkmarkColor: AppColors.primary,
-    );
+    ).then((selected) {
+      if (selected != null) {
+        _setStatusFilter(selected);
+      }
+    });
   }
 
   void _showLongPressMenu(BuildContext ctx, Luggage luggage) {
     final l10n = AppLocalizations.of(ctx)!;
     showModalBottomSheet(
       context: ctx,
-      builder: (ctx2) => Container(
+      backgroundColor: AppColors.surfaceLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx2) => Padding(
         padding: EdgeInsets.all(Responsive.padding(ctx2, AppSpacing.md)),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: Icon(Icons.edit, size: Responsive.iconSize(ctx2, 20)),
-            title: Text(l10n.changeStatus, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
-            onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
-          ),
-          ListTile(
-            leading: Icon(Icons.report_problem, size: Responsive.iconSize(ctx2, 20)),
-            title: Text(l10n.markDamaged, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
-            onTap: () {
-              Navigator.pop(ctx2);
-              Navigator.of(ctx2).push(
-                MaterialPageRoute(builder: (_) => DamageReportScreen(
-                  luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
-                  luggageDbId: luggage.id,
-                )),
-              ).then((result) { if (result == true) _refresh(); });
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.history, size: Responsive.iconSize(ctx2, 20)),
-            title: Text(l10n.viewHistoryLog, style: TextStyle(fontSize: Responsive.fontSize(ctx2, 14))),
-            onTap: () { Navigator.pop(ctx2); _navigateToDetail(luggage); },
-          ),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderLight,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+            ListTile(
+              leading: const Icon(Icons.edit, size: 20, color: AppColors.primary),
+              title: Text(
+                l10n.changeStatus,
+                style: const TextStyle(fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(ctx2);
+                _navigateToDetail(luggage);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.report_problem, size: 20, color: AppColors.warning),
+              title: Text(
+                l10n.markDamaged,
+                style: const TextStyle(fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(ctx2);
+                Navigator.of(ctx2).push(
+                  MaterialPageRoute(builder: (_) => DamageReportScreen(
+                    luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+                    luggageDbId: luggage.id,
+                  )),
+                ).then((result) { if (result == true) _refresh(); });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, size: 20, color: AppColors.info),
+              title: Text(
+                l10n.viewHistoryLog,
+                style: const TextStyle(fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(ctx2);
+                _navigateToDetail(luggage);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -300,158 +275,225 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final padMd = Responsive.padding(context, AppSpacing.md);
-    final spSm = Responsive.spacing(context, AppSpacing.sm);
-    final spXs = Responsive.spacing(context, AppSpacing.xs);
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: Text(l10n.luggageManagement),
+        backgroundColor: AppColors.backgroundLight,
+        elevation: 0,
+        title: Text(
+          l10n.luggageManagement,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimaryLight),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.filter_list, color: AppColors.primary),
             onPressed: _isLoadingFirst ? null : _showFilterBottomSheet,
             tooltip: l10n.filter,
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: AppColors.primary),
             onPressed: _isLoadingFirst ? null : _refresh,
             tooltip: l10n.refresh,
           ),
         ],
       ),
-      body: Column(children: [
-        // 搜索框
-        Padding(
-          padding: EdgeInsets.all(padMd),
-          child: TextField(
-            controller: _searchController,
-            onChanged: _onSearchChanged,
-            decoration: InputDecoration(
-              hintText: l10n.searchLuggageTag,
-              prefixIcon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(icon: const Icon(Icons.clear), onPressed: _clearFilters)
-                  : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.input)),
-              contentPadding: EdgeInsets.symmetric(
-                  horizontal: padMd,
-                  vertical: Responsive.spacing(context, AppSpacing.buttonPadding)),
-            ),
-          ),
-        ),
-        // 统计行
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: padMd, vertical: spXs),
-          child: Row(children: [
-            Text(
-              l10n.totalLuggage(_filteredItems.length),
-              style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 14)),
-            ),
-            if (_hasMoreData && !_isLoadingFirst)
-              Padding(
-                padding: EdgeInsets.only(left: spXs),
-                child: Text(
-                  l10n.loadMore,
-                  style: TextStyle(color: Colors.grey[400], fontSize: Responsive.fontSize(context, 12)),
-                ),
+      body: Column(
+        children: [
+          // 搜索框
+          Padding(
+            padding: EdgeInsets.all(padMd),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppRadius.input),
+                border: Border.all(color: AppColors.borderLight),
               ),
-          ]),
-        ),
-        // 筛选标签
-        if (_statusFilter != null || _searchQuery.isNotEmpty)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: padMd, vertical: spSm),
-            child: Row(children: [
-              if (_statusFilter != null)
-                Container(
-                  margin: EdgeInsets.only(right: spSm),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.spacing(context, 12),
-                      vertical: Responsive.spacing(context, 4)),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    StatusBadge(statusKey: _statusFilter, compact: true),
-                    SizedBox(width: Responsive.spacing(context, 4)),
-                    GestureDetector(
-                      onTap: () => _setStatusFilter(null),
-                      child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: AppColors.primary),
-                    ),
-                  ]),
-                ),
-              if (_searchQuery.isNotEmpty)
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.spacing(context, 12),
-                      vertical: Responsive.spacing(context, 4)),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('"$_searchQuery"', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-                    SizedBox(width: Responsive.spacing(context, 4)),
-                    GestureDetector(
-                      onTap: _clearFilters,
-                      child: Icon(Icons.close, size: Responsive.iconSize(context, 14), color: Colors.grey[600]),
-                    ),
-                  ]),
-                ),
-            ]),
-          ),
-        // 列表主体
-        Expanded(
-          child: _isLoadingFirst
-              ? const LoadingState()
-              : _error != null
-                  ? ErrorState(message: _error!, onRetry: _loadFirstPage)
-                  : _filteredItems.isEmpty
-                      ? EmptyState.search(context, keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
-                      : RefreshIndicator(
-                          onRefresh: _refresh,
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            padding: EdgeInsets.all(padMd),
-                            // 列表项数 + 底部指示器
-                            itemCount: _filteredItems.length +
-                                ((_isLoadingMore || _hasMoreData) ? 1 : 0),
-                            itemBuilder: (ctx, index) {
-                              if (index == _filteredItems.length) {
-                                if (_isLoadingMore) {
-                                  return Container(
-                                    padding: EdgeInsets.all(padMd),
-                                    alignment: Alignment.center,
-                                    child: const CircularProgressIndicator(),
-                                  );
-                                }
-                                if (!_hasMoreData) {
-                                  return Container(
-                                    padding: EdgeInsets.all(padMd),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      l10n.allLoaded(_allItems.length),
-                                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                                    ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              }
-                              final luggage = _filteredItems[index];
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: spSm),
-                                child: LuggageCard(
-                                  luggage: luggage,
-                                  onTap: () => _navigateToDetail(luggage),
-                                  onLongPress: () => _showLongPressMenu(context, luggage),
-                                ),
-                              );
-                            },
-                          ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimaryLight,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: l10n.searchLuggageTag,
+                        hintStyle: const TextStyle(color: AppColors.textHintLight),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          size: 20,
+                          color: AppColors.textSecondaryLight,
                         ),
-        ),
-      ]),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.clear,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                      onPressed: _clearFilters,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // 统计行
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: padMd, vertical: 4),
+            child: Row(
+              children: [
+                Text(
+                  l10n.totalLuggage(_filteredItems.length),
+                  style: const TextStyle(
+                    color: AppColors.textSecondaryLight,
+                    fontSize: 14,
+                  ),
+                ),
+                if (_hasMoreData && !_isLoadingFirst)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      l10n.loadMore,
+                      style: const TextStyle(
+                        color: AppColors.textHintLight,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // 筛选标签
+          if (_statusFilter != null || _searchQuery.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: padMd, vertical: 8),
+              child: Row(
+                children: [
+                  if (_statusFilter != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          StatusBadge(statusKey: _statusFilter, compact: true),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () => _setStatusFilter(null),
+                            child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_searchQuery.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '"$_searchQuery"',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: _clearFilters,
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          // 列表主体
+          Expanded(
+            child: _isLoadingFirst
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : _error != null
+                    ? ErrorState(message: _error!, onRetry: _loadFirstPage)
+                    : _filteredItems.isEmpty
+                        ? EmptyState.search(context, keyword: _searchQuery.isNotEmpty ? _searchQuery : null)
+                        : RefreshIndicator(
+                            onRefresh: _refresh,
+                            color: AppColors.primary,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: EdgeInsets.all(padMd),
+                              itemCount: _filteredItems.length +
+                                  ((_isLoadingMore || _hasMoreData) ? 1 : 0),
+                              itemBuilder: (ctx, index) {
+                                if (index == _filteredItems.length) {
+                                  if (_isLoadingMore) {
+                                    return Container(
+                                      padding: EdgeInsets.all(padMd),
+                                      alignment: Alignment.center,
+                                      child: const CircularProgressIndicator(
+                                        color: AppColors.primary,
+                                      ),
+                                    );
+                                  }
+                                  if (!_hasMoreData) {
+                                    return Container(
+                                      padding: EdgeInsets.all(padMd),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        l10n.allLoaded(_allItems.length),
+                                        style: const TextStyle(
+                                          color: AppColors.textHintLight,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }
+                                final luggage = _filteredItems[index];
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: 8),
+                                  child: LuggageCard(
+                                    luggage: luggage,
+                                    onTap: () => _navigateToDetail(luggage),
+                                    onLongPress: () => _showLongPressMenu(context, luggage),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+          ),
+        ],
+      ),
     );
   }
 }

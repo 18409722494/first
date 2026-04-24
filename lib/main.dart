@@ -54,14 +54,15 @@ class MyApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return MaterialApp(
-            title: '行李管理系统',
+            title: 'AirBaggage Pro',
             debugShowCheckedModeBanner: false,
             locale: settings.locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: settings.themeMode,
+            // 默认使用深色主题（与UI设计保持一致）
+            themeMode: ThemeMode.dark,
             home: const AuthWrapper(),
           );
         },

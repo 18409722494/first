@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
+import '../utils/api_cache.dart';
 
 /// 后端行李信息 API 服务
 class BaggageApiService {
@@ -18,6 +20,16 @@ class BaggageApiService {
     int page = 1,
     int pageSize = _pageSize,
   }) async {
+    // 第1页且请求全部数据时使用缓存
+    if (page == 1 && pageSize >= 100) {
+      final cacheKey = 'allBaggage_$pageSize';
+      final cached = baggageListCache.get(cacheKey);
+      if (cached != null) {
+        final items = cached.map((json) => _parseBaggage(json)).toList();
+        return PagedResult(items: items, hasMore: items.length >= pageSize, page: page);
+      }
+    }
+
     try {
       final uri = Uri.parse('$_baseUrl/baggage/all').replace(
         queryParameters: {'page': '$page', 'pageSize': '$pageSize'},
@@ -30,6 +42,13 @@ class BaggageApiService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         final items = data.map((json) => _parseBaggage(json)).toList();
+
+        // 缓存第1页大量数据
+        if (page == 1 && pageSize >= 100) {
+          final cacheKey = 'allBaggage_$pageSize';
+          baggageListCache.set(cacheKey, data.cast<Map<String, dynamic>>());
+        }
+
         final hasMore = items.length == pageSize;
         return PagedResult(items: items, hasMore: hasMore, page: page);
       } else {
@@ -46,35 +65,27 @@ class BaggageApiService {
     return result.items;
   }
 
-  /// 行李操作历史（GET `/baggage/operationLogs`）
+  /// 行李操作历史（POST /baggage/history）
   ///
-  /// Query：`baggageNumber`、`id` / `baggageId`（按后端实际字段择一或并存）。
-  /// 响应支持：JSON 数组，或 `{ "data": [...] }` / `{ "logs": [...] }`。
+  /// Query参数：baggageNumber（行李号）
   /// 接口不存在或失败时返回空列表，不阻塞详情页。
   static Future<List<BaggageOperationLog>> getOperationLogs({
     String? baggageNumber,
     String? baggageId,
   }) async {
-    final q = <String, String>{};
-    if (baggageNumber != null && baggageNumber.trim().isNotEmpty) {
-      q['baggageNumber'] = baggageNumber.trim();
-    }
-    if (baggageId != null && baggageId.trim().isNotEmpty) {
-      q['id'] = baggageId.trim();
-      q['baggageId'] = baggageId.trim();
-    }
-    if (q.isEmpty) return [];
+    final key = baggageNumber?.trim() ?? baggageId?.trim() ?? '';
+    if (key.isEmpty) return [];
 
     try {
-      final uri = Uri.parse('$_baseUrl/baggage/operationLogs').replace(
-        queryParameters: q,
-      );
-      final response = await http
-          .get(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+      // 使用 POST /baggage/history 接口
+      final body = <String, dynamic>{
+        'baggageNumber': key,
+      };
+      final response = await http.post(
+        Uri.parse('$_baseUrl/baggage/history'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return [];
@@ -85,7 +96,7 @@ class BaggageApiService {
       if (decoded is List) {
         rawList = decoded;
       } else if (decoded is Map<String, dynamic>) {
-        final d = decoded['data'] ?? decoded['logs'] ?? decoded['records'];
+        final d = decoded['data'] ?? decoded['records'] ?? decoded['logs'];
         if (d is List) {
           rawList = d;
         } else {
@@ -291,41 +302,67 @@ class BaggageApiService {
     }
   }
 
-  /// 更新行李位置与状态（PUT /baggage/location）
+  /// 更新行李位置与状态（POST /baggage/location）
+  /// 请求: { baggageNumber, location, status?, employeeId }
+  /// 添加重试机制和详细错误信息
   static Future<Map<String, dynamic>> updateBaggageLocation({
     required String baggageNumber,
     required String location,
     String? status,
     String? employeeId,
   }) async {
-    try {
-      final body = <String, dynamic>{
-        'baggageNumber': baggageNumber,
-        'location': location,
-        if (status != null && status.isNotEmpty) 'status': status,
-        if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
-      };
-      final response = await http.post(
-        Uri.parse('$_baseUrl/baggage/location'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+    const maxRetries = 2;
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final map = jsonDecode(response.body) as Map<String, dynamic>;
-        final ok = map['result']?.toString().toLowerCase() == 'success' ||
-            map['success'] == true ||
-            map['code']?.toString() == '0';
-        if (ok || !map.containsKey('result')) {
-          return map;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        final body = <String, dynamic>{
+          'baggageNumber': baggageNumber,
+          'location': location,
+          if (status != null && status.isNotEmpty) 'status': status,
+          if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
+        };
+
+        debugPrint('[BaggageApiService] POST /baggage/location (第$attempt次): $body');
+
+        final response = await http.post(
+          Uri.parse('$_baseUrl/baggage/location'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+        debugPrint('[BaggageApiService] 响应状态码: ${response.statusCode}');
+        debugPrint('[BaggageApiService] 响应内容: ${response.body}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final map = jsonDecode(response.body) as Map<String, dynamic>;
+          final ok = map['result']?.toString().toLowerCase() == 'success' ||
+              map['success'] == true ||
+              map['code']?.toString() == '0';
+          if (ok || !map.containsKey('result')) {
+            return map;
+          }
+          throw Exception(map['message']?.toString() ?? '更新行李失败');
+        } else {
+          // 尝试解析错误信息
+          String errorDetail = '更新行李位置失败: ${response.statusCode}';
+          try {
+            final errorMap = jsonDecode(response.body) as Map<String, dynamic>;
+            errorDetail = errorMap['message']?.toString() ??
+                errorMap['error']?.toString() ??
+                errorDetail;
+          } catch (_) {}
+          throw Exception(errorDetail);
         }
-        throw Exception(map['message']?.toString() ?? '更新行李失败');
-      } else {
-        throw Exception('更新行李位置失败: ${response.statusCode}');
+      } catch (e) {
+        debugPrint('[BaggageApiService] 位置更新第$attempt次失败: $e');
+        if (attempt < maxRetries) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        } else {
+          rethrow;
+        }
       }
-    } catch (e) {
-      rethrow;
     }
+    throw Exception('更新行李位置失败');
   }
 
   /// 写入操作日志（POST /baggage/history）
@@ -392,6 +429,41 @@ class BaggageApiService {
           return data
               .whereType<Map>()
               .map((m) => BaggageOperationLog.fromJson(Map<String, dynamic>.from(m)))
+              .toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 通过行李号读取操作历史（POST /baggage/history/by-number）
+  /// 返回行李位置变更的历史记录
+  static Future<List<BaggageOperationLog>> getOperationHistoryByNumber(
+    String baggageNumber,
+  ) async {
+    try {
+      final body = <String, dynamic>{
+        'baggageNumber': baggageNumber,
+      };
+      final response = await http.post(
+        Uri.parse('$_baseUrl/baggage/history/by-number'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      if (response.statusCode == 200) {
+        final map = jsonDecode(response.body) as Map<String, dynamic>;
+        final result = map['result']?.toString().toLowerCase();
+        if (result != 'success') return [];
+
+        final data = map['data'];
+        if (data == null) return [];
+        if (data is List) {
+          return data
+              .whereType<Map>()
+              .map((m) => BaggageOperationLog.fromHistoryByNumber(Map<String, dynamic>.from(m)))
               .toList();
         }
       }

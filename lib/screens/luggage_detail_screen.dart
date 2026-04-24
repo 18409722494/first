@@ -14,6 +14,7 @@ import '../components/app_button.dart';
 import '../components/status_badge.dart';
 import '../components/empty_state.dart';
 import '../utils/responsive.dart';
+import '../utils/luggage_utils.dart';
 
 /// 行李详情页面
 class LuggageDetailScreen extends StatefulWidget {
@@ -109,10 +110,11 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           ? bag.tagNumber
           : widget.qrPayload.luggageId ?? '';
       final employeeId = await StorageService.getEmployeeId();
+      final locationText = _locationCtrl.text.trim();
 
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
-        location: _locationCtrl.text.trim(),
+        location: locationText,
         status: BaggageStatusMapper.toBackendLocationStatus(bag.status),
         employeeId: employeeId,
       );
@@ -151,8 +153,9 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           ? locationText
           : (bag.destination.isNotEmpty ? bag.destination : '未知位置');
 
+      final employeeId = await StorageService.getEmployeeId();
+
       if (baggageNumber.isNotEmpty) {
-        final employeeId = await StorageService.getEmployeeId();
         await LuggageService.updateScanLocation(
           baggageNumber: baggageNumber,
           location: locationForApi,
@@ -314,7 +317,9 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
             _kv('旅客', bag.passengerName.isNotEmpty ? bag.passengerName : '-'),
             _kv('重量', bag.weight > 0 ? '${bag.weight} kg' : '-'),
             _kv('状态', '', status: bag.status),
-            _kv('当前位置', bag.destination.isNotEmpty ? bag.destination : '-'),
+            _kv('当前位置', bag.destination.isNotEmpty
+                ? LuggageUtils.cleanLocationString(bag.destination)
+                : '-'),
             _kv('联系手机', bag.contact != null && bag.contact!.isNotEmpty ? bag.contact! : '-'),
             _kv('最后更新', _formatDateTime(bag.lastUpdated)),
             _kv('备注', bag.notes.isNotEmpty ? bag.notes : '-'),
@@ -425,7 +430,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
             _kv('破损描述', r.damageDescription),
-            _kv('上报位置', r.location),
+            _kv('上报位置', LuggageUtils.cleanLocationString(r.location)),
             _kv('行李哈希', r.baggageHash.isNotEmpty ? r.baggageHash : '-'),
             _kv('图片', r.imageUrl.isNotEmpty ? r.imageUrl : '-'),
             _kv('上报时间', r.formattedDate),
@@ -497,7 +502,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           ),
           if (log.details.isNotEmpty)
             Text(
-              log.details,
+              LuggageUtils.cleanLocationString(log.details),
               style: TextStyle(fontSize: Responsive.fontSize(context, 12), color: theme.colorScheme.onSurfaceVariant),
             ),
         ],

@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../constants/app_constants.dart';
 import '../models/luggage.dart';
 import '../models/todo_item.dart';
 import '../services/evidence_service.dart';
 import '../services/luggage_service.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
-import '../theme/app_colors.dart';
 import 'damage_report_screen.dart';
 import 'overweight_screen.dart';
 import 'contact_passenger_screen.dart';
 
-/// 待办事项页面
-/// 从数据库实时拉取：破损记录、超重行李、无人认领行李
+/// 待办事项页面 - 基于 UI 设计风格
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
 
@@ -51,7 +50,6 @@ class _TodoScreenState extends State<TodoScreen> {
     }
   }
 
-  /// 并发拉取三类待办数据
   Future<List<TodoItem>> _fetchAllTodoItems() async {
     final results = await Future.wait([
       _fetchDamageTodos(),
@@ -61,7 +59,6 @@ class _TodoScreenState extends State<TodoScreen> {
     return [...results[0], ...results[1], ...results[2]];
   }
 
-  /// 破损行李（来源: abnormal-baggage 表）
   Future<List<TodoItem>> _fetchDamageTodos() async {
     try {
       final records = await EvidenceService.getAllAbnormalBaggage();
@@ -77,7 +74,6 @@ class _TodoScreenState extends State<TodoScreen> {
     }
   }
 
-  /// 超重行李（来源: luggage 表，weight > freeBaggageWeightKg）
   Future<List<TodoItem>> _fetchOverweightTodos() async {
     try {
       final list = await LuggageService.getOverweightLuggage();
@@ -92,16 +88,16 @@ class _TodoScreenState extends State<TodoScreen> {
     }
   }
 
-  /// 无人认领行李（来源: luggage 表，arrived 超过 24h 未交付）
   Future<List<TodoItem>> _fetchUnclaimedTodos() async {
     try {
-      final list = await LuggageService.getUnclaimedLuggage(hours: 24);
+      final hours = AppConstants.unclaimedHoursThreshold;
+      final list = await LuggageService.getUnclaimedLuggage();
       return list.map((luggage) => TodoItem.fromUnclaimedLuggage(
         tagNumber: luggage.tagNumber,
         luggageId: luggage.id,
         passengerName: luggage.passengerName,
         arrivedAt: luggage.lastUpdated,
-        unclaimedHours: 24,
+        unclaimedHours: hours,
       )).toList();
     } catch (_) {
       return [];
@@ -110,22 +106,33 @@ class _TodoScreenState extends State<TodoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: Text(l10n.todoTitle),
+        backgroundColor: AppColors.backgroundLight,
+        elevation: 0,
+        title: const Text(
+          '待办事项',
+          style: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimaryLight),
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _loadTodoItems,
             icon: _isLoading
-                ? SizedBox(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
                   )
-                : const Icon(Icons.refresh),
-            tooltip: l10n.refresh,
+                : const Icon(Icons.refresh, color: AppColors.primary),
+            tooltip: '刷新',
           ),
         ],
       ),
@@ -134,10 +141,10 @@ class _TodoScreenState extends State<TodoScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (_isLoading && _items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
     }
 
     if (_error != null && _items.isEmpty) {
@@ -145,13 +152,24 @@ class _TodoScreenState extends State<TodoScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.error.withValues(alpha: 0.7),
+            ),
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Colors.grey[600])),
+            Text(
+              _error!,
+              style: const TextStyle(color: AppColors.textSecondaryLight),
+            ),
             const SizedBox(height: 16),
-            TextButton(
+            ElevatedButton(
               onPressed: _loadTodoItems,
-              child: Text(l10n.reload),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('重新加载'),
             ),
           ],
         ),
@@ -163,29 +181,48 @@ class _TodoScreenState extends State<TodoScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle_outline, size: 48, color: AppColors.primary.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text(
-              l10n.noTodoItems,
-              style: TextStyle(fontSize: Responsive.fontSize(context, 15), color: Colors.grey[600]),
+            Icon(
+              Icons.check_circle_outline,
+              size: 64,
+              color: AppColors.success.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '暂无待办事项',
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '所有任务都已处理完成',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textHintLight,
+              ),
             ),
           ],
         ),
       );
     }
 
-    return Padding(
-      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      onRefresh: _loadTodoItems,
+      color: AppColors.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
         children: [
+          // 标题和数量
           Row(
             children: [
-              Text(
-                l10n.abnormalLuggage,
+              const Text(
+                '异常行李',
                 style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 15),
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(width: 8),
@@ -197,41 +234,31 @@ class _TodoScreenState extends State<TodoScreen> {
                 ),
                 child: Text(
                   '${_items.length}',
-                  style: TextStyle(
-                    fontSize: Responsive.fontSize(context, 12),
-                    color: AppColors.primary,
+                  style: const TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadTodoItems,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom +
-                      kBottomNavigationBarHeight +
-                      24,
-                ),
-                itemCount: _items.length,
-                itemBuilder: (context, index) {
-                  final item = _items[index];
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      bottom: index < _items.length - 1
-                          ? Responsive.spacing(context, 8)
-                          : 0,
-                    ),
-                    child: _buildTodoItem(context, item),
-                  );
-                },
+          SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+          // 待办列表
+          ..._items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index < _items.length - 1
+                    ? Responsive.spacing(context, AppSpacing.sm)
+                    : 0,
               ),
-            ),
-          ),
+              child: _buildTodoItem(context, item),
+            );
+          }),
+          // 底部安全区
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
         ],
       ),
     );
@@ -243,21 +270,29 @@ class _TodoScreenState extends State<TodoScreen> {
       child: Container(
         padding: EdgeInsets.all(Responsive.padding(context, 12)),
         decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: item.color.withValues(alpha: 0.3)),
-          color: item.color.withValues(alpha: 0.08),
+          border: Border.all(
+            color: item.color.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
+            // 图标
             Container(
               padding: EdgeInsets.all(Responsive.padding(context, 10)),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                color: item.color.withValues(alpha: 0.18),
+                color: item.color.withValues(alpha: 0.15),
               ),
-              child: Icon(item.icon, size: Responsive.iconSize(context, 18), color: item.color),
+              child: Icon(
+                item.icon,
+                size: Responsive.iconSize(context, 18),
+                color: item.color,
+              ),
             ),
             SizedBox(width: Responsive.spacing(context, 12)),
+            // 内容
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,8 +300,9 @@ class _TodoScreenState extends State<TodoScreen> {
                   Text(
                     item.title,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: Responsive.fontSize(context, 14),
+                      color: AppColors.textPrimaryLight,
                     ),
                   ),
                   SizedBox(height: Responsive.spacing(context, 2)),
@@ -274,15 +310,19 @@ class _TodoScreenState extends State<TodoScreen> {
                     item.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: Responsive.fontSize(context, 12),
-                      color: Colors.grey[700],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400]),
+            // 箭头
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textHintLight,
+            ),
           ],
         ),
       ),
@@ -307,8 +347,6 @@ class _TodoScreenState extends State<TodoScreen> {
     }
   }
 
-  /// 待办列表来自 /baggage/all，[id] 多为库内主键；旧版 [GET /luggage/:id] 可能不认该 id。
-  /// 优先用行李号 [tagNumber] 走 baggage 查询，与扫码逻辑一致。
   Future<Luggage> _resolveLuggageForNavigation(TodoItem item) async {
     final tag = item.tagNumber.trim();
     if (tag.isNotEmpty) {
@@ -317,14 +355,16 @@ class _TodoScreenState extends State<TodoScreen> {
     }
     final id = item.luggageId?.trim();
     if (id != null && id.isNotEmpty) {
-      return LuggageService.getLuggageForScan(id);
+      final result = await LuggageService.getLuggageForScan(id);
+      if (result.success && result.luggage != null) {
+        return result.luggage!;
+      }
+      throw Exception(result.errorMessage ?? '未找到行李: $id');
     }
-      throw Exception('未找到行李: ${tag.isNotEmpty ? tag : id ?? ''}');
+    throw Exception('未找到行李: ${tag.isNotEmpty ? tag : item.luggageId ?? ''}');
   }
 
   Future<void> _loadAndNavigateOverweight(BuildContext context, TodoItem item) async {
-    final l10n = AppLocalizations.of(context)!;
-
     try {
       final luggage = await _resolveLuggageForNavigation(item);
       if (context.mounted) {
@@ -337,15 +377,16 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.loadLuggageFailed(e.toString())), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('加载失败: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
   }
 
   Future<void> _loadAndNavigateContact(BuildContext context, TodoItem item) async {
-    final l10n = AppLocalizations.of(context)!;
-
     try {
       final luggage = await _resolveLuggageForNavigation(item);
       if (context.mounted) {
@@ -358,7 +399,10 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.loadLuggageFailed(e.toString())), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('加载失败: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }

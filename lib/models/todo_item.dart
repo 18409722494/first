@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import '../theme/app_colors.dart';
 
 /// 待办事项类型
 enum TodoType {
@@ -59,8 +60,8 @@ class TodoItem {
       description: damageDescription.isEmpty
           ? '行李标签号: $baggageNumber 存在破损'
           : '$baggageNumber — $damageDescription',
-      icon: Icons.report_problem,
-      color: Colors.red,
+      icon: Icons.warning_amber,
+      color: AppColors.error,
       tagNumber: baggageNumber,
       luggageId: luggageId,
       timestamp: timestamp,
@@ -82,7 +83,7 @@ class TodoItem {
       description:
           '$tagNumber 超出免费额度 ${overweightKg.toStringAsFixed(1)} kg，需补缴费用',
       icon: Icons.scale,
-      color: Colors.orange,
+      color: AppColors.warning,
       tagNumber: tagNumber,
       luggageId: luggageId,
       timestamp: timestamp,
@@ -103,7 +104,7 @@ class TodoItem {
       title: '联系旅客（无人认领）',
       description: '$tagNumber（旅客: $passengerName）到达超过 $unclaimedHours 小时未认领',
       icon: Icons.phone,
-      color: Colors.blue,
+      color: AppColors.info,
       tagNumber: tagNumber,
       luggageId: luggageId,
       timestamp: arrivedAt,

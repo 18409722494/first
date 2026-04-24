@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
-/// 系统设置详情页面
+/// 系统设置页面 - 基于 UI 设计风格 (Frame2989)
 class SystemSettingsScreen extends StatefulWidget {
   const SystemSettingsScreen({super.key});
 
@@ -40,14 +41,24 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.languageSettings),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          l10n.languageSettings,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text(l10n.simplifiedChinese),
               trailing: settings.locale.languageCode == 'zh'
-                  ? const Icon(Icons.check, color: Colors.green)
+                  ? const Icon(Icons.check, color: AppColors.primary)
                   : null,
               onTap: () {
                 settings.setLocale(const Locale('zh', 'CN'));
@@ -57,7 +68,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
             ListTile(
               title: Text(l10n.english),
               trailing: settings.locale.languageCode == 'en'
-                  ? const Icon(Icons.check, color: Colors.green)
+                  ? const Icon(Icons.check, color: AppColors.primary)
                   : null,
               onTap: () {
                 settings.setLocale(const Locale('en', 'US'));
@@ -77,7 +88,17 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.themeSettings),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          l10n.themeSettings,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -121,9 +142,15 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   }) {
     final isSelected = current == mode;
     return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+      leading: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondaryLight),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? AppColors.primary : AppColors.textPrimaryLight,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
       onTap: () {
         settings.setThemeMode(mode);
         Navigator.pop(dialogCtx);
@@ -137,24 +164,96 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.clearCache),
-        content: Text(l10n.clearCacheConfirm),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          l10n.clearCache,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          l10n.clearCacheConfirm,
+          style: const TextStyle(color: AppColors.textSecondaryLight),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.cancel),
           ),
-          FilledButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               Future.delayed(const Duration(milliseconds: 100), () {
                 if (!mounted) return;
                 messenger.showSnackBar(
-                  SnackBar(content: Text(l10n.cacheClearedSuccess)),
+                  SnackBar(
+                    content: Text(l10n.cacheClearedSuccess),
+                    backgroundColor: AppColors.success,
+                  ),
                 );
               });
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
             child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.luggage, color: AppColors.primary, size: 28),
+            SizedBox(width: 12),
+            Text(
+              'AirBaggage Pro',
+              style: TextStyle(
+                color: AppColors.textPrimaryLight,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '版本: v2.4.1',
+              style: TextStyle(color: AppColors.textSecondaryLight),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'AirBaggage Pro 是一款专业的航空行李管理应用，'
+              '为地勤人员提供高效的行李追踪与管理服务。',
+              style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13),
+            ),
+            SizedBox(height: 16),
+            Text(
+              '© 2024 AirBaggage Pro. 保留所有权利。',
+              style: TextStyle(color: AppColors.textHintLight, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('关闭'),
           ),
         ],
       ),
@@ -164,109 +263,165 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: Text(l10n.systemSettingsTitle),
+        backgroundColor: AppColors.backgroundLight,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimaryLight),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          l10n.systemSettingsTitle,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return ListView(
-            padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
+            padding: EdgeInsets.all(padMd),
             children: [
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(Icons.notifications_outlined,
-                          size: Responsive.iconSize(context, 24)),
-                      title: Text(l10n.notificationSettings,
-                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                      onTap: () => _showNotificationSettingsDialog(context),
-                    ),
-                    Divider(height: 1, indent: Responsive.spacing(context, 40)),
-                    ListTile(
-                      leading: Icon(Icons.language_outlined,
-                          size: Responsive.iconSize(context, 24)),
-                      title: Text(l10n.languageSettings,
-                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _getCurrentLanguageLabel(context, settings.locale),
-                            style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: Responsive.fontSize(context, 14)),
-                          ),
-                          SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
-                          Icon(Icons.chevron_right, color: Colors.grey[400]),
-                        ],
-                      ),
-                      onTap: () => _showLanguageDialog(context),
-                    ),
-                    Divider(height: 1, indent: Responsive.spacing(context, 40)),
-                    ListTile(
-                      leading: Icon(Icons.dark_mode_outlined,
-                          size: Responsive.iconSize(context, 24)),
-                      title: Text(l10n.themeSettings,
-                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _getCurrentThemeLabel(context, settings.themeMode),
-                            style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: Responsive.fontSize(context, 14)),
-                          ),
-                          SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
-                          Icon(Icons.chevron_right, color: Colors.grey[400]),
-                        ],
-                      ),
-                      onTap: () => _showThemeDialog(context),
-                    ),
-                    Divider(height: 1, indent: Responsive.spacing(context, 40)),
-                    ListTile(
-                      leading: Icon(Icons.storage_outlined,
-                          size: Responsive.iconSize(context, 24)),
-                      title: Text(l10n.clearCache,
-                          style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      subtitle: Text('12.3 MB',
-                          style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-                      trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                      onTap: () => _showClearCacheDialog(context),
-                    ),
-                  ],
+              // 通知设置分组
+              _buildSectionTitle('通知设置'),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              _buildSettingsCard([
+                _buildSwitchItem(
+                  icon: Icons.notifications_outlined,
+                  title: '推送通知',
+                  value: settings.notifyLuggageStatus,
+                  onChanged: (value) => settings.setNotifyLuggageStatus(value),
                 ),
-              ),
+                _buildDivider(),
+                _buildSwitchItem(
+                  icon: Icons.warning_amber_outlined,
+                  title: '异常行李提醒',
+                  value: settings.notifyAbnormal,
+                  onChanged: (value) => settings.setNotifyAbnormal(value),
+                ),
+                _buildDivider(),
+                _buildSwitchItem(
+                  icon: Icons.volume_up_outlined,
+                  title: '声音提示',
+                  value: settings.notifySystem,
+                  onChanged: (value) => settings.setNotifySystem(value),
+                ),
+              ]),
               SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
-              Card(
-                child: Padding(
-                  padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+
+              // 显示与语言分组
+              _buildSectionTitle('显示与语言'),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              _buildSettingsCard([
+                _buildNavItem(
+                  icon: Icons.language_outlined,
+                  title: '语言',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        l10n.systemSettingsNote,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: Responsive.fontSize(context, 16),
+                        _getCurrentLanguageLabel(context, settings.locale),
+                        style: const TextStyle(
+                          color: AppColors.textSecondaryLight,
+                          fontSize: 14,
                         ),
                       ),
-                      SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                      Text(
-                        l10n.systemSettingsNoteContent,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: Responsive.fontSize(context, 13),
-                          height: 1.5,
-                        ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textHintLight,
+                        size: 20,
                       ),
                     ],
                   ),
+                  onTap: () => _showLanguageDialog(context),
                 ),
-              ),
+                _buildDivider(),
+                _buildNavItem(
+                  icon: Icons.dark_mode_outlined,
+                  title: '主题',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getCurrentThemeLabel(context, settings.themeMode),
+                        style: const TextStyle(
+                          color: AppColors.textSecondaryLight,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textHintLight,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                  onTap: () => _showThemeDialog(context),
+                ),
+              ]),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+              // 存储分组
+              _buildSectionTitle('存储'),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              _buildSettingsCard([
+                _buildNavItem(
+                  icon: Icons.delete_outline,
+                  title: '清除缓存',
+                  subtitle: '当前缓存: 45.2 MB',
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      '清除',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  onTap: () => _showClearCacheDialog(context),
+                ),
+              ]),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+              // 关于分组
+              _buildSettingsCard([
+                _buildNavItem(
+                  icon: Icons.info_outline,
+                  title: '关于 AirBaggage Pro',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'v2.4.1',
+                        style: TextStyle(
+                          color: AppColors.textSecondaryLight,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textHintLight,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                  onTap: () => _showAboutDialog(context),
+                ),
+              ]),
             ],
           );
         },
@@ -274,56 +429,92 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     );
   }
 
-  void _showNotificationSettingsDialog(BuildContext context) {
-    final settings = Provider.of<SettingsProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: Text(l10n.notificationSettings),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SwitchListTile(
-                  title: Text(l10n.luggageStatusUpdate,
-                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  value: settings.notifyLuggageStatus,
-                  onChanged: (value) {
-                    settings.setNotifyLuggageStatus(value);
-                    setDialogState(() {});
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.systemNotification,
-                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  value: settings.notifySystem,
-                  onChanged: (value) {
-                    settings.setNotifySystem(value);
-                    setDialogState(() {});
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.abnormalAlert,
-                      style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  value: settings.notifyAbnormal,
-                  onChanged: (value) {
-                    settings.setNotifyAbnormal(value);
-                    setDialogState(() {});
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          );
-        },
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textSecondaryLight,
       ),
+    );
+  }
+
+  Widget _buildSettingsCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider() {
+    return const Divider(
+      height: 1,
+      indent: 56,
+      color: AppColors.borderLight,
+    );
+  }
+
+  Widget _buildSwitchItem({
+    required IconData icon,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary, size: 22),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textPrimaryLight,
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return Colors.grey;
+        }),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Widget trailing,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary, size: 22),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textPrimaryLight,
+        ),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textHintLight,
+              ),
+            )
+          : null,
+      trailing: trailing,
+      onTap: onTap,
     );
   }
 }

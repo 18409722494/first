@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../components/luggage_card.dart';
 import '../models/luggage.dart';
-import '../services/luggage_service.dart';
+import '../models/qr_payload.dart';
+import '../services/baggage_api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/luggage_utils.dart';
 import '../utils/responsive.dart';
 import 'qr_scan_screen.dart';
+import 'luggage_detail_screen.dart';
 
-/// 查询行李页面
-/// 用于通过条件搜索行李信息
+/// 搜索行李页面 - 基于 UI 设计
 class SearchLuggageScreen extends StatefulWidget {
   const SearchLuggageScreen({super.key});
 
@@ -19,58 +20,51 @@ class SearchLuggageScreen extends StatefulWidget {
 
 class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
   final _searchController = TextEditingController();
-  
-  // 搜索结果
+
   List<Luggage> _searchResults = [];
-  // 过滤条件
   LuggageStatus? _selectedStatus;
-  // 加载状态
   bool _isLoading = false;
-  
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
-  
-  /// 执行搜索
+
   Future<void> _performSearch() async {
     setState(() {
       _isLoading = true;
     });
-    
-    try {
-      // 客户端筛选：拉取足够多页数据（与列表分页接口一致）
-      final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
-      if (!mounted) return;
-      final allLuggage = result.items;
 
-      // 应用搜索和过滤
-      final results = allLuggage.where((luggage) {
-        // 搜索条件
-        final searchTerm = _searchController.text.toLowerCase().trim();
-        final matchesSearch = searchTerm.isEmpty ||
-            luggage.tagNumber.toLowerCase().contains(searchTerm) ||
-            luggage.flightNumber.toLowerCase().contains(searchTerm) ||
-            luggage.passengerName.toLowerCase().contains(searchTerm) ||
-            luggage.destination.toLowerCase().contains(searchTerm);
-        
-        // 状态过滤
-        final matchesStatus = _selectedStatus == null || luggage.status == _selectedStatus;
-        
-        return matchesSearch && matchesStatus;
-      }).toList();
-      
+    try {
+      final searchTerm = _searchController.text.toLowerCase().trim();
+      List<Luggage> results;
+
+      if (searchTerm.isNotEmpty) {
+        final allResults = await BaggageApiService.searchBaggage(searchTerm);
+        results = _selectedStatus == null
+            ? allResults
+            : allResults.where((l) => l.status == _selectedStatus).toList();
+      } else {
+        final allResults = await BaggageApiService.getAllBaggageList();
+        results = _selectedStatus == null
+            ? allResults
+            : allResults.where((l) => l.status == _selectedStatus).toList();
+      }
+
+      if (!mounted) return;
       setState(() {
         _searchResults = results;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('搜索失败：${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('搜索失败：${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -79,8 +73,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
       }
     }
   }
-  
-  /// 重置搜索
+
   void _resetSearch() {
     setState(() {
       _searchController.clear();
@@ -88,253 +81,268 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
       _searchResults.clear();
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final paddingSm = Responsive.padding(context, AppSpacing.sm);
-    final spacingSm = Responsive.spacing(context, AppSpacing.sm);
-    final spacingXs = Responsive.spacing(context, AppSpacing.xs);
+    final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: const Text('查询行李'),
+        backgroundColor: AppColors.backgroundLight,
+        elevation: 0,
+        title: const Text(
+          '行李搜索',
+          style: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimaryLight),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QrScanScreen()),
+              );
+            },
+            tooltip: '扫描条形码',
+          ),
+        ],
       ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.all(paddingSm),
+          // 搜索框区域
+          Container(
+            padding: EdgeInsets.all(padMd),
+            color: AppColors.backgroundLight,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: _searchController,
-                  style: TextStyle(fontSize: Responsive.fontSize(context, 14)),
-                  decoration: InputDecoration(
-                    labelText: '搜索行李',
-                    hintText: '标签号、航班号、乘客姓名或目的地',
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                    suffixIcon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: _resetSearch,
-                          icon: Icon(Icons.clear, size: Responsive.iconSize(context, 20)),
-                        ),
-                        IconButton(
-                          onPressed: _performSearch,
-                          icon: Icon(Icons.search, size: Responsive.iconSize(context, 20)),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const QrScanScreen(),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.qr_code_scanner, size: Responsive.iconSize(context, 20)),
-                          tooltip: '扫描条形码',
-                        ),
-                      ],
-                    ),
+                // 搜索输入框
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderLight),
                   ),
-                  onSubmitted: (_) => _performSearch(),
-                ),
-                SizedBox(height: spacingSm),
-
-                DropdownButtonFormField<LuggageStatus?>(
-                  initialValue: _selectedStatus,
-                  isExpanded: true,
-                  isDense: true,
-                  decoration: const InputDecoration(
-                    labelText: '状态过滤',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem<LuggageStatus?>(
-                      value: null,
-                      child: Text('全部状态', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                    ),
-                    ...LuggageStatus.values.map((status) {
-                      return DropdownMenuItem<LuggageStatus>(
-                        value: status,
-                        child: Text(_getStatusText(status), style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedStatus = value;
-                    });
-                    _performSearch();
-                  },
-                ),
-                SizedBox(height: spacingXs),
-
-                // 勿用小于主题 padding+字高的固定 height，否则会裁剪按钮导致文字竖排/只显示一半
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _performSearch,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      minimumSize: Size(
-                        double.infinity,
-                        Responsive.buttonHeight(context, 48)
-                            .clamp(kMinInteractiveDimension, 56),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            height: Responsive.iconSize(context, 18),
-                            width: Responsive.iconSize(context, 18),
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            '执行搜索',
-                            style: TextStyle(fontSize: Responsive.fontSize(context, 14)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textPrimaryLight,
                           ),
+                          decoration: InputDecoration(
+                            hintText: '搜索行李号/旅客',
+                            hintStyle: const TextStyle(
+                              color: AppColors.textHintLight,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppColors.textSecondaryLight,
+                              size: 20,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear,
+                                      color: AppColors.textSecondaryLight,
+                                    ),
+                                    onPressed: _resetSearch,
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          onSubmitted: (_) => _performSearch(),
+                        ),
+                      ),
+                      // 搜索按钮
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _performSearch,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            '搜索',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+                // 状态筛选
+                SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildFilterChip(
+                        label: '全部',
+                        isSelected: _selectedStatus == null,
+                        onTap: () {
+                          setState(() => _selectedStatus = null);
+                          _performSearch();
+                        },
+                      ),
+                      SizedBox(width: Responsive.spacing(context, 8)),
+                      ...LuggageStatus.values.map((status) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              right: Responsive.spacing(context, 8)),
+                          child: _buildFilterChip(
+                            label: LuggageUtils.getStatusText(status),
+                            isSelected: _selectedStatus == status,
+                            onTap: () {
+                              setState(() => _selectedStatus = status);
+                              _performSearch();
+                            },
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-
+          // 搜索结果
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   )
                 : _searchResults.isEmpty
-                    ? Center(
-                        child: Text('请输入搜索条件并点击搜索按钮', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                      )
-                    : ListView.builder(
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final luggage = _searchResults[index];
-                          return _buildLuggageCard(luggage);
-                        },
-                      ),
+                    ? _buildEmptyState()
+                    : _buildSearchResults(),
           ),
         ],
       ),
     );
   }
-  
-  /// 构建行李卡片
-  Widget _buildLuggageCard(Luggage luggage) {
-    final spacingXs = Responsive.spacing(context, AppSpacing.xs);
-    final spacingSm = Responsive.spacing(context, AppSpacing.sm);
 
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: Responsive.padding(context, AppSpacing.sm), vertical: spacingXs),
-      elevation: 2,
-      child: Padding(
-        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '行李标签号: ${luggage.tagNumber}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: Responsive.fontSize(context, 14),
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: Responsive.spacing(context, 10), vertical: Responsive.spacing(context, 3)),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(luggage.status),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _getStatusText(luggage.status),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: Responsive.fontSize(context, 11),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: spacingXs),
-
-            Row(
-              children: [
-                Icon(Icons.flight, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                SizedBox(width: Responsive.spacing(context, 6)),
-                Text(luggage.flightNumber, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-                SizedBox(width: spacingSm),
-                Icon(Icons.person, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                SizedBox(width: Responsive.spacing(context, 6)),
-                Text(luggage.passengerName, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-              ],
-            ),
-            SizedBox(height: spacingXs),
-
-            Row(
-              children: [
-                Icon(Icons.location_on, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                SizedBox(width: Responsive.spacing(context, 6)),
-                Text(luggage.destination, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-                SizedBox(width: spacingSm),
-                Icon(Icons.scale, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                SizedBox(width: Responsive.spacing(context, 6)),
-                Text('${luggage.weight}kg', style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-              ],
-            ),
-            SizedBox(height: spacingXs),
-
-            Row(
-              children: [
-                Icon(Icons.access_time, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                SizedBox(width: Responsive.spacing(context, 6)),
-                Text(DateFormat('yyyy-MM-dd HH:mm').format(luggage.checkInTime), style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-              ],
-            ),
-
-            if (luggage.notes.isNotEmpty) ...[
-              SizedBox(height: spacingXs),
-              Row(
-                children: [
-                  Icon(Icons.note, size: Responsive.iconSize(context, 14), color: Colors.grey),
-                  SizedBox(width: Responsive.spacing(context, 6)),
-                  Expanded(
-                    child: Text(
-                      '备注: ${luggage.notes}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: Responsive.fontSize(context, 12)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.borderLight,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textSecondaryLight,
+          ),
         ),
       ),
     );
   }
-  
-  /// 获取状态文本
-  String _getStatusText(LuggageStatus status) {
-    return LuggageUtils.getStatusText(status);
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.search,
+            size: 64,
+            color: AppColors.textHintLight.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '输入行李号或旅客姓名进行搜索',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '也可点击右上角图标扫描行李条码',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textHintLight,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  /// 获取状态颜色
-  Color _getStatusColor(LuggageStatus status) {
-    return LuggageUtils.getStatusColor(status);
+  Widget _buildSearchResults() {
+    return ListView.builder(
+      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final luggage = _searchResults[index];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: Responsive.spacing(context, AppSpacing.sm),
+          ),
+          child: LuggageCard(
+            luggage: luggage,
+            compact: true,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LuggageDetailScreen(
+                    qrPayload: _buildQrPayload(luggage),
+                    raw: luggage.tagNumber,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  QrPayload _buildQrPayload(Luggage luggage) {
+    return QrPayload(
+      userId: null,
+      luggageId: luggage.tagNumber,
+      role: null,
+      extra: {
+        'tagNo': luggage.tagNumber,
+        'flight_hint': luggage.flightNumber,
+        'passenger_hint': luggage.passengerName,
+      },
+    );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/luggage.dart';
 import '../utils/luggage_utils.dart';
 
-/// 行李状态徽章组件
+/// 行李状态徽章组件 - 基于 UI 设计风格
 /// 统一展示行李状态标签，带圆角背景和状态颜色
 ///
 /// 使用示例：
@@ -11,20 +11,10 @@ import '../utils/luggage_utils.dart';
 /// StatusBadge(statusKey: 'damaged')
 /// ```
 class StatusBadge extends StatelessWidget {
-  /// 行李状态枚举
   final LuggageStatus? status;
-
-  /// 行李状态字符串键（与 status 二选一）
   final String? statusKey;
-
-  /// 徽章文本（可选，默认使用状态显示名）
   final String? text;
-
-  /// 是否为紧凑样式（无背景色）
   final bool compact;
-
-  /// 徽章圆角
-  final double? radius;
 
   const StatusBadge({
     super.key,
@@ -32,7 +22,6 @@ class StatusBadge extends StatelessWidget {
     this.statusKey,
     this.text,
     this.compact = false,
-    this.radius,
   });
 
   bool get _hasRenderableContent {
@@ -61,11 +50,33 @@ class StatusBadge extends StatelessWidget {
 
   Color get _bgColor {
     if (compact) return Colors.transparent;
-    if (status != null) return LuggageUtils.getStatusBgColor(status!);
+    if (status != null) return _getStatusBgColor(status!);
     if (statusKey != null && statusKey!.trim().isNotEmpty) {
-      return LuggageUtils.getStatusBgColorByKey(statusKey!);
+      final s = LuggageStatus.values.firstWhere(
+        (st) => st.name == statusKey,
+        orElse: () => LuggageStatus.checkIn,
+      );
+      return _getStatusBgColor(s);
     }
-    return Colors.grey.shade100;
+    return Colors.grey;
+  }
+
+  /// 浅色主题背景色映射
+  Color _getStatusBgColor(LuggageStatus s) {
+    switch (s) {
+      case LuggageStatus.checkIn:
+        return const Color(0xFFDBEAFE); // 浅蓝
+      case LuggageStatus.inTransit:
+        return const Color(0xFFFEF3C7); // 浅黄
+      case LuggageStatus.arrived:
+        return const Color(0xFFDCFCE7); // 浅绿
+      case LuggageStatus.delivered:
+        return const Color(0xFFECFEFF); // 浅青
+      case LuggageStatus.damaged:
+        return const Color(0xFFFEF2F2); // 浅红
+      case LuggageStatus.lost:
+        return const Color(0xFFF1F5F9); // 浅灰
+    }
   }
 
   @override
@@ -74,15 +85,20 @@ class StatusBadge extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final effectiveRadius = radius ?? (compact ? 4.0 : 999.0);
-
     if (compact) {
-      return Text(
-        _displayText,
-        style: TextStyle(
-          color: _textColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: _bgColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          _displayText,
+          style: TextStyle(
+            color: _textColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       );
     }
@@ -91,7 +107,7 @@ class StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _bgColor,
-        borderRadius: BorderRadius.circular(effectiveRadius),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         _displayText,
@@ -105,7 +121,7 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
-/// 可交互的状态选择器徽章
+/// 可交互的状态选择器徽章 - 基于 UI 设计风格
 class StatusBadgeSelector extends StatelessWidget {
   final LuggageStatus currentStatus;
   final ValueChanged<LuggageStatus>? onStatusChanged;
@@ -130,7 +146,7 @@ class StatusBadgeSelector extends StatelessWidget {
       children: statuses.map((status) {
         final isSelected = status == currentStatus;
         final textColor = LuggageUtils.getStatusColor(status);
-        final bgColor = LuggageUtils.getStatusBgColor(status);
+        final bgColor = _getStatusBgColor(status);
 
         return GestureDetector(
           onTap: onStatusChanged != null ? () => onStatusChanged!(status) : null,
@@ -138,8 +154,8 @@ class StatusBadgeSelector extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? bgColor : bgColor.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(999.0),
+              color: isSelected ? bgColor : bgColor.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(18),
               border: isSelected
                   ? Border.all(color: textColor, width: 1.5)
                   : Border.all(color: Colors.transparent, width: 1.5),
@@ -156,5 +172,22 @@ class StatusBadgeSelector extends StatelessWidget {
         );
       }).toList(),
     );
+  }
+
+  Color _getStatusBgColor(LuggageStatus s) {
+    switch (s) {
+      case LuggageStatus.checkIn:
+        return const Color(0xFFDBEAFE);
+      case LuggageStatus.inTransit:
+        return const Color(0xFFFEF3C7);
+      case LuggageStatus.arrived:
+        return const Color(0xFFDCFCE7);
+      case LuggageStatus.delivered:
+        return const Color(0xFFECFEFF);
+      case LuggageStatus.damaged:
+        return const Color(0xFFFEF2F2);
+      case LuggageStatus.lost:
+        return const Color(0xFFF1F5F9);
+    }
   }
 }

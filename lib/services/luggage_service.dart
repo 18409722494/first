@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:geolocator/geolocator.dart';
 import 'package:collection/collection.dart';
 import '../constants/app_constants.dart';
 import '../models/abnormal_baggage.dart';
@@ -12,8 +10,32 @@ import '../models/qr_payload.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 import 'baggage_api_service.dart';
+import 'location_service.dart';
+import 'luggage_detail_service.dart';
+import 'package:flutter/foundation.dart';
 
-/// 行李服务
+/// 扫码结果包装器
+class ScanResult {
+  final bool success;
+  final String? errorMessage;
+  final Luggage? luggage;
+
+  const ScanResult._({required this.success, this.errorMessage, this.luggage});
+
+  factory ScanResult.success(Luggage luggage) => ScanResult._(success: true, luggage: luggage);
+  factory ScanResult.failure(String message) => ScanResult._(success: false, errorMessage: message);
+}
+
+/// 行李核心服务
+///
+/// 提供行李基础 CRUD 操作：
+/// - 列表查询（分页）
+/// - 单条查询
+/// - 添加/更新/删除
+/// - 搜索和筛选
+///
+/// GPS 相关功能 → [LocationService]
+/// 详情聚合查询 → [LuggageDetailService]
 class LuggageService {
   /// 获取会话 Token（后端不需要认证时返回空字符串）
   static Future<String> _sessionToken() async {
@@ -22,6 +44,10 @@ class LuggageService {
     }
     return (await StorageService.getToken()) ?? '';
   }
+
+  // ─────────────────────────────────────────────
+  // 基础 CRUD
+  // ─────────────────────────────────────────────
 
   /// 获取行李列表（分页）
   /// [page] 从 1 开始；[pageSize] 每页条数
@@ -69,181 +95,61 @@ class LuggageService {
     }
   }
 
-  /// 行李操作历史（后端 `/baggage/operationLogs`；无数据或接口未实现时返回空列表）
-  static Future<List<BaggageOperationLog>> getBaggageOperationLogs({
-    String? baggageNumber,
-    String? baggageId,
-  }) =>
-      BaggageApiService.getOperationLogs(
-        baggageNumber: baggageNumber,
-        baggageId: baggageId,
-      );
-
-  /// 获取指定行李的破损记录（按行李号过滤）
-  static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) =>
-      BaggageApiService.getAbnormalRecords(baggageNumber);
-
-  /// 写入操作日志（扫码时调用）
-  /// 从行李信息中获取 contact 作为 phone 参数
-  static Future<bool> addScanOperationLog({
-    required Luggage luggage,
-    required String action,
-    String? location,
-    String? employeeId,
-    String? details,
-  }) async {
-    // 优先使用行李的 contact 字段作为 phone
-    final phone = luggage.contact?.trim();
-    if (phone == null || phone.isEmpty) {
-      return false;
-    }
-    return BaggageApiService.addOperationLog(
-      baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
-      phone: phone,
-      action: action,
-      location: location,
-      employeeId: employeeId,
-      details: details,
-    );
-  }
-
-  /// 获取行李操作历史（使用 POST /baggage/history 接口）
-  /// 需提供 baggageNumber 和 phone（来自行李的 contact 字段）
-  static Future<List<BaggageOperationLog>> getBaggageOperationHistory({
-    required String baggageNumber,
-    required String phone,
-  }) =>
-      BaggageApiService.getOperationHistory(
-        baggageNumber: baggageNumber,
-        phone: phone,
-      );
-
-  /// 优先从 /baggage/all 接口获取行李详情，同时并发拉取操作日志和破损记录。
-  /// 全部失败时基于扫码 [qrPayload] 构造基础信息。
-  static Future<LuggageDetailInfo> getBaggageDetail({
-    required QrPayload qrPayload,
-    required String rawQr,
-  }) async {
-    // 从 QR 中提取行李号
-    final tagNo = (qrPayload.extra['tagNo'] ??
-            qrPayload.extra['tag_no'] ??
-            qrPayload.luggageId ??
-            '')
-        .toString()
-        .trim();
-
-    // 1. 优先从 /baggage/all 获取行李信息
-    Luggage? luggage;
-    if (tagNo.isNotEmpty) {
-      try {
-        final found = await BaggageApiService.getBaggageByNumber(tagNo);
-        if (found != null) {
-          luggage = _mergeApiAndQr(found, qrPayload);
-        }
-      } catch (_) {}
-    }
-
-    // 2. 尝试旧接口兜底
-    if (luggage == null) {
-      final luggageId = qrPayload.luggageId?.trim() ?? '';
-      if (luggageId.isNotEmpty) {
-        try {
-          luggage = await getLuggageById(luggageId);
-          luggage = _mergeApiAndQr(luggage, qrPayload);
-        } catch (_) {}
-      }
-    }
-
-    // 3. 完全兜底：仅用扫码数据构造
-    if (luggage == null) {
-      luggage = _buildFromQrOnly(qrPayload, rawQr);
-    }
-
-    // 4. 并发拉取操作日志和破损记录
-    final effectiveTagNo = luggage.tagNumber.trim().isNotEmpty
-        ? luggage.tagNumber.trim()
-        : tagNo;
-
-    final phone = luggage.contact?.trim();
-
-    List<BaggageOperationLog> logs = [];
-    if (effectiveTagNo.isNotEmpty && phone != null && phone.isNotEmpty) {
-      logs = await getBaggageOperationHistory(
-        baggageNumber: effectiveTagNo,
-        phone: phone,
-      );
-    }
-    if (logs.isEmpty) {
-      logs = await getBaggageOperationLogs(
-        baggageNumber: effectiveTagNo.isNotEmpty ? effectiveTagNo : null,
-        baggageId: luggage.id.trim().isNotEmpty ? luggage.id.trim() : null,
-      );
-    }
-
-    final abnormalFuture = effectiveTagNo.isNotEmpty
-        ? getAbnormalRecords(effectiveTagNo)
-        : Future.value(<AbnormalBaggage>[]);
-
-    final abnormalRecords = await abnormalFuture;
-
-    logs.sort((a, b) => b.time.compareTo(a.time));
-    abnormalRecords.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-    return LuggageDetailInfo(
-      luggage: luggage,
-      abnormalRecords: abnormalRecords,
-      operationLogs: logs,
-    );
-  }
-
-  static Luggage _mergeApiAndQr(Luggage api, QrPayload p) {
-    final tagQr = '${p.extra['tagNo'] ?? p.extra['tag_no'] ?? p.luggageId ?? ''}';
-    final passHint = '${p.extra['passenger_hint'] ?? p.extra['旅客'] ?? p.extra['passengerName'] ?? ''}';
-    final flightHint = '${p.extra['flight_hint'] ?? p.extra['航班'] ?? p.extra['flightNumber'] ?? ''}';
-    return api.copyWith(
-      tagNumber: api.tagNumber.trim().isNotEmpty ? api.tagNumber : tagQr,
-      passengerName: api.passengerName.trim().isNotEmpty ? api.passengerName : passHint,
-      flightNumber: api.flightNumber.trim().isNotEmpty ? api.flightNumber : flightHint,
-    );
-  }
-
-  static Luggage _buildFromQrOnly(QrPayload p, String rawQr) {
-    final id = (p.luggageId != null && p.luggageId!.trim().isNotEmpty)
-        ? p.luggageId!.trim()
-        : (rawQr.trim().isNotEmpty ? rawQr.trim() : 'unknown');
-    final tag = '${p.extra['tagNo'] ?? p.extra['tag_no'] ?? p.luggageId ?? ''}';
-    final passenger = '${p.extra['passenger_hint'] ?? p.extra['旅客'] ?? p.extra['passengerName'] ?? ''}';
-    final flight = '${p.extra['flight_hint'] ?? p.extra['航班'] ?? p.extra['flightNumber'] ?? ''}';
-    final contact = p.extra['contact']?.toString();
-    return Luggage(
-      id: id,
-      tagNumber: tag,
-      flightNumber: flight,
-      passengerName: passenger,
-      weight: 0,
-      status: LuggageStatus.checkIn,
-      checkInTime: DateTime.now(),
-      lastUpdated: DateTime.now(),
-      destination: '',
-      notes: '',
-      contact: contact,
-    );
-  }
-
   /// 扫码解析出的可能是数据库 id，也可能是行李号 [baggageNumber]，依次尝试解析。
-  static Future<Luggage> getLuggageForScan(String luggageIdOrBaggageNumber) async {
+  /// 返回 [ScanResult] 包含成功/失败状态和详细信息
+  static Future<ScanResult> getLuggageForScan(String luggageIdOrBaggageNumber) async {
     final key = luggageIdOrBaggageNumber.trim();
     if (key.isEmpty) {
-      throw Exception('缺少行李标识');
+      return ScanResult.failure('缺少行李标识');
     }
+
+    debugPrint('[LuggageService] 扫码查询行李: $key');
+
+    // 方式1: 通过 ID 查询
     try {
-      return await getLuggageById(key);
-    } catch (_) {
-      final byTag = await searchByTagNumber(key);
-      if (byTag != null) return byTag;
-      throw Exception('未找到行李（已按ID与行李号尝试）: $key');
+      debugPrint('[LuggageService] 方式1: 通过ID查询 $key');
+      final luggage = await getLuggageById(key);
+      debugPrint('[LuggageService] ID查询成功: ${luggage.tagNumber}');
+      return ScanResult.success(luggage);
+    } catch (e) {
+      debugPrint('[LuggageService] ID查询失败: $e');
     }
+
+    // 方式2: 通过行李号搜索（调用后端 API）
+    try {
+      debugPrint('[LuggageService] 方式2: 通过行李号搜索 $key');
+      final byTag = await searchByTagNumber(key);
+      if (byTag != null) {
+        debugPrint('[LuggageService] 行李号搜索成功: ${byTag.tagNumber}');
+        return ScanResult.success(byTag);
+      }
+    } catch (e) {
+      debugPrint('[LuggageService] 行李号搜索失败: $e');
+    }
+
+    // 方式3: 模糊搜索（从全部行李中查找包含关键词的）
+    try {
+      debugPrint('[LuggageService] 方式3: 模糊搜索 $key');
+      final result = await BaggageApiService.getAllBaggageList();
+      final found = result.firstWhereOrNull(
+        (item) =>
+            item.tagNumber.toLowerCase().contains(key.toLowerCase()) ||
+            item.id.toLowerCase().contains(key.toLowerCase()) ||
+            item.passengerName.toLowerCase().contains(key.toLowerCase()),
+      );
+      if (found != null) {
+        debugPrint('[LuggageService] 模糊搜索成功: ${found.tagNumber}');
+        return ScanResult.success(found);
+      }
+    } catch (e) {
+      debugPrint('[LuggageService] 模糊搜索失败: $e');
+    }
+
+    final errorMsg = '未找到行李: $key\n\n可能原因:\n1. 行李尚未录入系统\n2. 行李标签号有误\n3. 网络连接不稳定';
+    debugPrint('[LuggageService] 所有查询方式均失败: $errorMsg');
+    return ScanResult.failure(errorMsg);
   }
+
 
   /// 获取行李详情
   static Future<Luggage> getLuggageById(String luggageId) async {
@@ -314,7 +220,129 @@ class LuggageService {
     }
   }
 
-  /// 更新行李位置
+  /// 添加行李
+  static Future<Luggage> addLuggage(Luggage luggage) async {
+    try {
+      final token = await _sessionToken();
+      final payload = luggage.toJson();
+
+      final http.Response res = await ApiService.authenticatedRequest(
+        'POST', '/luggage', payload, token,
+      );
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final obj = (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>)
+            ? (data['data'] as Map<String, dynamic>)
+            : (data as Map<String, dynamic>);
+        return Luggage.fromJson(obj);
+      }
+
+      final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
+      throw Exception(msg ?? '添加行李失败(${res.statusCode})');
+    } catch (e) {
+      return luggage;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 搜索与筛选
+  // ─────────────────────────────────────────────
+
+  /// 通过标签号搜索行李（调用后端 API）
+  static Future<Luggage?> searchByTagNumber(String tagNumber) async {
+    try {
+      return await BaggageApiService.getBaggageByNumber(tagNumber);
+    } catch (_) {
+      // 回退到本地搜索
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      return result.items.firstWhereOrNull(
+        (item) => item.tagNumber == tagNumber || item.tagNumber.contains(tagNumber),
+      );
+    }
+  }
+
+  /// 根据航班号获取行李列表
+  static Future<List<Luggage>> getByFlightNumber(String flightNumber) async {
+    try {
+      return await BaggageApiService.getBaggageByFlight(flightNumber);
+    } catch (_) {
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      return result.items.where((item) => item.flightNumber == flightNumber).toList();
+    }
+  }
+
+  /// 根据乘客名获取行李列表
+  static Future<List<Luggage>> getByPassengerName(String passengerName) async {
+    try {
+      return await BaggageApiService.getBaggageByPassenger(passengerName);
+    } catch (_) {
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      return result.items.where((item) => item.passengerName == passengerName).toList();
+    }
+  }
+
+  /// 获取按航班分组的行李
+  static Future<Map<String, List<Luggage>>> getGroupedByFlight() async {
+    try {
+      return await BaggageApiService.getBaggageGroupedByFlight();
+    } catch (_) {
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      final Map<String, List<Luggage>> grouped = {};
+      for (final luggage in result.items) {
+        final flight = luggage.flightNumber;
+        grouped.putIfAbsent(flight, () => []).add(luggage);
+      }
+      return grouped;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 统计与待办
+  // ─────────────────────────────────────────────
+
+  /// 获取今日统计数据
+  static Future<Map<String, int>> getTodayStats() async {
+    try {
+      return await BaggageApiService.getTodayStatistics();
+    } catch (_) {
+      return {'todayProcessed': 0, 'abnormal': 0};
+    }
+  }
+
+  /// 获取需要处理的超重行李列表（重量 > 免费额度）
+  static Future<List<Luggage>> getOverweightLuggage() async {
+    try {
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      return result.items
+          .where((item) => item.weight > AppConstants.freeBaggageWeightKg)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取无人认领行李列表（已到达但超过 [hours] 小时未交付）
+  static Future<List<Luggage>> getUnclaimedLuggage({int? hours}) async {
+    final thresholdHours = hours ?? AppConstants.unclaimedHoursThreshold;
+    try {
+      final result = await getLuggageList(page: 1, pageSize: 100);
+      final threshold = DateTime.now().subtract(Duration(hours: thresholdHours));
+      return result.items
+          .where((item) =>
+              item.status == LuggageStatus.arrived &&
+              item.lastUpdated.isBefore(threshold))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 位置更新
+  // ─────────────────────────────────────────────
+
+  /// 更新行李位置（使用旧 API）
   static Future<Luggage> updateLuggageLocation({
     required String luggageId,
     required double latitude,
@@ -349,256 +377,153 @@ class LuggageService {
     }
   }
 
-  /// 添加行李
-  static Future<Luggage> addLuggage(Luggage luggage) async {
-    try {
-      final token = await _sessionToken();
-      final payload = luggage.toJson();
-
-      final http.Response res = await ApiService.authenticatedRequest(
-        'POST', '/luggage', payload, token,
-      );
-
-      final data = jsonDecode(res.body);
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        final obj = (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>)
-            ? (data['data'] as Map<String, dynamic>)
-            : (data as Map<String, dynamic>);
-        return Luggage.fromJson(obj);
-      }
-
-      final msg = (data is Map<String, dynamic>) ? (data['message']?.toString()) : null;
-      throw Exception(msg ?? '添加行李失败(${res.statusCode})');
-    } catch (e) {
-      return luggage;
-    }
-  }
-
-  /// 通过标签号搜索行李（调用后端 API）
-  static Future<Luggage?> searchByTagNumber(String tagNumber) async {
-    try {
-      // 优先使用后端 API
-      return await BaggageApiService.getBaggageByNumber(tagNumber);
-    } catch (_) {
-      // 回退到本地搜索（分页第一页即可）
-      final result = await getLuggageList(page: 1, pageSize: 999);
-      return result.items.firstWhereOrNull(
-        (item) => item.tagNumber == tagNumber || item.tagNumber.contains(tagNumber),
-      );
-    }
-  }
-
-  /// 根据航班号获取行李列表
-  static Future<List<Luggage>> getByFlightNumber(String flightNumber) async {
-    try {
-      return await BaggageApiService.getBaggageByFlight(flightNumber);
-    } catch (_) {
-      final result = await getLuggageList(page: 1, pageSize: 999);
-      return result.items.where((item) => item.flightNumber == flightNumber).toList();
-    }
-  }
-
-  /// 根据乘客名获取行李列表
-  static Future<List<Luggage>> getByPassengerName(String passengerName) async {
-    try {
-      return await BaggageApiService.getBaggageByPassenger(passengerName);
-    } catch (_) {
-      final result = await getLuggageList(page: 1, pageSize: 999);
-      return result.items.where((item) => item.passengerName == passengerName).toList();
-    }
-  }
-
-  /// 获取今日统计数据
-  static Future<Map<String, int>> getTodayStats() async {
-    try {
-      return await BaggageApiService.getTodayStatistics();
-    } catch (_) {
-      return {
-        'todayProcessed': 0,
-        'abnormal': 0,
-      };
-    }
-  }
-
-  /// 获取按航班分组的行李
-  static Future<Map<String, List<Luggage>>> getGroupedByFlight() async {
-    try {
-      return await BaggageApiService.getBaggageGroupedByFlight();
-    } catch (_) {
-      final result = await getLuggageList(page: 1, pageSize: 999);
-      final Map<String, List<Luggage>> grouped = {};
-      for (final luggage in result.items) {
-        final flight = luggage.flightNumber;
-        grouped.putIfAbsent(flight, () => []).add(luggage);
-      }
-      return grouped;
-    }
-  }
-
-  /// 更新行李扫码位置与状态
+  /// 更新行李扫码位置与状态（POST /baggage/location）
   ///
-  /// 调用后端接口: PUT /baggage/location
-  /// 请求: { baggageNumber, location, status?, employeeId? }（status 为后端中文，如「已达」）
+  /// 请求: { baggageNumber, location, status?, employeeId }
+  /// 注意：操作日志由后端自动记录（通过外键关联），无需前端手动记录
+  /// 带有重试机制和详细错误提示
+  /// [employeeId] 如果不传，将自动从本地存储读取
   static Future<Map<String, dynamic>> updateScanLocation({
     required String baggageNumber,
     required String location,
     String? status,
     String? employeeId,
   }) async {
-    try {
-      return await BaggageApiService.updateBaggageLocation(
-        baggageNumber: baggageNumber,
-        location: location,
-        status: status,
-        employeeId: employeeId,
-      );
-    } catch (e) {
-      rethrow;
+    debugPrint('[LuggageService] 更新行李位置: baggageNumber=$baggageNumber, location=$location');
+
+    // 如果没有传入 employeeId，从本地存储读取
+    String? resolvedEmployeeId = employeeId;
+    if (resolvedEmployeeId == null || resolvedEmployeeId.isEmpty) {
+      resolvedEmployeeId = await StorageService.getEmployeeId();
+      debugPrint('[LuggageService] 从本地读取员工工号: $resolvedEmployeeId');
     }
-  }
 
-  /// 获取需要处理的超重行李列表（重量 > 免费额度）
-  static Future<List<Luggage>> getOverweightLuggage() async {
-    try {
-      final result = await getLuggageList(page: 1, pageSize: 9999);
-      return result.items
-          .where((item) => item.weight > AppConstants.freeBaggageWeightKg)
-          .toList();
-    } catch (e) {
-      return [];
+    // 尝试更新位置（最多重试2次）
+    const maxRetries = 2;
+    String? lastError;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        debugPrint('[LuggageService] 位置更新第$attempt次尝试');
+        final result = await BaggageApiService.updateBaggageLocation(
+          baggageNumber: baggageNumber,
+          location: location,
+          status: status,
+          employeeId: resolvedEmployeeId,
+        );
+        debugPrint('[LuggageService] 位置更新成功: $result');
+        return result;
+      } catch (e) {
+        lastError = e.toString();
+        debugPrint('[LuggageService] 位置更新第$attempt次失败: $e');
+        if (attempt < maxRetries) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
     }
+
+    // 所有重试都失败
+    debugPrint('[LuggageService] 位置更新全部失败，最后错误: $lastError');
+    throw Exception('更新行李位置失败: $lastError\n\n请检查:\n1. 网络连接是否正常\n2. 后端服务是否可用');
   }
 
-  /// 获取无人认领行李列表（已到达但超过 [hours] 小时未交付）
-  static Future<List<Luggage>> getUnclaimedLuggage({int hours = 24}) async {
-    try {
-      final result = await getLuggageList(page: 1, pageSize: 9999);
-      final threshold = DateTime.now().subtract(Duration(hours: hours));
-      return result.items
-          .where((item) =>
-              item.status == LuggageStatus.arrived &&
-              item.lastUpdated.isBefore(threshold))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+  /// 通过行李号获取操作历史（调用 POST /baggage/history/by-number）
+  static Future<List<BaggageOperationLog>> getOperationHistoryByNumber(
+    String baggageNumber,
+  ) async {
+    return BaggageApiService.getOperationHistoryByNumber(baggageNumber);
   }
 
-  // ==================== GPS 位置获取辅助 ====================
-
-  /// 检查并请求位置权限
-  static Future<bool> checkLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    return permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always;
-  }
-
-  static bool _isPlausibleCoordinate(Position p) {
-    final lat = p.latitude;
-    final lng = p.longitude;
-    if (lat.isNaN || lng.isNaN) return false;
-    if (lat.abs() < 1e-7 && lng.abs() < 1e-7) return false;
-    if (lat.abs() > 90 || lng.abs() > 180) return false;
-    return true;
-  }
-
-  static Duration _locationTimeoutForAccuracy(LocationAccuracy a) {
-    switch (a) {
-      case LocationAccuracy.lowest:
-        return const Duration(seconds: 22);
-      case LocationAccuracy.low:
-        return const Duration(seconds: 22);
-      case LocationAccuracy.medium:
-        return const Duration(seconds: 14);
-      default:
-        return const Duration(seconds: 12);
-    }
-  }
-
-  /// 获取设备当前位置（优先「能拿到」，不追求高精度）
-  ///
-  /// 策略：
-  /// 1. [getLastKnownPosition]：7 天内缓存直接用；实时全失败后再用更旧缓存兜底
-  /// 2. 实时定位顺序：**lowest → low → medium**（网络/基站优先，弱 GPS 室内更易成功）
-  /// 3. 不使用 high/best，避免长时间等卫星
-  static Future<Position?> getCurrentDevicePosition({
-    int retryPerAccuracy = 2,
-    Duration? timeout,
+  /// 主动记录操作日志（供外部调用）
+  /// 用于扫码确认、手动更新等场景
+  static Future<bool> recordOperation({
+    required String baggageNumber,
+    required String action,
+    String? location,
+    String? employeeId,
+    String? details,
+    String? phone,
   }) async {
-    Position? oldButPlausibleLast;
-
-    // 1) 最近已知位置
     try {
-      final last = await Geolocator.getLastKnownPosition();
-      if (last != null && _isPlausibleCoordinate(last)) {
-        oldButPlausibleLast = last;
-        final age = DateTime.now().difference(last.timestamp);
-        if (age.inDays <= 7) {
-          debugPrint(
-            'getCurrentDevicePosition: 使用最近已知位置（约 ${age.inHours} 小时前，精度不限）',
-          );
-          return last;
-        }
-      }
-    } catch (e) {
-      debugPrint('getCurrentDevicePosition: lastKnown 失败 $e');
+      return await BaggageApiService.addOperationLog(
+        baggageNumber: baggageNumber,
+        phone: phone ?? '',
+        action: action,
+        location: location,
+        employeeId: employeeId,
+        details: details,
+      );
+    } catch (_) {
+      return false;
     }
-
-    // 2) 实时：从最低精度到 medium
-    const order = <LocationAccuracy>[
-      LocationAccuracy.lowest,
-      LocationAccuracy.low,
-      LocationAccuracy.medium,
-    ];
-
-    for (final accuracy in order) {
-      final t = timeout ?? _locationTimeoutForAccuracy(accuracy);
-      for (int attempt = 0; attempt < retryPerAccuracy; attempt++) {
-        try {
-          final position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: accuracy,
-            timeLimit: t,
-          );
-          if (_isPlausibleCoordinate(position)) {
-            debugPrint(
-              'getCurrentDevicePosition: 实时成功 accuracy=$accuracy 第${attempt + 1}次',
-            );
-            return position;
-          }
-        } catch (e) {
-          debugPrint(
-            'getCurrentDevicePosition: accuracy=$accuracy 第${attempt + 1}次失败 $e',
-          );
-          if (attempt < retryPerAccuracy - 1) {
-            await Future.delayed(const Duration(milliseconds: 700));
-          }
-        }
-      }
-    }
-
-    // 3) 兜底：超过 7 天的 lastKnown 仍优于无坐标
-    if (oldButPlausibleLast != null) {
-      debugPrint('getCurrentDevicePosition: 使用较旧的缓存位置作为兜底');
-      return oldButPlausibleLast;
-    }
-
-    try {
-      final last = await Geolocator.getLastKnownPosition();
-      if (last != null && _isPlausibleCoordinate(last)) {
-        return last;
-      }
-    } catch (_) {}
-
-    debugPrint('getCurrentDevicePosition: 所有策略均失败，返回 null');
-    return null;
   }
 
-  /// 检查 GPS 服务是否启用
-  static Future<bool> isLocationServiceEnabled() async {
-    return await Geolocator.isLocationServiceEnabled();
+  // ─────────────────────────────────────────────
+  // 操作日志
+  // ─────────────────────────────────────────────
+
+  /// 行李操作历史（后端 `/baggage/operationLogs`）
+  static Future<List<BaggageOperationLog>> getBaggageOperationLogs({
+    String? baggageNumber,
+    String? baggageId,
+  }) =>
+      BaggageApiService.getOperationLogs(
+        baggageNumber: baggageNumber,
+        baggageId: baggageId,
+      );
+
+  /// 获取行李操作历史（POST /baggage/history）
+  static Future<List<BaggageOperationLog>> getBaggageOperationHistory({
+    required String baggageNumber,
+    required String phone,
+  }) =>
+      BaggageApiService.getOperationHistory(
+        baggageNumber: baggageNumber,
+        phone: phone,
+      );
+
+  /// 写入操作日志（扫码时调用）
+  static Future<bool> addScanOperationLog({
+    required Luggage luggage,
+    required String action,
+    String? location,
+    String? employeeId,
+    String? details,
+  }) async {
+    final phone = luggage.contact?.trim();
+    if (phone == null || phone.isEmpty) {
+      return false;
+    }
+    return BaggageApiService.addOperationLog(
+      baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+      phone: phone,
+      action: action,
+      location: location,
+      employeeId: employeeId,
+      details: details,
+    );
   }
+
+  // ─────────────────────────────────────────────
+  // 破损记录（委托给 BaggageApiService）
+  // ─────────────────────────────────────────────
+
+  /// 获取指定行李的破损记录（按行李号过滤）
+  static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) =>
+      BaggageApiService.getAbnormalRecords(baggageNumber);
+
+  // ─────────────────────────────────────────────
+  // 详情聚合（委托给 LuggageDetailService）
+  // ─────────────────────────────────────────────
+
+  /// 优先从 /baggage/all 接口获取行李详情，同时并发拉取操作日志和破损记录。
+  /// 全部失败时基于扫码 [qrPayload] 构造基础信息。
+  static Future<LuggageDetailInfo> getBaggageDetail({
+    required QrPayload qrPayload,
+    required String rawQr,
+  }) =>
+      LuggageDetailService.getBaggageDetail(
+        qrPayload: qrPayload,
+        rawQr: rawQr,
+      );
 }
-

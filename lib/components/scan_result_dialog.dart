@@ -236,6 +236,16 @@ class ScanResultDialog extends StatelessWidget {
               ),
             ],
           ),
+          SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+          SizedBox(
+            width: double.infinity,
+            child: _ActionButton(
+              icon: Icons.info_outline,
+              label: '查看详情',
+              color: AppColors.textSecondary,
+              onTap: () => Navigator.of(context).pop<String>('view_detail'),
+            ),
+          ),
         ],
       ),
     );

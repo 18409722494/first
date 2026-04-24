@@ -6,7 +6,7 @@ import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 import 'status_badge.dart';
 
-/// 行李卡片组件
+/// 行李卡片组件 - 基于 UI 设计风格
 class LuggageCard extends StatelessWidget {
   final Luggage luggage;
   final VoidCallback? onTap;
@@ -27,28 +27,27 @@ class LuggageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Card(
       margin: EdgeInsets.zero,
-      elevation: compact ? 0 : (isDark ? 2 : 1),
+      elevation: 0,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.borderLight, width: 1),
       ),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.cardPadding),
+          padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(context),
               if (!compact) ...[
                 const SizedBox(height: AppSpacing.sm),
-                _buildDivider(isDark),
+                const Divider(height: 1, color: AppColors.borderLight),
                 const SizedBox(height: AppSpacing.sm),
                 _buildInfoGrid(context),
               ],
@@ -72,8 +71,9 @@ class LuggageCard extends StatelessWidget {
                 luggage.tagNumber,
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 14),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
+                  color: AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(height: 2),
@@ -81,16 +81,20 @@ class LuggageCard extends StatelessWidget {
                 luggage.flightNumber,
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 12),
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: AppColors.textSecondaryLight,
                 ),
               ),
             ],
           ),
         ),
-        StatusBadge(status: luggage.status),
+        StatusBadge(status: luggage.status, compact: true),
         if (showDeleteAction)
           IconButton(
-            icon: Icon(Icons.delete_outline, color: AppColors.error, size: Responsive.iconSize(context, 20)),
+            icon: Icon(
+              Icons.delete_outline,
+              color: AppColors.error,
+              size: Responsive.iconSize(context, 20),
+            ),
             onPressed: onDelete,
             visualDensity: VisualDensity.compact,
           ),
@@ -104,22 +108,14 @@ class LuggageCard extends StatelessWidget {
       width: Responsive.spacing(context, 40),
       height: Responsive.spacing(context, 40),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        color: const Color(0xFFDBEAFE),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
         Icons.luggage_outlined,
         color: AppColors.primary,
         size: iconSizeVal,
       ),
-    );
-  }
-
-  Widget _buildDivider(bool isDark) {
-    return Divider(
-      height: 1,
-      thickness: 1,
-      color: isDark ? AppColors.dividerDark : AppColors.divider,
     );
   }
 
@@ -172,19 +168,22 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: Responsive.iconSize(context, 11), color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              icon,
+              size: Responsive.iconSize(context, 11),
+              color: AppColors.textSecondaryLight,
+            ),
             const SizedBox(width: 2),
             Text(
               label,
               style: TextStyle(
                 fontSize: Responsive.fontSize(context, 10),
-                color: theme.colorScheme.onSurfaceVariant,
+                color: AppColors.textSecondaryLight,
               ),
             ),
           ],
@@ -195,6 +194,7 @@ class _InfoItem extends StatelessWidget {
           style: TextStyle(
             fontSize: Responsive.fontSize(context, 12),
             fontWeight: FontWeight.w500,
+            color: AppColors.textPrimaryLight,
           ),
           maxLines: maxLines,
           overflow: overflow,
@@ -225,12 +225,17 @@ class LuggageListTile extends StatelessWidget {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
+      tileColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        side: const BorderSide(color: AppColors.borderLight, width: 1),
+      ),
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          color: const Color(0xFFDBEAFE),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: const Icon(
           Icons.luggage_outlined,
@@ -240,13 +245,17 @@ class LuggageListTile extends StatelessWidget {
       ),
       title: Text(
         luggage.tagNumber,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: AppColors.textPrimaryLight,
+        ),
       ),
       subtitle: Text(
         luggage.passengerName,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: AppColors.textSecondaryLight,
         ),
       ),
       trailing: trailing ?? StatusBadge(status: luggage.status, compact: true),

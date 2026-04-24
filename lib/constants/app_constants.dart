@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// 应用常量
@@ -63,35 +62,11 @@ class AppConstants {
     return overweight > 0 ? overweight * overweightFeePerKg : 0.0;
   }
 
+  // 行李状态超时规则
+  /// 无人认领判定时间（小时）
+  static const int unclaimedHoursThreshold = 24;
+
   // 分页配置
   static const int pageSize = 20;
   static const double preloadThreshold = 100.0;
-
-  // 行李状态颜色
-  static const Map<String, Color> luggageStatusColors = {
-    'checkIn':    Color(0xFF2196F3),
-    'inTransit':  Color.fromARGB(255, 5, 13, 34),
-    'arrived':    Color(0xFF4CAF50),
-    'delivered':  Color.fromARGB(255, 117, 33, 22),
-    'damaged':    Color.fromARGB(255, 189, 187, 65),
-    'lost':       Color(0xFF9E9E9E),
-  };
-
-  static const Map<String, Color> luggageStatusBgColors = {
-    'checkIn':    Color(0xFFE3F2FD),
-    'inTransit':  Color(0xFFFFF3E0),
-    'arrived':    Color(0xFFE8F5E9),
-    'delivered':  Color(0xFFE1F5FE),
-    'damaged':    Color(0xFFFFEBEE),
-    'lost':       Color(0xFFF5F5F5),
-  };
-
-  static Color getStatusColor(String statusKey) {
-    return luggageStatusColors[statusKey] ?? Colors.grey;
-  }
-
-  static Color getStatusBgColor(String statusKey) {
-    return luggageStatusBgColors[statusKey] ?? Colors.grey.shade100;
-  }
-
 }

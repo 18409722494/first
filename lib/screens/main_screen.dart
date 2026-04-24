@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'luggage_list_screen.dart';
@@ -7,6 +6,7 @@ import 'profile_screen.dart';
 import 'todo_screen.dart';
 
 /// 主界面：底部导航 + 四个页面
+/// 基于 UI 设计风格 (Frame282 底部导航)
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -17,49 +17,96 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // 硬编码待办数量，用于演示badge显示
+  // 硬编码待办数量，用于演示 badge 显示
   final int _pendingTaskCount = 3;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
       body: SizedBox.expand(child: _buildBody()),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l10n.homeTab,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 10,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+          child: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (i) => setState(() => _currentIndex = i),
+            backgroundColor: Colors.white,
+            elevation: 0,
+            height: 65,
+            indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined, color: AppColors.textSecondaryLight),
+                selectedIcon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: const Icon(Icons.home, color: Colors.white, size: 20),
+                ),
+                label: '首页',
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.luggage_outlined, color: AppColors.textSecondaryLight),
+                selectedIcon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: const Icon(Icons.luggage, color: Colors.white, size: 20),
+                ),
+                label: '行李',
+              ),
+              NavigationDestination(
+                icon: _buildBadgeIcon(Icons.task_outlined, false),
+                selectedIcon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: const Icon(Icons.task, color: Colors.white, size: 20),
+                ),
+                label: '待办',
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.person_outline, color: AppColors.textSecondaryLight),
+                selectedIcon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 20),
+                ),
+                label: '我的',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.luggage_outlined),
-            selectedIcon: const Icon(Icons.luggage),
-            label: l10n.luggageTab,
-          ),
-          NavigationDestination(
-            icon: _buildBadge(Icons.task_outlined, false),
-            selectedIcon: _buildBadge(Icons.task, true),
-            label: l10n.todoTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.myTab,
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBadge(IconData iconData, bool isSelected) {
+  Widget _buildBadgeIcon(IconData iconData, bool isSelected) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Icon(iconData),
+        Icon(iconData, color: AppColors.textSecondaryLight),
         if (_pendingTaskCount > 0)
           Positioned(
             right: -4,
@@ -71,9 +118,7 @@ class _MainScreenState extends State<MainScreen> {
                 color: AppColors.warning,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected 
-                      ? Theme.of(context).colorScheme.surface 
-                      : Theme.of(context).scaffoldBackgroundColor,
+                  color: isSelected ? Colors.white : Colors.white,
                   width: 1.5,
                 ),
               ),

@@ -44,6 +44,7 @@ class AuthProvider with ChangeNotifier {
   Future<bool> login({
     required String username,
     required String password,
+    required String employeeId,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -53,29 +54,24 @@ class AuthProvider with ChangeNotifier {
       final response = await ApiService.login(
         username: username.trim(),
         password: password,
+        employeeId: employeeId.trim(),
       );
 
       if (response.success) {
-        final data = await StorageService.readAuthData();
-        final savedEmployeeId = data['employeeId'];
-
+        // 保存用户信息，包括工号
         await StorageService.saveUserInfo(
           userId: username.trim(),
           username: username.trim(),
           email: '',
-          employeeId: savedEmployeeId,
+          employeeId: employeeId,
         );
-
-        if (response.token != null && response.token!.isNotEmpty) {
-          await StorageService.saveToken(response.token!);
-        }
 
         _user = User(
           id: username.trim(),
           username: username.trim(),
           email: '',
           token: response.token,
-          employeeId: savedEmployeeId,
+          employeeId: employeeId,
         );
 
         _isLoading = false;
@@ -99,6 +95,7 @@ class AuthProvider with ChangeNotifier {
     String employeeId,
     String username,
     String password,
+    String airport,
   ) async {
     _isLoading = true;
     _errorMessage = null;
@@ -107,7 +104,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final empId = employeeId.trim();
       final name = username.trim();
-      final response = await ApiService.register(empId, name, password);
+      final response = await ApiService.register(empId, name, password, airport);
 
       if (response.success) {
         await StorageService.saveUserInfo(

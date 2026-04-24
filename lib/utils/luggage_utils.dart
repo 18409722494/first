@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/luggage.dart';
-import '../constants/app_constants.dart';
 
 /// 行李相关的UI工具函数
-/// 禁止在 screens/ 中重复定义 getStatusText / getStatusColor
+/// 颜色定义已移至 [LuggageStatus.color] 和 [LuggageStatus.bgColor]
 class LuggageUtils {
   LuggageUtils._();
 
@@ -33,25 +32,32 @@ class LuggageUtils {
   }
 
   /// 获取行李状态的主颜色（适合标签/文字）
+  /// 优先使用枚举自身属性
   static Color getStatusColor(LuggageStatus status) {
-    final key = status.name;
-    return AppConstants.luggageStatusColors[key] ?? Colors.grey;
+    return status.color;
   }
 
   /// 获取行李状态的浅色背景（适合Chip/Container背景）
   static Color getStatusBgColor(LuggageStatus status) {
-    final key = status.name;
-    return AppConstants.luggageStatusBgColors[key] ?? Colors.grey.shade100;
+    return status.bgColor;
   }
 
   /// 获取行李状态的主颜色（根据字符串状态键）
   static Color getStatusColorByKey(String statusKey) {
-    return AppConstants.getStatusColor(statusKey);
+    final status = LuggageStatus.values.firstWhere(
+      (s) => s.name == statusKey,
+      orElse: () => LuggageStatus.checkIn,
+    );
+    return status.color;
   }
 
   /// 获取行李状态的浅色背景（根据字符串状态键）
   static Color getStatusBgColorByKey(String statusKey) {
-    return AppConstants.getStatusBgColor(statusKey);
+    final status = LuggageStatus.values.firstWhere(
+      (s) => s.name == statusKey,
+      orElse: () => LuggageStatus.checkIn,
+    );
+    return status.bgColor;
   }
 
   /// 格式化相对时间（如"2小时前"）
@@ -76,5 +82,32 @@ class LuggageUtils {
   static String extractTagNumber(String description) {
     final match = RegExp(r'行李标签号: (BA\d+)').firstMatch(description);
     return match?.group(1) ?? 'BA00000';
+  }
+
+  /// 清理位置数据中的乱码字符
+  /// 移除控制字符、非法Unicode代理对等，只保留可见字符
+  static String cleanLocationString(String input) {
+    if (input.isEmpty) return input;
+
+    // 移除常见的控制字符和乱码模式
+    String cleaned = input
+        // 移除 Unicode 控制字符 (C0 控制字符)
+        .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+        // 移除常见的乱码模式 (如 锟斤拷, 烫烫烫 等)
+        .replaceAll(RegExp(r'锟斤拷|烫烫烫|\?{2,}'), '')
+        // 移除零宽字符
+        .replaceAll(RegExp(r'[\u200B-\u200F\uFEFF]'), '')
+        // 移除 Unicode 代理对 (非法的 surrogate pairs)
+        .replaceAll(RegExp(r'[\uD800-\uDFFF]'), '')
+        // 规范化空白字符
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    // 如果清理后为空或全是乱码，返回原始值（让用户知道有问题）
+    if (cleaned.isEmpty) {
+      return input;
+    }
+
+    return cleaned;
   }
 }

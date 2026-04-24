@@ -28,7 +28,9 @@ class LocationSearchService {
   static const String _chinaMapBound = '73,3,136,54';
   static const String _adminSpecifyChina = '156000000';
 
-  static final Map<String, List<SearchResult>> _cache = {};
+  // 缓存过期时间：10分钟
+  static const Duration _cacheMaxAge = Duration(minutes: 10);
+  static final Map<String, _CacheEntry> _cache = {};
 
   /// 搜索地名、地址、POI
   static Future<List<SearchResult>> search(String keyword) async {
@@ -38,8 +40,10 @@ class LocationSearchService {
 
     final trimmedKeyword = keyword.trim();
 
-    if (_cache.containsKey(trimmedKeyword)) {
-      return _cache[trimmedKeyword]!;
+    // 检查缓存（带 TTL）
+    final cached = _cache[trimmedKeyword];
+    if (cached != null && !cached.isExpired()) {
+      return cached.results;
     }
 
     late List<SearchResult> administrative;
@@ -103,9 +107,16 @@ class LocationSearchService {
       nominatim,
     ]);
 
-    _cache[trimmedKeyword] = merged;
+    _cache[trimmedKeyword] = _CacheEntry(merged);
     return merged;
   }
+
+  /// 清除全部缓存
+  static void clearCache() {
+    _cache.clear();
+  }
+
+  // ──────────────────── 私有方法 ────────────────────
 
   /// 行政区划查询（省 / 市 / 区县名，如「天津市」「东丽区」）
   static Future<List<SearchResult>> _searchTiandituAdministrative(
@@ -401,8 +412,15 @@ class LocationSearchService {
   static bool _looksLikeChinese(String s) {
     return RegExp(r'[\u4e00-\u9fff]').hasMatch(s);
   }
+}
 
-  static void clearCache() {
-    _cache.clear();
-  }
+/// 搜索结果缓存条目（带 TTL）
+class _CacheEntry {
+  final List<SearchResult> results;
+  final DateTime timestamp;
+
+  _CacheEntry(this.results) : timestamp = DateTime.now();
+
+  bool isExpired() =>
+      DateTime.now().difference(timestamp) > LocationSearchService._cacheMaxAge;
 }

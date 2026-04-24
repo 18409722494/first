@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/luggage.dart';
 import '../theme/app_spacing.dart';
 import '../components/empty_state.dart';
@@ -89,11 +90,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('正在拨打...')),
-                      );
-                    },
+                    onPressed: () => _makePhoneCall(),
                     icon: Icon(Icons.phone, size: Responsive.iconSize(context, 18)),
                     label: Text('拨打电话', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ),
@@ -101,11 +98,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                 SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('发送短信')),
-                      );
-                    },
+                    onPressed: () => _sendSms(),
                     icon: Icon(Icons.sms, size: Responsive.iconSize(context, 18)),
                     label: Text('发送短信', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ),
@@ -174,6 +167,56 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  /// 拨打电话
+  Future<void> _makePhoneCall() async {
+    // 模拟电话号码，实际应该从行李数据中获取
+    const phoneNumber = '13800138000';
+    final uri = Uri.parse('tel:$phoneNumber');
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法拨打电话')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('拨打失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 发送短信
+  Future<void> _sendSms() async {
+    // 模拟电话号码
+    const phoneNumber = '13800138000';
+    final uri = Uri.parse('sms:$phoneNumber');
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法发送短信')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('发送失败: $e')),
+        );
       }
     }
   }

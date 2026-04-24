@@ -1,26 +1,20 @@
 import 'dart:typed_data';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import '../l10n/app_localizations.dart';
-import '../components/app_text_field.dart';
-import '../components/app_button.dart';
+import '../components/image_picker_field.dart';
 import '../services/damage_report_service.dart';
 import '../services/permission_service.dart';
+import '../services/location_service.dart';
 import '../services/luggage_service.dart';
-import '../models/permission_type.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
-/// 破损报告界面
-/// 用于提交行李破损报告，包括图片上传、信息填写和哈希计算
+/// 破损报告页面 - 基于 UI 设计风格 (Frame2632)
 class DamageReportScreen extends StatefulWidget {
-  /// 从扫码页跳转时传入的行李标识（可能是行李号 tagNumber，也可能是数据库 id）
   final String? luggageId;
-  /// 行李的数据库 id（可选），用于提交成功后同步更新行李状态
   final String? luggageDbId;
 
   const DamageReportScreen({super.key, this.luggageId, this.luggageDbId});
@@ -30,16 +24,14 @@ class DamageReportScreen extends StatefulWidget {
 }
 
 class _DamageReportScreenState extends State<DamageReportScreen> {
-  final _picker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
   final _luggageIdController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  XFile? _selectedImage;
   Uint8List? _imageBytes;
+  XFile? _imageFile;
   Position? _position;
   bool _isLoading = false;
-  /// 行李的数据库 id，优先用构造器传入的值；若未传入则从行李号查询
   String? _resolvedLuggageDbId;
 
   @override
@@ -57,22 +49,18 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     });
   }
 
-  /// 若构造器未传 luggageDbId，则通过行李号查询对应的数据库 id
   Future<void> _resolveLuggageDbId() async {
     if (_resolvedLuggageDbId != null) return;
     final tag = _luggageIdController.text.trim();
     if (tag.isEmpty) return;
     try {
-      final luggage = await LuggageService.getLuggageForScan(tag);
-      if (mounted && luggage.id.isNotEmpty) {
-        setState(() => _resolvedLuggageDbId = luggage.id);
+      final result = await LuggageService.getLuggageForScan(tag);
+      if (result.success && result.luggage != null && mounted) {
+        setState(() => _resolvedLuggageDbId = result.luggage!.id);
       }
     } catch (_) {}
   }
 
-  // ==================== 位置：权限 + 统一走 LuggageService（优先任意可用坐标） ====================
-
-  /// 不因「系统定位开关」直接放弃：部分机型 isLocationServiceEnabled 误报，仍可能拿到网络/缓存位置。
   Future<Position?> _resolvePosition({
     required bool showPermissionDeniedSnack,
   }) async {
@@ -94,10 +82,9 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     );
     if (!hasPermission) return null;
 
-    return LuggageService.getCurrentDevicePosition();
+    return LocationService.getCurrentDevicePosition();
   }
 
-  /// 刷新页面上的 [_position]。
   Future<void> _refreshLocation({bool showFailureSnack = false}) async {
     final l10n = AppLocalizations.of(context)!;
     final pos = await _resolvePosition(showPermissionDeniedSnack: showFailureSnack);
@@ -113,94 +100,11 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     }
   }
 
-  // ==================== 图片选择 - 使用 PermissionService ====================
-
-  Future<void> _showImageSourceDialog() async {
-    final l10n = AppLocalizations.of(context)!;
-    return showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.selectImageSource),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _pickImageFromSource(ImageSource.camera);
-            },
-            child: Text(l10n.camera),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _pickImageFromSource(ImageSource.gallery);
-            },
-            child: Text(l10n.album),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickImageFromSource(ImageSource source) async {
-    try {
-      if (source == ImageSource.camera) {
-        final ok = await PermissionService.request(
-          PermissionType.camera,
-          context: context,
-        );
-        if (!ok) return;
-      } else {
-        // Android 13+ 上 image_picker 走系统 Photo Picker，多数机型无需 READ_MEDIA_IMAGES；
-        // 部分国产系统先调 permission_handler 会拿不到系统弹窗、直接 denied，导致永远进不了相册。
-        if (!Platform.isAndroid) {
-          final ok = await PermissionService.request(
-            PermissionType.photos,
-            context: context,
-          );
-          if (!ok) return;
-        }
-      }
-
-      XFile? pickedFile;
-      try {
-        pickedFile = await _picker.pickImage(
-          source: source,
-          imageQuality: 80,
-        );
-      } catch (_) {
-        // Android 低版本若必须先授权存储，再请求一次后重试
-        if (source == ImageSource.gallery && Platform.isAndroid && mounted) {
-          final ok = await PermissionService.request(
-            PermissionType.photos,
-            context: context,
-          );
-          if (ok) {
-            pickedFile = await _picker.pickImage(
-              source: source,
-              imageQuality: 80,
-            );
-          }
-        } else {
-          rethrow;
-        }
-      }
-
-      if (pickedFile != null) {
-        if (mounted) {
-          setState(() {
-            _selectedImage = pickedFile;
-          });
-        }
-        _imageBytes = await pickedFile.readAsBytes();
-      }
-    } catch (e) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.imageSelectFailed)),
-        );
-      }
-    }
+  void _onImageSelected(Uint8List bytes, XFile file) {
+    setState(() {
+      _imageBytes = bytes;
+      _imageFile = file;
+    });
   }
 
   Future<void> _submitReport() async {
@@ -219,7 +123,6 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      // 进入页时可能未拿到坐标（室内高精度超时等），提交前再完整尝试一次
       Position? pos = _position;
       if (pos == null) {
         pos = await _resolvePosition(showPermissionDeniedSnack: true);
@@ -233,7 +136,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.noLocationHint),
-              duration: Duration(seconds: 5),
+              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -311,7 +214,6 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     if (body == null || body.isEmpty) return '';
     final l10n = AppLocalizations.of(context)!;
     try {
-      // 尝试解析 JSON，取其中 message/msg/result 等常见字段
       final lower = body.toLowerCase();
       if (lower.contains('not found') || lower.contains('不存在')) {
         return l10n.baggageNotExist;
@@ -322,7 +224,6 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
       if (lower.contains('hash')) {
         return l10n.hashCheckFailed;
       }
-      // 简单返回原始 body 前 80 字符
       return body.length > 80 ? '${body.substring(0, 80)}…' : body;
     } catch (_) {
       return body.length > 80 ? '${body.substring(0, 80)}…' : body;
@@ -377,8 +278,8 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
   void _resetForm() {
     if (mounted) {
       setState(() {
-        _selectedImage = null;
         _imageBytes = null;
+        _imageFile = null;
         _luggageIdController.clear();
         _descriptionController.clear();
       });
@@ -395,173 +296,358 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final paddingMd = Responsive.padding(context, AppSpacing.md);
+    final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: Text(l10n.damageReportTitle),
+        backgroundColor: AppColors.backgroundLight,
+        elevation: 0,
+        title: Text(
+          l10n.damageReportTitle,
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimaryLight),
         actions: [
           IconButton(
             tooltip: l10n.reloadLocation,
             onPressed: _isLoading
                 ? null
                 : () => _refreshLocation(showFailureSnack: true),
-            icon: const Icon(Icons.my_location),
+            icon: const Icon(Icons.my_location, color: AppColors.primary),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(paddingMd),
+        padding: EdgeInsets.all(padMd),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GestureDetector(
-                onTap: _showImageSourceDialog,
-                child: Container(
-                  height: Responsive.height(context, 200),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.divider),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+              // 提示信息
+              Container(
+                padding: EdgeInsets.all(padMd),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '请如实填写破损情况，证据将经哈希验证',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.warning.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 图片选择器
+              ImagePickerField(
+                imageBytes: _imageBytes,
+                imageFile: _imageFile,
+                onImageSelected: _onImageSelected,
+                height: Responsive.height(context, 180),
+                l10n: (key) {
+                  final l10n = AppLocalizations.of(context)!;
+                  switch (key) {
+                    case 'selectImageSource': return l10n.selectImageSource;
+                    case 'camera': return l10n.camera;
+                    case 'album': return l10n.album;
+                    case 'imageSelectFailed': return l10n.imageSelectFailed;
+                    case 'tapSelectPhoto': return l10n.tapSelectPhoto;
+                    default: return key;
+                  }
+                },
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 行李信息卡片
+              Container(
+                padding: EdgeInsets.all(padMd),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDBEAFE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.luggage_outlined,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _luggageIdController.text.isNotEmpty
+                                ? _luggageIdController.text
+                                : '行李号',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '请扫描或输入行李标签号',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 行李号输入框
+              _buildInputField(
+                controller: _luggageIdController,
+                label: '行李标签号',
+                hint: '扫描或手动输入',
+                icon: Icons.qr_code,
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 破损类型选择
+              _buildSectionTitle('破损类型'),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildDamageTypeTag('外壳破损'),
+                  _buildDamageTypeTag('拉链损坏'),
+                  _buildDamageTypeTag('轮子损坏'),
+                  _buildDamageTypeTag('提手断裂'),
+                  _buildDamageTypeTag('内容物损坏'),
+                ],
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 破损描述输入框
+              _buildSectionTitle('破损描述'),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 4,
+                  style: const TextStyle(
+                    color: AppColors.textPrimaryLight,
+                    fontSize: 14,
                   ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          child: Image.file(
-                            File(_selectedImage!.path),
-                            fit: BoxFit.cover,
+                  decoration: InputDecoration(
+                    hintText: '请详细描述破损情况...',
+                    hintStyle: const TextStyle(color: AppColors.textHintLight),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return l10n.enterDamageDesc;
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 位置信息显示
+              _buildLocationCard(),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
+
+              // 提交按钮
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitReport,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.textHintLight,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Column(
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.camera_alt,
-                              size: Responsive.iconSize(context, 48),
-                              color: AppColors.textSecondary,
-                            ),
-                            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+                            const Icon(Icons.check_circle_outline, size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              l10n.tapSelectPhoto,
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: Responsive.fontSize(context, 14),
+                              l10n.submitReport,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                 ),
               ),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-
-              AppTextField(
-                controller: _luggageIdController,
-                label: l10n.luggageId,
-                hint: l10n.enterLuggageId,
-                prefixIcon: Icons.luggage,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l10n.enterLuggageId;
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-
-              AppTextField(
-                controller: _descriptionController,
-                label: l10n.damageDescription,
-                hint: l10n.enterDamageDesc,
-                prefixIcon: Icons.description,
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l10n.enterDamageDesc;
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-
-              if (_position != null)
-                Container(
-                  padding: EdgeInsets.all(paddingMd),
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundLight,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: Responsive.iconSize(context, 20),
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                      Expanded(
-                        child: Text(
-                          l10n.locationCoords(
-                            _position!.latitude.toStringAsFixed(6),
-                            _position!.longitude.toStringAsFixed(6),
-                          ),
-                          style: TextStyle(
-                            fontSize: Responsive.fontSize(context, 14),
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  padding: EdgeInsets.all(paddingMd),
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundLight,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: AppColors.divider),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.location_off_outlined,
-                        size: Responsive.iconSize(context, 20),
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                      Expanded(
-                        child: Text(
-                          l10n.noLocationYet,
-                          style: TextStyle(
-                            fontSize: Responsive.fontSize(context, 13),
-                            color: AppColors.textSecondary,
-                            height: 1.35,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _refreshLocation(showFailureSnack: true),
-                        child: Text(l10n.getLocation),
-                      ),
-                    ],
-                  ),
-                ),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
-
-              AppButton(
-                text: l10n.submitReport,
-                type: AppButtonType.primary,
-                size: AppButtonSize.large,
-                fullWidth: true,
-                isLoading: _isLoading,
-                onPressed: _submitReport,
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimaryLight,
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(label),
+        SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: TextFormField(
+            controller: controller,
+            style: const TextStyle(
+              color: AppColors.textPrimaryLight,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: AppColors.textHintLight),
+              prefixIcon: Icon(icon, color: AppColors.textSecondaryLight, size: 20),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDamageTypeTag(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondaryLight,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationCard() {
+    return Container(
+      padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _position != null ? Icons.location_on : Icons.location_off_outlined,
+            size: 20,
+            color: _position != null ? AppColors.success : AppColors.textSecondaryLight,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _position != null
+                ? Text(
+                    'GPS: ${_position!.latitude.toStringAsFixed(6)}°N, ${_position!.longitude.toStringAsFixed(6)}°E',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimaryLight,
+                    ),
+                  )
+                : Text(
+                    'GPS: 等待获取位置...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                  ),
+          ),
+          TextButton(
+            onPressed: _isLoading ? null : () => _refreshLocation(showFailureSnack: true),
+            child: Text(
+              '刷新',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

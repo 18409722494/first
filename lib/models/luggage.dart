@@ -1,30 +1,56 @@
-/// 行李状态枚举
-enum LuggageStatus {
-  checkIn,
-  inTransit,
-  arrived,
-  delivered,
-  damaged,
-  lost;
+import 'package:flutter/material.dart';
 
-  String get displayName {
+/// 行李状态枚举（自带展示属性：颜色、背景色）
+///
+/// [displayNameKey] 用于国际化 lookup。
+enum LuggageStatus {
+  checkIn('已办理托运'),
+  inTransit('运输中'),
+  arrived('已到达'),
+  delivered('已交付'),
+  damaged('已损坏'),
+  lost('已丢失');
+
+  /// 中文默认显示名
+  final String displayName;
+
+  /// 状态文字颜色
+  Color get color {
     switch (this) {
       case LuggageStatus.checkIn:
-        return '已办理托运';
+        return const Color(0xFF2196F3); // 蓝色
       case LuggageStatus.inTransit:
-        return '运输中';
+        return const Color(0xFF050D22); // 深蓝
       case LuggageStatus.arrived:
-        return '已到达';
+        return const Color(0xFF4CAF50); // 绿色
       case LuggageStatus.delivered:
-        return '已交付';
+        return const Color(0xFF75210E); // 深红
       case LuggageStatus.damaged:
-        return '已损坏';
+        return const Color(0xFFBDBB41); // 黄色
       case LuggageStatus.lost:
-        return '已丢失';
-      default:
-        return '未知状态';
+        return const Color(0xFF9E9E9E); // 灰色
     }
   }
+
+  /// 状态背景浅色（适合 Chip/Container 背景）
+  Color get bgColor {
+    switch (this) {
+      case LuggageStatus.checkIn:
+        return const Color(0xFFE3F2FD);
+      case LuggageStatus.inTransit:
+        return const Color(0xFFE8EAF6);
+      case LuggageStatus.arrived:
+        return const Color(0xFFE8F5E9);
+      case LuggageStatus.delivered:
+        return const Color(0xFFFBE9E7);
+      case LuggageStatus.damaged:
+        return const Color(0xFFFFFDE7);
+      case LuggageStatus.lost:
+        return const Color(0xFFF5F5F5);
+    }
+  }
+
+  const LuggageStatus(this.displayName);
 
   @override
   String toString() => displayName;
