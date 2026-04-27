@@ -248,18 +248,13 @@ class _QrScanScreenState extends State<QrScanScreen> {
       final employeeId = await StorageService.getEmployeeId();
       final finalLocation = locationName.isNotEmpty ? locationName : luggage.destination;
 
+      // 更新行李位置和状态到后端
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: finalLocation,
         status: BaggageStatusMapper.toBackendLocationStatus(LuggageStatus.arrived),
         employeeId: employeeId,
       );
-      try {
-        await LuggageService.updateLuggage(luggage.id, {
-          'status': LuggageStatus.arrived.name,
-          'destination': finalLocation,
-        });
-      } catch (_) {}
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

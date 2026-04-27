@@ -391,13 +391,8 @@ class ProfileScreen extends StatelessWidget {
           );
 
           if (confirm == true && context.mounted) {
-            final serverMsg = await authProvider.logout();
+            await authProvider.logout();
             if (context.mounted) {
-              if (serverMsg != null && serverMsg.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(serverMsg)),
-                );
-              }
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,

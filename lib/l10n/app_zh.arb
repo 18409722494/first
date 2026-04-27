@@ -38,7 +38,7 @@
   "employeeName": "员工姓名",
   "unknownUser": "未知用户",
   "accountInfoNote": "账户信息说明",
-  "accountInfoNoteContent": "• 员工工号是您在系统中的唯一标识\n• 工作邮箱用于系统通知和重要信息发送\n• 员工姓名将显示在您的个人资料中",
+  "accountInfoNoteContent": "• 员工工号是您在系统中的唯一标识\n• 您可以在此修改个人相关信息",
 
   "changePassword": "修改密码",
   "oldPassword": "旧密码",
@@ -728,5 +728,53 @@
   "passwordsMismatch": "两次输入的密码不一致",
   "register": "注册",
   "hasAccount": "已有账户？",
-  "loginNow": "立即登录"
+  "loginNow": "立即登录",
+
+  "personalInfo": "个人信息",
+  "personalInfoChangedSuccess": "个人信息修改成功",
+  "edit": "编辑",
+  "save": "保存",
+  "gender": "性别",
+  "enterGender": "请输入性别",
+  "hometown": "籍贯",
+  "enterHometown": "请输入籍贯",
+  "birthDate": "出生日期",
+  "contact": "联系方式",
+  "enterContact": "请输入联系方式",
+  "hireDate": "入职日期",
+  "selectDate": "选择日期",
+
+  "unprocessedBaggage": "未处理行李",
+  "selectFlight": "选择航班",
+  "noAvailableFlights": "暂无可用航班",
+  "noUnprocessedBaggage": "该航班暂无未处理行李",
+  "markAsLost": "标记丢失",
+  "selectBaggageToMark": "请先选择要标记为丢失的行李",
+  "confirmMarkLost": "确认标记",
+  "markLostSuccess": "成功标记 {count} 件行李为丢失",
+  "@markLostSuccess": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "markLostFailed": "部分失败：成功 {success} 件，失败 {fail} 件",
+  "@markLostFailed": {
+    "placeholders": {
+      "success": {"type": "int"},
+      "fail": {"type": "int"}
+    }
+  },
+  "selectedCount": "已选择 {count} 件",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "totalUnprocessed": "共 {total} 件未处理行李",
+  "@totalUnprocessed": {
+    "placeholders": {
+      "total": {"type": "int"}
+    }
+  },
+  "unprocessed": "待处理"
 }

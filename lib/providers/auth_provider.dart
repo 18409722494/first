@@ -96,6 +96,7 @@ class AuthProvider with ChangeNotifier {
     String username,
     String password,
     String airport,
+    String natureOfService,
   ) async {
     _isLoading = true;
     _errorMessage = null;
@@ -104,7 +105,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final empId = employeeId.trim();
       final name = username.trim();
-      final response = await ApiService.register(empId, name, password, airport);
+      final response = await ApiService.register(empId, name, password, airport, natureOfService);
 
       if (response.success) {
         await StorageService.saveUserInfo(
@@ -131,24 +132,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<String?> logout() async {
-    final id = _user?.employeeId?.trim();
-    String? serverMessage;
-    if (id != null && id.isNotEmpty) {
-      final response = await ApiService.logout(id);
-      if (!response.success) {
-        serverMessage = response.message;
-      }
-    }
+  /// 退出登录（仅清除本地数据，不调用后端接口）
+  Future<void> logout() async {
     await StorageService.clearAll();
     _user = null;
     _errorMessage = null;
     notifyListeners();
-    return serverMessage;
   }
 
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// 更新用户个人信息
+  void updateUserDetails({
+    String? gender,
+    String? hometown,
+    String? birthDate,
+    String? contact,
+    String? hireDate,
+  }) {
+    if (_user != null) {
+      _user = _user!.copyWith(
+        gender: gender ?? _user!.gender,
+        hometown: hometown ?? _user!.hometown,
+        birthDate: birthDate ?? _user!.birthDate,
+        contact: contact ?? _user!.contact,
+        hireDate: hireDate ?? _user!.hireDate,
+      );
+      notifyListeners();
+    }
   }
 }

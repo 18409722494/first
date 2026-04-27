@@ -17,6 +17,9 @@ class Airport {
 
   @override
   String toString() => '$name ($code)';
+
+  /// 返回完整名称：城市+机场名（如 "北京首都国际机场"）
+  String get fullName => '$city$name';
 }
 
 const List<Airport> allAirports = [
@@ -181,6 +184,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   Airport? _selectedAirport;
+  String? _selectedNatureOfService;
+
+  static const List<String> _natureOfServiceOptions = [
+    '行李中转员',
+    '值机员',
+    '安检员',
+    '地勤人员',
+    '客服人员',
+  ];
 
   @override
   void dispose() {
@@ -199,7 +211,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _employeeIdController.text.trim(),
         _usernameController.text.trim(),
         _passwordController.text,
-        _selectedAirport?.name ?? '',
+        _selectedAirport?.fullName ?? '',
+        _selectedNatureOfService ?? '',
       );
 
       if (success && mounted) {
@@ -303,6 +316,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               // 机场选择
               _buildAirportDropdown(),
+              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
+
+              // 服务性质选择
+              _buildNatureOfServiceDropdown(),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
 
               // 设置密码
@@ -498,6 +515,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   '${airport.city} ${airport.name} (${airport.code})',
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 服务性质下拉选择器
+  Widget _buildNatureOfServiceDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '服务性质',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondaryDark,
+          ),
+        ),
+        SizedBox(height: Responsive.spacing(context, 8)),
+        Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceDark,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.borderDark, width: 1),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedNatureOfService,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.work_outline, color: AppColors.textSecondaryDark, size: 20),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+            hint: const Text(
+              '请选择服务性质',
+              style: TextStyle(color: AppColors.textHintDark, fontSize: 15),
+            ),
+            dropdownColor: AppColors.surfaceDark,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryDark),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return '请选择服务性质';
+              }
+              return null;
+            },
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedNatureOfService = newValue;
+              });
+            },
+            items: _natureOfServiceOptions.map((service) {
+              return DropdownMenuItem<String>(
+                value: service,
+                child: Text(
+                  service,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               );
             }).toList(),

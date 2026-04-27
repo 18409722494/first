@@ -323,7 +323,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountInfoNoteContent.
   ///
   /// In zh, this message translates to:
-  /// **'• 员工工号是您在系统中的唯一标识\n• 工作邮箱用于系统通知和重要信息发送\n• 员工姓名将显示在您的个人资料中'**
+  /// **'• 员工工号是您在系统中的唯一标识\n• 您可以在此修改个人相关信息'**
   String get accountInfoNoteContent;
 
   /// No description provided for @changePassword.
@@ -2725,6 +2725,156 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'立即登录'**
   String get loginNow;
+
+  /// No description provided for @personalInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人信息'**
+  String get personalInfo;
+
+  /// No description provided for @personalInfoChangedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人信息修改成功'**
+  String get personalInfoChangedSuccess;
+
+  /// No description provided for @edit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get edit;
+
+  /// No description provided for @save.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get save;
+
+  /// No description provided for @gender.
+  ///
+  /// In zh, this message translates to:
+  /// **'性别'**
+  String get gender;
+
+  /// No description provided for @enterGender.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入性别'**
+  String get enterGender;
+
+  /// No description provided for @hometown.
+  ///
+  /// In zh, this message translates to:
+  /// **'籍贯'**
+  String get hometown;
+
+  /// No description provided for @enterHometown.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入籍贯'**
+  String get enterHometown;
+
+  /// No description provided for @birthDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'出生日期'**
+  String get birthDate;
+
+  /// No description provided for @contact.
+  ///
+  /// In zh, this message translates to:
+  /// **'联系方式'**
+  String get contact;
+
+  /// No description provided for @enterContact.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入联系方式'**
+  String get enterContact;
+
+  /// No description provided for @hireDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'入职日期'**
+  String get hireDate;
+
+  /// No description provided for @selectDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择日期'**
+  String get selectDate;
+
+  /// No description provided for @unprocessedBaggage.
+  ///
+  /// In zh, this message translates to:
+  /// **'未处理行李'**
+  String get unprocessedBaggage;
+
+  /// No description provided for @selectFlight.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择航班'**
+  String get selectFlight;
+
+  /// No description provided for @noAvailableFlights.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可用航班'**
+  String get noAvailableFlights;
+
+  /// No description provided for @noUnprocessedBaggage.
+  ///
+  /// In zh, this message translates to:
+  /// **'该航班暂无未处理行李'**
+  String get noUnprocessedBaggage;
+
+  /// No description provided for @markAsLost.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记丢失'**
+  String get markAsLost;
+
+  /// No description provided for @selectBaggageToMark.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先选择要标记为丢失的行李'**
+  String get selectBaggageToMark;
+
+  /// No description provided for @confirmMarkLost.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认标记'**
+  String get confirmMarkLost;
+
+  /// No description provided for @markLostSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功标记 {count} 件行李为丢失'**
+  String markLostSuccess(int count);
+
+  /// No description provided for @markLostFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分失败：成功 {success} 件，失败 {fail} 件'**
+  String markLostFailed(int success, int fail);
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选择 {count} 件'**
+  String selectedCount(int count);
+
+  /// No description provided for @totalUnprocessed.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {total} 件未处理行李'**
+  String totalUnprocessed(int total);
+
+  /// No description provided for @unprocessed.
+  ///
+  /// In zh, this message translates to:
+  /// **'待处理'**
+  String get unprocessed;
 }
 
 class _AppLocalizationsDelegate

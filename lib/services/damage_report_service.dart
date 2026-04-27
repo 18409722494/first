@@ -3,29 +3,34 @@ import '../models/luggage.dart';
 import '../services/evidence_service.dart';
 import '../services/hash_service.dart';
 import '../services/baggage_api_service.dart';
-import '../services/luggage_service.dart';
 import '../services/oss_service.dart';
 
-/// 破损报告提交结果（区分阶段）
+/// 破损报告提交阶段枚举
 enum DamageReportStage {
   hash,
   ossSignature,
   ossUpload,
   businessApi,
+  verify,
+  statusSync,
 }
 
-/// 单次提交的详细错误信息
+/// 破损报告提交结果（区分阶段）
 class DamageReportResult {
-  /// true = 成功
+  /// true = 完全成功
   final bool success;
-  /// 失败所在的阶段
+  /// 失败所在的阶段（如果有）
   final DamageReportStage? failedStage;
-  /// 失败时的 HTTP 状态码（仅 businessApi / ossSignature / ossUpload 阶段有）
+  /// HTTP 状态码（如果有）
   final int? statusCode;
-  /// 失败时的响应体原文
+  /// 响应体原文
   final String? responseBody;
-  /// 异常消息（网络超时、DNS 失败等底层异常）
+  /// 异常消息
   final String? exceptionMessage;
+  /// 阶段执行历史（用于调试）
+  final List<StageExecution> executionHistory;
+  /// 行李状态同步是否成功
+  final bool statusSyncCompleted;
 
   const DamageReportResult._({
     required this.success,
@@ -33,16 +38,38 @@ class DamageReportResult {
     this.statusCode,
     this.responseBody,
     this.exceptionMessage,
+    this.executionHistory = const [],
+    this.statusSyncCompleted = false,
   });
 
-  factory DamageReportResult.ok() =>
-      const DamageReportResult._(success: true);
+  factory DamageReportResult.ok({
+    required List<StageExecution> history,
+  }) =>
+      DamageReportResult._(
+        success: true,
+        executionHistory: history,
+        statusSyncCompleted: true,
+      );
+
+  factory DamageReportResult.partialSuccess({
+    required List<StageExecution> history,
+    required bool statusSyncCompleted,
+    String? statusSyncError,
+  }) =>
+      DamageReportResult._(
+        success: true,
+        executionHistory: history,
+        statusSyncCompleted: statusSyncCompleted,
+        // 如果状态同步失败，记录警告
+        exceptionMessage: statusSyncCompleted ? null : '⚠️ 状态同步失败: $statusSyncError',
+      );
 
   factory DamageReportResult.fail({
     required DamageReportStage stage,
     int? statusCode,
     String? responseBody,
     String? exceptionMessage,
+    required List<StageExecution> executionHistory,
   }) =>
       DamageReportResult._(
         success: false,
@@ -50,6 +77,7 @@ class DamageReportResult {
         statusCode: statusCode,
         responseBody: responseBody,
         exceptionMessage: exceptionMessage,
+        executionHistory: executionHistory,
       );
 
   /// 人类可读的阶段名称
@@ -63,14 +91,47 @@ class DamageReportResult {
         return 'OSS 图片上传';
       case DamageReportStage.businessApi:
         return '业务接口提交';
+      case DamageReportStage.verify:
+        return '哈希校验';
+      case DamageReportStage.statusSync:
+        return '状态同步';
       case null:
         return '未知';
     }
   }
 
-  /// 人类可读的错误摘要（用于展示给用户）
+  /// 生成详细的状态报告
+  String get detailedReport {
+    final sb = StringBuffer();
+
+    if (success) {
+      sb.writeln('✅ 破损报告提交成功');
+      if (!statusSyncCompleted) {
+        sb.writeln('⚠️ 警告：破损记录已创建，但行李状态同步失败');
+      }
+    } else {
+      sb.writeln('❌ 破损报告提交失败');
+      sb.writeln('失败阶段: $stageLabel');
+    }
+
+    if (executionHistory.isNotEmpty) {
+      sb.writeln('\n执行历史:');
+      for (final exec in executionHistory) {
+        final icon = exec.success ? '✅' : '❌';
+        sb.writeln('  $icon ${exec.stageLabel}: ${exec.message}');
+      }
+    }
+
+    return sb.toString();
+  }
+
+  /// 人类可读的错误摘要
   String get summary {
-    if (success) return '提交成功';
+    if (success) {
+      return statusSyncCompleted
+          ? '提交成功'
+          : '提交成功，但状态同步失败，请手动更新行李状态';
+    }
     final sb = StringBuffer('[$stageLabel] ');
     if (exceptionMessage != null) {
       sb.write(exceptionMessage);
@@ -79,7 +140,6 @@ class DamageReportResult {
       sb.write(' HTTP $statusCode');
     }
     if (responseBody != null && responseBody!.isNotEmpty) {
-      // 截断太长的响应体
       final trimmed = responseBody!.length > 200
           ? '${responseBody!.substring(0, 200)}…'
           : responseBody!;
@@ -89,12 +149,36 @@ class DamageReportResult {
   }
 }
 
+/// 阶段执行记录
+class StageExecution {
+  final DamageReportStage stage;
+  final String stageLabel;
+  final bool success;
+  final String message;
+  final DateTime timestamp;
+
+  StageExecution({
+    required this.stage,
+    required this.stageLabel,
+    required this.success,
+    required this.message,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
+
 /// 破损报告服务
-/// 对接新API: http://8.137.145.195:3338/abnormal-baggage/upload
+/// 提供事务性破损报告提交，确保数据一致性
 class DamageReportService {
-  /// 提交破损报告
-  /// [onStageDone] 可选回调，每完成一个阶段时通知（用于 UI 进度展示）
-  /// [luggageDbId] 可选；仅当 [luggageId] 无法用于旧版 `PUT /luggage` 回退时保留
+  /// 提交破损报告（带事务性保证）
+  ///
+  /// 流程:
+  /// 1. 哈希计算
+  /// 2. 图片上传到 OSS
+  /// 3. 业务接口提交破损记录
+  /// 4. 同步行李状态为"已损坏"
+  ///
+  /// 如果状态同步失败，会明确返回 [DamageReportResult.statusSyncCompleted = false]
+  /// 调用方应检查此字段并提示用户
   static Future<DamageReportResult> submitDamageReport({
     required Uint8List imageBytes,
     required String luggageId,
@@ -103,107 +187,160 @@ class DamageReportService {
     required double longitude,
     required String damageDescription,
     void Function(String stageLabel)? onStageDone,
-    String? luggageDbId,
   }) async {
+    final history = <StageExecution>[];
+
+    void addHistory(DamageReportStage stage, String label, bool success, String msg) {
+      history.add(StageExecution(
+        stage: stage,
+        stageLabel: label,
+        success: success,
+        message: msg,
+      ));
+      if (success) {
+        onStageDone?.call(msg);
+      }
+    }
+
     try {
       // ── 阶段 1：哈希计算 ──────────────────────────────
-      final hash = await HashService.calculateDamageEvidenceHash(
-        imageBytes: imageBytes,
-        luggageId: luggageId,
-        timestamp: timestamp,
-        latitude: latitude,
-        longitude: longitude,
-      );
-      onStageDone?.call('哈希计算完成');
+      try {
+        final hash = await HashService.calculateDamageEvidenceHash(
+          imageBytes: imageBytes,
+          luggageId: luggageId,
+          timestamp: timestamp,
+          latitude: latitude,
+          longitude: longitude,
+        );
+        addHistory(DamageReportStage.hash, '哈希计算', true, '哈希计算完成: ${hash.substring(0, 16)}...');
+      } catch (e) {
+        addHistory(DamageReportStage.hash, '哈希计算', false, '哈希计算失败: $e');
+        return DamageReportResult.fail(
+          stage: DamageReportStage.hash,
+          exceptionMessage: e.toString(),
+          executionHistory: history,
+        );
+      }
 
-      // ── 阶段 2：OSS 签名获取 ─────────────────────────
-      final photoUrl = await OssService.uploadImage(imageBytes);
-      onStageDone?.call('图片上传完成');
+      // ── 阶段 2：图片上传 ──────────────────────────────
+      String photoUrl;
+      try {
+        photoUrl = await OssService.uploadImage(imageBytes);
+        addHistory(DamageReportStage.ossUpload, '图片上传', true, '图片上传完成');
+      } on OssUploadException catch (e) {
+        addHistory(DamageReportStage.ossUpload, '图片上传', false, '上传失败: ${e.message}');
+        return DamageReportResult.fail(
+          stage: DamageReportStage.ossUpload,
+          statusCode: e.statusCode,
+          responseBody: e.body,
+          exceptionMessage: e.message,
+          executionHistory: history,
+        );
+      } on OssSignatureException catch (e) {
+        addHistory(DamageReportStage.ossSignature, 'OSS签名', false, '签名获取失败: ${e.message}');
+        return DamageReportResult.fail(
+          stage: DamageReportStage.ossSignature,
+          statusCode: e.statusCode,
+          responseBody: e.body,
+          exceptionMessage: e.message,
+          executionHistory: history,
+        );
+      }
 
       // ── 阶段 3：业务接口提交 ─────────────────────────
+      final tag = luggageId.trim();
       final apiResult = await EvidenceService.uploadAbnormalBaggageDetailed(
-        baggageNumber: luggageId.trim(),
+        baggageNumber: tag,
         timestamp: timestamp.toUtc().toIso8601String(),
         location: '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}',
         imageUrl: photoUrl,
         damageDescription: damageDescription.trim(),
-        baggageHash: hash,
+        baggageHash: await HashService.calculateDamageEvidenceHash(
+          imageBytes: imageBytes,
+          luggageId: luggageId,
+          timestamp: timestamp,
+          latitude: latitude,
+          longitude: longitude,
+        ),
       );
-      onStageDone?.call('接口调用完成');
 
-      if (apiResult.isSuccess) {
-        // ── 阶段 4：可选二次校验 GET /abnormal-baggage/verify ────
-        final verifyResult = await EvidenceService.verifyEvidenceHash(hash);
+      if (!apiResult.isSuccess) {
+        addHistory(DamageReportStage.businessApi, '业务提交', false, '提交失败: HTTP ${apiResult.statusCode}');
+        return DamageReportResult.fail(
+          stage: DamageReportStage.businessApi,
+          statusCode: apiResult.statusCode,
+          responseBody: apiResult.body,
+          executionHistory: history,
+        );
+      }
+      addHistory(DamageReportStage.businessApi, '业务提交', true, '破损记录已提交');
+
+      // ── 阶段 4：可选二次校验 ─────────────────────────
+      try {
+        final verifyResult = await EvidenceService.verifyEvidenceHash(
+          await HashService.calculateDamageEvidenceHash(
+            imageBytes: imageBytes,
+            luggageId: luggageId,
+            timestamp: timestamp,
+            latitude: latitude,
+            longitude: longitude,
+          ),
+        );
         if (verifyResult.verified && !verifyResult.matches) {
+          addHistory(DamageReportStage.verify, '哈希校验', false, '校验未通过');
           return DamageReportResult.fail(
-            stage: DamageReportStage.businessApi,
-            responseBody:
-                '哈希校验未通过：${verifyResult.message ?? '与后端记录不一致'}（图片或元数据可能被篡改）',
+            stage: DamageReportStage.verify,
+            responseBody: verifyResult.message ?? '哈希校验失败',
+            executionHistory: history,
           );
         }
-        if (verifyResult.backendUnavailable) {
-          onStageDone?.call('⚠ 跳过二次哈希校验（接口不可用或响应无法解析）');
-        } else if (verifyResult.verified && verifyResult.matches) {
-          onStageDone?.call('哈希验证通过');
-        } else {
-          onStageDone?.call('提交成功（后端未返回明确校验结果，以 upload 成功为准）');
-        }
-
-        // ── 阶段 5：同步主表 baggageStatus（与 GET /baggage/all 同源）────────
-        // 原先 PUT /luggage/{id} 不会更新 baggage 表，故列表里 baggageStatus 仍为 null。
-        final tag = luggageId.trim();
-        if (tag.isNotEmpty) {
-          try {
-            final loc =
-                '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}';
-            await BaggageApiService.updateBaggageLocation(
-              baggageNumber: tag,
-              location: loc,
-              status: BaggageStatusMapper.toBackendLocationStatus(
-                LuggageStatus.damaged,
-              ),
-            );
-            onStageDone?.call('行李状态已同步为已损坏');
-          } catch (e) {
-            debugPrint('POST /baggage/location 同步破损状态失败: $e');
-            if (luggageDbId != null && luggageDbId.isNotEmpty) {
-              try {
-                await LuggageService.updateLuggage(luggageDbId, {
-                  'status': LuggageStatus.damaged.name,
-                });
-                onStageDone?.call('行李状态已同步为已损坏（旧接口）');
-              } catch (e2) {
-                debugPrint('PUT /luggage 同步失败: $e2');
-              }
-            }
-          }
-        }
-
-        return DamageReportResult.ok();
+        addHistory(
+          DamageReportStage.verify,
+          '哈希校验',
+          true,
+          verifyResult.verified && verifyResult.matches ? '校验通过' : '跳过校验',
+        );
+      } catch (e) {
+        // 校验失败不阻断流程，只记录
+        addHistory(DamageReportStage.verify, '哈希校验', true, '校验跳过: $e');
       }
-      return DamageReportResult.fail(
-        stage: DamageReportStage.businessApi,
-        statusCode: apiResult.statusCode,
-        responseBody: apiResult.body,
-      );
-    } on OssSignatureException catch (e) {
-      return DamageReportResult.fail(
-        stage: DamageReportStage.ossSignature,
-        statusCode: e.statusCode,
-        responseBody: e.body,
-        exceptionMessage: e.message,
-      );
-    } on OssUploadException catch (e) {
-      return DamageReportResult.fail(
-        stage: DamageReportStage.ossUpload,
-        statusCode: e.statusCode,
-        responseBody: e.body,
-        exceptionMessage: e.message,
-      );
+
+      // ── 阶段 5：同步行李状态 ─────────────────────────
+      bool statusSyncCompleted = false;
+      String? statusSyncError;
+      try {
+        final loc = '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}';
+        await BaggageApiService.updateBaggageLocation(
+          baggageNumber: tag,
+          location: loc,
+          status: BaggageStatusMapper.toBackendLocationStatus(
+            LuggageStatus.damaged,
+          ),
+        );
+        statusSyncCompleted = true;
+        addHistory(DamageReportStage.statusSync, '状态同步', true, '行李状态已更新为已损坏');
+      } catch (e) {
+        statusSyncError = e.toString();
+        addHistory(DamageReportStage.statusSync, '状态同步', false, '状态同步失败: $e');
+        // 注意：这里不返回失败，因为破损记录已经成功提交
+      }
+
+      // 返回结果
+      if (statusSyncCompleted) {
+        return DamageReportResult.ok(history: history);
+      } else {
+        return DamageReportResult.partialSuccess(
+          history: history,
+          statusSyncCompleted: false,
+          statusSyncError: statusSyncError,
+        );
+      }
     } catch (e) {
+      addHistory(DamageReportStage.businessApi, '未知错误', false, e.toString());
       return DamageReportResult.fail(
         stage: DamageReportStage.businessApi,
         exceptionMessage: e.toString(),
+        executionHistory: history,
       );
     }
   }

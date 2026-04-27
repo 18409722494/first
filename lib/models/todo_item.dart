@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import '../constants/app_constants.dart';
 import '../theme/app_colors.dart';
 
 /// 待办事项类型
 enum TodoType {
   damage,
-  overweight,
   unclaimed,
+  unprocessed,
 }
 
 /// 待办事项数据模型
+///
 /// 数据来源：
-///   - damage    → abnormal-baggage 表（EvidenceService）
-///   - overweight → luggage 表，按重量筛选（BaggageApiService）
-///   - unclaimed → luggage 表，按状态/时间筛选（BaggageApiService）
+///   - damage      → abnormal-baggage 表（EvidenceService）
+///   - unclaimed   → luggage 表，按状态/时间筛选（BaggageApiService）
+///   - unprocessed → 航班未处理行李（从 /baggage/unprocessed 获取）
 class TodoItem {
   /// 唯一标识（来源类型 + 来源 id）
   final String id;
@@ -32,6 +32,8 @@ class TodoItem {
   final String? luggageId;
   /// 发生时间
   final DateTime timestamp;
+  /// 关联航班号（unprocessed 类型用）
+  final String? flightNumber;
 
   const TodoItem({
     required this.id,
@@ -43,6 +45,7 @@ class TodoItem {
     required this.tagNumber,
     this.luggageId,
     required this.timestamp,
+    this.flightNumber,
   });
 
   /// 从破损行李记录构造
@@ -68,28 +71,6 @@ class TodoItem {
     );
   }
 
-  /// 从超重行李构造
-  factory TodoItem.fromOverweightLuggage({
-    required String tagNumber,
-    required String luggageId,
-    required double weight,
-    required DateTime timestamp,
-  }) {
-    final overweightKg = weight - AppConstants.freeBaggageWeightKg;
-    return TodoItem(
-      id: 'overweight_${luggageId}_$timestamp',
-      type: TodoType.overweight,
-      title: '行李超重处理',
-      description:
-          '$tagNumber 超出免费额度 ${overweightKg.toStringAsFixed(1)} kg，需补缴费用',
-      icon: Icons.scale,
-      color: AppColors.warning,
-      tagNumber: tagNumber,
-      luggageId: luggageId,
-      timestamp: timestamp,
-    );
-  }
-
   /// 从无人认领行李构造
   factory TodoItem.fromUnclaimedLuggage({
     required String tagNumber,
@@ -108,6 +89,25 @@ class TodoItem {
       tagNumber: tagNumber,
       luggageId: luggageId,
       timestamp: arrivedAt,
+    );
+  }
+
+  /// 从未处理行李构造
+  factory TodoItem.fromUnprocessed({
+    required String baggageNumber,
+    required String flightNumber,
+    required DateTime timestamp,
+  }) {
+    return TodoItem(
+      id: 'unprocessed_${baggageNumber}_$flightNumber',
+      type: TodoType.unprocessed,
+      title: '待处理行李',
+      description: '行李号: $baggageNumber',
+      icon: Icons.inventory_2_outlined,
+      color: AppColors.warning,
+      tagNumber: baggageNumber,
+      flightNumber: flightNumber,
+      timestamp: timestamp,
     );
   }
 }

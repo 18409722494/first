@@ -121,7 +121,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountInfoNoteContent =>
-      '• Your employee ID is your unique identifier in the system\n• Work email is used for system notifications and important messages\n• Your employee name will be displayed in your profile';
+      '• Your employee ID is your unique identifier in the system\n• You can modify your personal information here';
 
   @override
   String get changePassword => 'Change Password';
@@ -1462,4 +1462,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginNow => 'Log in now';
+
+  @override
+  String get personalInfo => 'Personal Information';
+
+  @override
+  String get personalInfoChangedSuccess =>
+      'Personal information updated successfully';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get gender => 'Gender';
+
+  @override
+  String get enterGender => 'Enter gender';
+
+  @override
+  String get hometown => 'Hometown';
+
+  @override
+  String get enterHometown => 'Enter hometown';
+
+  @override
+  String get birthDate => 'Birth Date';
+
+  @override
+  String get contact => 'Contact';
+
+  @override
+  String get enterContact => 'Enter contact';
+
+  @override
+  String get hireDate => 'Hire Date';
+
+  @override
+  String get selectDate => 'Select Date';
+
+  @override
+  String get unprocessedBaggage => 'Unprocessed Luggage';
+
+  @override
+  String get selectFlight => 'Select Flight';
+
+  @override
+  String get noAvailableFlights => 'No available flights';
+
+  @override
+  String get noUnprocessedBaggage => 'No unprocessed luggage for this flight';
+
+  @override
+  String get markAsLost => 'Mark as Lost';
+
+  @override
+  String get selectBaggageToMark => 'Please select luggage to mark as lost';
+
+  @override
+  String get confirmMarkLost => 'Confirm';
+
+  @override
+  String markLostSuccess(int count) {
+    return 'Successfully marked $count luggage as lost';
+  }
+
+  @override
+  String markLostFailed(int success, int fail) {
+    return 'Partially failed: $success succeeded, $fail failed';
+  }
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String totalUnprocessed(int total) {
+    return '$total unprocessed luggage in total';
+  }
+
+  @override
+  String get unprocessed => 'Pending';
 }

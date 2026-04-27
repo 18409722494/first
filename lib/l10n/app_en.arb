@@ -38,7 +38,7 @@
   "employeeName": "Employee Name",
   "unknownUser": "Unknown User",
   "accountInfoNote": "Account Info Notice",
-  "accountInfoNoteContent": "• Your employee ID is your unique identifier in the system\n• Work email is used for system notifications and important messages\n• Your employee name will be displayed in your profile",
+  "accountInfoNoteContent": "• Your employee ID is your unique identifier in the system\n• You can modify your personal information here",
 
   "changePassword": "Change Password",
   "oldPassword": "Old Password",
@@ -728,5 +728,53 @@
   "passwordsMismatch": "Passwords do not match",
   "register": "Register",
   "hasAccount": "Have an account?",
-  "loginNow": "Log in now"
+  "loginNow": "Log in now",
+
+  "personalInfo": "Personal Information",
+  "personalInfoChangedSuccess": "Personal information updated successfully",
+  "edit": "Edit",
+  "save": "Save",
+  "gender": "Gender",
+  "enterGender": "Enter gender",
+  "hometown": "Hometown",
+  "enterHometown": "Enter hometown",
+  "birthDate": "Birth Date",
+  "contact": "Contact",
+  "enterContact": "Enter contact",
+  "hireDate": "Hire Date",
+  "selectDate": "Select Date",
+
+  "unprocessedBaggage": "Unprocessed Luggage",
+  "selectFlight": "Select Flight",
+  "noAvailableFlights": "No available flights",
+  "noUnprocessedBaggage": "No unprocessed luggage for this flight",
+  "markAsLost": "Mark as Lost",
+  "selectBaggageToMark": "Please select luggage to mark as lost",
+  "confirmMarkLost": "Confirm",
+  "markLostSuccess": "Successfully marked {count} luggage as lost",
+  "@markLostSuccess": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "markLostFailed": "Partially failed: {success} succeeded, {fail} failed",
+  "@markLostFailed": {
+    "placeholders": {
+      "success": {"type": "int"},
+      "fail": {"type": "int"}
+    }
+  },
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "totalUnprocessed": "{total} unprocessed luggage in total",
+  "@totalUnprocessed": {
+    "placeholders": {
+      "total": {"type": "int"}
+    }
+  },
+  "unprocessed": "Pending"
 }

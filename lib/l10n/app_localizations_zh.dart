@@ -120,8 +120,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountInfoNote => '账户信息说明';
 
   @override
-  String get accountInfoNoteContent =>
-      '• 员工工号是您在系统中的唯一标识\n• 工作邮箱用于系统通知和重要信息发送\n• 员工姓名将显示在您的个人资料中';
+  String get accountInfoNoteContent => '• 员工工号是您在系统中的唯一标识\n• 您可以在此修改个人相关信息';
 
   @override
   String get changePassword => '修改密码';
@@ -1434,4 +1433,87 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get loginNow => '立即登录';
+
+  @override
+  String get personalInfo => '个人信息';
+
+  @override
+  String get personalInfoChangedSuccess => '个人信息修改成功';
+
+  @override
+  String get edit => '编辑';
+
+  @override
+  String get save => '保存';
+
+  @override
+  String get gender => '性别';
+
+  @override
+  String get enterGender => '请输入性别';
+
+  @override
+  String get hometown => '籍贯';
+
+  @override
+  String get enterHometown => '请输入籍贯';
+
+  @override
+  String get birthDate => '出生日期';
+
+  @override
+  String get contact => '联系方式';
+
+  @override
+  String get enterContact => '请输入联系方式';
+
+  @override
+  String get hireDate => '入职日期';
+
+  @override
+  String get selectDate => '选择日期';
+
+  @override
+  String get unprocessedBaggage => '未处理行李';
+
+  @override
+  String get selectFlight => '选择航班';
+
+  @override
+  String get noAvailableFlights => '暂无可用航班';
+
+  @override
+  String get noUnprocessedBaggage => '该航班暂无未处理行李';
+
+  @override
+  String get markAsLost => '标记丢失';
+
+  @override
+  String get selectBaggageToMark => '请先选择要标记为丢失的行李';
+
+  @override
+  String get confirmMarkLost => '确认标记';
+
+  @override
+  String markLostSuccess(int count) {
+    return '成功标记 $count 件行李为丢失';
+  }
+
+  @override
+  String markLostFailed(int success, int fail) {
+    return '部分失败：成功 $success 件，失败 $fail 件';
+  }
+
+  @override
+  String selectedCount(int count) {
+    return '已选择 $count 件';
+  }
+
+  @override
+  String totalUnprocessed(int total) {
+    return '共 $total 件未处理行李';
+  }
+
+  @override
+  String get unprocessed => '待处理';
 }

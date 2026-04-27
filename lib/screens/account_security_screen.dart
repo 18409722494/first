@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
 
@@ -13,9 +16,8 @@ class AccountSecurityScreen extends StatefulWidget {
 }
 
 class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
-  bool _twoFactorEnabled = false;
+  bool _isLoading = false;
 
-  /// 显示修改密码对话框
   void _showChangePasswordDialog() {
     final l10n = AppLocalizations.of(context)!;
     final oldPasswordController = TextEditingController();
@@ -61,111 +63,93 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.cancel),
           ),
           FilledButton(
-            onPressed: () {
-              if (newPasswordController.text != confirmPasswordController.text) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(content: Text(l10n.passwordMismatch)),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              Future.delayed(const Duration(milliseconds: 100), () {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.passwordChangedSuccess)),
-                );
-              });
-            },
-            child: Text(l10n.confirm),
+            onPressed: _isLoading
+                ? null
+                : () async {
+                    if (oldPasswordController.text.isEmpty ||
+                        newPasswordController.text.isEmpty ||
+                        confirmPasswordController.text.isEmpty) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        SnackBar(content: Text(l10n.fillAllFields)),
+                      );
+                      return;
+                    }
+                    if (newPasswordController.text != confirmPasswordController.text) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        SnackBar(content: Text(l10n.passwordMismatch)),
+                      );
+                      return;
+                    }
+                    if (newPasswordController.text.length < 6) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        SnackBar(content: Text(l10n.passwordMinLength)),
+                      );
+                      return;
+                    }
+
+                    final authProvider = context.read<AuthProvider>();
+                    final user = authProvider.user;
+                    if (user == null || user.employeeId == null) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(content: Text('无法获取用户信息，请重新登录')),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(dialogContext);
+                    await _handlePasswordChange(
+                      user.employeeId!,
+                      user.username,
+                      newPasswordController.text,
+                    );
+                  },
+            child: Text(_isLoading ? '...' : l10n.confirm),
           ),
         ],
       ),
     );
   }
 
-  /// 显示绑定手机对话框
-  void _showBindPhoneDialog() {
+  Future<void> _handlePasswordChange(
+    String employeeId,
+    String username,
+    String newPassword,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
-    final phoneController = TextEditingController();
-    final codeController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.phoneBind),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: l10n.phoneNumber,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: codeController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.verifyCode,
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                  FilledButton(
-                    onPressed: () {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(content: Text(l10n.verifyCodeSent)),
-                );
-                    },
-                    child: Text(l10n.getVerifyCode, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await ApiService.updatePassword(
+        employeeId: employeeId,
+        username: username,
+        newPassword: newPassword,
+      );
+
+      setState(() => _isLoading = false);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.success ? l10n.passwordChangedSuccess : response.message),
+          backgroundColor: response.success ? Colors.green : Colors.red,
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (phoneController.text.isEmpty || codeController.text.isEmpty) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(content: Text(l10n.fillAllFields)),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              Future.delayed(const Duration(milliseconds: 100), () {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.phoneBindSuccess)),
-                );
-              });
-            },
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('密码修改失败: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -184,32 +168,14 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                 ListTile(
                   leading: Icon(Icons.lock_outlined, size: Responsive.iconSize(context, 24)),
                   title: Text(l10n.passwordChange, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: _showChangePasswordDialog,
-                ),
-                Divider(height: 1, indent: Responsive.spacing(context, 40)),
-                ListTile(
-                  leading: Icon(Icons.phone_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text(l10n.phoneBind, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  subtitle: Text(l10n.notBound, style: TextStyle(fontSize: Responsive.fontSize(context, 12))),
-                  trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  onTap: _showBindPhoneDialog,
-                ),
-                Divider(height: 1, indent: Responsive.spacing(context, 40)),
-                ListTile(
-                  leading: Icon(Icons.two_wheeler_outlined, size: Responsive.iconSize(context, 24)),
-                  title: Text(l10n.twoFactorAuth, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
-                  trailing: Switch(
-                    value: _twoFactorEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _twoFactorEnabled = value;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.twoFactorEnabled)),
-                      );
-                    },
-                  ),
+                  trailing: _isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.chevron_right, color: Colors.grey[400]),
+                  onTap: _isLoading ? null : _showChangePasswordDialog,
                 ),
               ],
             ),

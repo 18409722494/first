@@ -11,6 +11,7 @@ import 'search_luggage_screen.dart';
 import 'damage_report_screen.dart';
 import 'evidence_list_screen.dart';
 import 'luggage_map_screen.dart';
+import 'unprocessed_baggage_screen.dart';
 
 /// 首页 - 基于 UI 设计文档 (Frame282)
 class HomeScreen extends StatelessWidget {
@@ -210,8 +211,8 @@ class HomeScreen extends StatelessWidget {
             Expanded(
               child: _buildActionButton(
                 context,
-                icon: Icons.scale_outlined,
-                label: '超重计算',
+                icon: Icons.warning_outlined,
+                label: '未处理行李',
                 bgColor: const Color(0xFFFFFBEB),
                 textColor: const Color(0xFFC2410C),
               ),
@@ -339,6 +340,11 @@ class HomeScreen extends StatelessWidget {
       case '行李地图':
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const LuggageMapScreen()),
+        );
+        break;
+      case '未处理行李':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const UnprocessedBaggageScreen()),
         );
         break;
       default:

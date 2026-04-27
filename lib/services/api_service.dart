@@ -38,7 +38,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/manager/login-with-employee-id'),
+        Uri.parse('$baseUrl/employee/login-with-employee-id'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username.trim(),
@@ -99,22 +99,25 @@ class ApiService {
   }
 
   /// 注册（航司员工：工号须已在后台预置且尚未激活）
-  /// [airport] 所属机场名称，如 "首都国际机场"
+  /// [airport] 所属机场完整名称，如 "北京首都国际机场"
+  /// [natureOfService] 服务性质，如 "行李中转员"
   static Future<AuthResponse> register(
     String employeeId,
     String username,
     String password,
     String airport,
+    String natureOfService,
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/manager/register'),
+        Uri.parse('$baseUrl/employee/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'employeeId': employeeId.trim(),
           'username': username.trim(),
           'password': password,
           'airport': airport,
+          'NatureofService': natureOfService,
         }),
       ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
 
@@ -183,7 +186,7 @@ class ApiService {
   static Future<AuthResponse> logout(String employeeId) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/manager/logout'),
+        Uri.parse('$baseUrl/employee/logout'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'employeeId': employeeId.trim(),
@@ -219,6 +222,128 @@ class ApiService {
       return AuthResponse(
         success: false,
         message: _pickServerMessage(data) ?? '注销失败，请重试',
+      );
+    } on TimeoutException {
+      return AuthResponse(
+        success: false,
+        message: '请求超时，请检查网络连接',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: '网络错误: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 修改密码
+  static Future<AuthResponse> updatePassword({
+    required String employeeId,
+    required String username,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/employee/update-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'employeeId': employeeId.trim(),
+          'username': username.trim(),
+          'newPassword': newPassword,
+        }),
+      ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '修改密码失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final result = data['result']?.toString() ?? '';
+
+      if (result == 'success') {
+        return AuthResponse(
+          success: true,
+          message: '密码修改成功',
+        );
+      }
+      return AuthResponse(
+        success: false,
+        message: _pickServerMessage(data) ?? '修改密码失败，请重试',
+      );
+    } on TimeoutException {
+      return AuthResponse(
+        success: false,
+        message: '请求超时，请检查网络连接',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: '网络错误: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 修改个人信息
+  static Future<AuthResponse> updateDetails({
+    required String employeeId,
+    String? gender,
+    String? hometown,
+    String? birthDate,
+    String? contact,
+    String? hireDate,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'employeeId': employeeId.trim(),
+      };
+      if (gender != null && gender.isNotEmpty) body['gender'] = gender;
+      if (hometown != null && hometown.isNotEmpty) body['hometown'] = hometown;
+      if (birthDate != null && birthDate.isNotEmpty) body['birthDate'] = birthDate;
+      if (contact != null && contact.isNotEmpty) body['contact'] = contact;
+      if (hireDate != null && hireDate.isNotEmpty) body['hireDate'] = hireDate;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/employee/update-details'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '修改个人信息失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final result = data['result']?.toString() ?? '';
+
+      if (result == 'success') {
+        return AuthResponse(
+          success: true,
+          message: '个人信息修改成功',
+        );
+      }
+      return AuthResponse(
+        success: false,
+        message: _pickServerMessage(data) ?? '修改个人信息失败，请重试',
       );
     } on TimeoutException {
       return AuthResponse(

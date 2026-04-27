@@ -150,14 +150,23 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
         latitude: pos.latitude,
         longitude: pos.longitude,
         damageDescription: _descriptionController.text.trim(),
-        luggageDbId: _resolvedLuggageDbId,
       );
 
       if (!mounted) return;
       if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.damageReportSuccess)),
-        );
+        // 检查状态同步是否完成
+        if (!result.statusSyncCompleted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.exceptionMessage ?? l10n.damageReportSuccess),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.damageReportSuccess)),
+          );
+        }
         _resetForm();
       } else {
         _showDetailedError(result);

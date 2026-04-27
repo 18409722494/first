@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
@@ -36,17 +37,21 @@ class LuggageDetailService {
         if (found != null) {
           luggage = _mergeApiAndQr(found, qrPayload);
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[LuggageDetailService] 通过行李号获取失败: $e');
+      }
     }
 
-    // 2. 尝试旧接口兜底
+    // 2. 如果行李号查询失败，尝试通过 ID 查询
     if (luggage == null) {
       final luggageId = qrPayload.luggageId?.trim() ?? '';
       if (luggageId.isNotEmpty) {
         try {
           final found = await LuggageService.getLuggageById(luggageId);
           luggage = _mergeApiAndQr(found, qrPayload);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[LuggageDetailService] 通过ID获取失败: $e');
+        }
       }
     }
 
