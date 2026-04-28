@@ -2,7 +2,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/auth_provider.dart';
 import '../components/image_picker_field.dart';
 import '../services/damage_report_service.dart';
 import '../services/permission_service.dart';
@@ -111,6 +113,18 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     if (!_formKey.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context)!;
 
+    // 获取当前用户的 employeeId
+    final authProvider = context.read<AuthProvider>();
+    final employeeId = authProvider.user?.employeeId;
+    if (employeeId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法获取用户信息，请重新登录')),
+        );
+      }
+      return;
+    }
+
     if (_imageBytes == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +164,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
         latitude: pos.latitude,
         longitude: pos.longitude,
         damageDescription: _descriptionController.text.trim(),
+        employeeId: employeeId,
       );
 
       if (!mounted) return;

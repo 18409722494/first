@@ -152,6 +152,7 @@ class AuthProvider with ChangeNotifier {
     String? birthDate,
     String? contact,
     String? hireDate,
+    String? status,
   }) {
     if (_user != null) {
       _user = _user!.copyWith(
@@ -160,8 +161,32 @@ class AuthProvider with ChangeNotifier {
         birthDate: birthDate ?? _user!.birthDate,
         contact: contact ?? _user!.contact,
         hireDate: hireDate ?? _user!.hireDate,
+        status: status ?? _user!.status,
       );
       notifyListeners();
+    }
+  }
+
+  /// 从后端拉取最新用户信息并更新本地状态
+  Future<void> fetchAndUpdateDetails() async {
+    if (_user == null || _user!.employeeId == null) return;
+
+    try {
+      final details = await ApiService.getDetails(_user!.employeeId!);
+      if (details != null && _user != null) {
+        _user = _user!.copyWith(
+          username: details.username ?? _user!.username,
+          gender: details.gender,
+          hometown: details.hometown,
+          birthDate: details.birthDate,
+          contact: details.contact,
+          hireDate: details.hireDate,
+          status: details.status,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      // 静默处理，不影响用户体验
     }
   }
 }

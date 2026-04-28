@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../services/baggage_api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
@@ -13,9 +14,147 @@ import 'evidence_list_screen.dart';
 import 'luggage_map_screen.dart';
 import 'unprocessed_baggage_screen.dart';
 
+/// 最近处理行李项数据模型
+class RecentLuggageItem {
+  final String tagNumber;
+  final String info;
+  final String status;
+  final Color statusColor;
+  final Color statusTextColor;
+  final Color iconBgColor;
+  final bool isOverweight;
+
+  const RecentLuggageItem({
+    required this.tagNumber,
+    required this.info,
+    required this.status,
+    required this.statusColor,
+    required this.statusTextColor,
+    required this.iconBgColor,
+    this.isOverweight = false,
+  });
+}
+
 /// 首页 - 基于 UI 设计文档 (Frame282)
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<RecentLuggageItem> _recentItems = [];
+  bool _isLoadingRecent = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentLuggage();
+  }
+
+  Future<void> _loadRecentLuggage() async {
+    setState(() => _isLoadingRecent = true);
+
+    try {
+      // 获取所有行李列表
+      final allLuggage = await BaggageApiService.getAllBaggageList();
+
+      // 按 lastUpdated 降序排序，取前2条
+      final sorted = List.from(allLuggage)
+        ..sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+
+      final recent = sorted.take(2).map((luggage) {
+        // 判断是否超重
+        final isOverweight = luggage.weight > 23.0;
+        final info = isOverweight
+            ? '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : "未知地点"} · 超重+${(luggage.weight - 23.0).toStringAsFixed(1)}kg'
+            : '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : "未知地点"} · ${luggage.weight}kg';
+
+        return RecentLuggageItem(
+          tagNumber: luggage.tagNumber,
+          info: info,
+          status: _getStatusText(luggage),
+          statusColor: _getStatusBgColor(luggage.status),
+          statusTextColor: _getStatusTextColor(luggage.status),
+          iconBgColor: _getStatusBgColor(luggage.status),
+          isOverweight: isOverweight,
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _recentItems = recent;
+          _isLoadingRecent = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] 加载最近处理行李失败: $e');
+      if (mounted) {
+        setState(() {
+          _recentItems = [];
+          _isLoadingRecent = false;
+        });
+      }
+    }
+  }
+
+  String _getStatusText(luggage) {
+    switch (luggage.status.name) {
+      case 'checkIn':
+        return '已托运';
+      case 'inTransit':
+        return '运输中';
+      case 'arrived':
+        return '已到达';
+      case 'delivered':
+        return '已交付';
+      case 'damaged':
+        return '已损坏';
+      case 'lost':
+        return '已丢失';
+      default:
+        return '已托运';
+    }
+  }
+
+  Color _getStatusBgColor(status) {
+    switch (status.name) {
+      case 'checkIn':
+        return const Color(0xFFDCFCE7);
+      case 'inTransit':
+        return const Color(0xFFFEF3C7);
+      case 'arrived':
+        return const Color(0xFFDCFCE7);
+      case 'delivered':
+        return const Color(0xFFDCFCE7);
+      case 'damaged':
+        return const Color(0xFFFEF2F2);
+      case 'lost':
+        return const Color(0xFFF1F5F9);
+      default:
+        return const Color(0xFFDCFCE7);
+    }
+  }
+
+  Color _getStatusTextColor(status) {
+    switch (status.name) {
+      case 'checkIn':
+        return const Color(0xFF16A34A);
+      case 'inTransit':
+        return const Color(0xFFD97706);
+      case 'arrived':
+        return const Color(0xFF16A34A);
+      case 'delivered':
+        return const Color(0xFF16A34A);
+      case 'damaged':
+        return const Color(0xFFDC2626);
+      case 'lost':
+        return const Color(0xFF64748B);
+      default:
+        return const Color(0xFF16A34A);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +163,6 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 状态栏区域
-            _buildStatusBar(),
             // 欢迎卡片区域（带渐变）
             _buildWelcomeCard(context),
             // 主内容区域
@@ -51,35 +188,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// 状态栏
-  Widget _buildStatusBar() {
-    return Container(
-      height: 62,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      color: AppColors.primaryDark,
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            '09:41',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            '5G ▋▋▋',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -274,6 +382,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+        SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
       ],
     );
   }
@@ -357,35 +466,82 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '最近处理',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimaryLight,
-          ),
+        Row(
+          children: [
+            const Text(
+              '最近处理',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryLight,
+              ),
+            ),
+            const Spacer(),
+            if (_isLoadingRecent)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
         ),
         SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
-        _buildRecentItem(
-          context,
-          tagNumber: 'BVIP2024-001234',
-          info: 'CA1234 · 北京→上海 · 23.5kg',
-          status: '已托运',
-          statusColor: const Color(0xFFDCFCE7),
-          statusTextColor: const Color(0xFF16A34A),
-          iconBgColor: const Color(0xFFDBEAFE),
-        ),
-        SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-        _buildRecentItem(
-          context,
-          tagNumber: 'BVIP2024-001235',
-          info: 'MU5678 · 上海→广州 · 超重+5.2kg',
-          status: '超重',
-          statusColor: const Color(0xFFFEF2F2),
-          statusTextColor: const Color(0xFFDC2626),
-          iconBgColor: const Color(0xFFFEF2F2),
-        ),
+        if (_isLoadingRecent)
+          const SizedBox.shrink()
+        else if (_recentItems.isEmpty)
+          _buildEmptyRecentItem(context)
+        else
+          ...List.generate(_recentItems.length, (index) {
+            final item = _recentItems[index];
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index < _recentItems.length - 1
+                    ? Responsive.spacing(context, AppSpacing.sm)
+                    : 0,
+              ),
+              child: _buildRecentItem(
+                context,
+                tagNumber: item.tagNumber,
+                info: item.info,
+                status: item.status,
+                statusColor: item.statusColor,
+                statusTextColor: item.statusTextColor,
+                iconBgColor: item.iconBgColor,
+              ),
+            );
+          }),
       ],
+    );
+  }
+
+  /// 空状态
+  Widget _buildEmptyRecentItem(BuildContext context) {
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight, width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inbox_outlined,
+            size: 24,
+            color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '暂无处理记录',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondaryLight.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -409,7 +565,6 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 图标
           Container(
             width: 40,
             height: 40,
@@ -424,7 +579,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // 文字信息
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -449,7 +603,6 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          // 状态标签
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(

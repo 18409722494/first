@@ -4,6 +4,48 @@ import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 import '../models/auth_response.dart';
 
+/// 员工详细信息
+class EmployeeDetails {
+  final String? employeeId;
+  final String? username;
+  final String? gender;
+  final String? hometown;
+  final String? birthDate;
+  final String? contact;
+  final String? hireDate;
+  final String? airport;
+  final String? natureOfService;
+  final String? status;
+
+  EmployeeDetails({
+    this.employeeId,
+    this.username,
+    this.gender,
+    this.hometown,
+    this.birthDate,
+    this.contact,
+    this.hireDate,
+    this.airport,
+    this.natureOfService,
+    this.status,
+  });
+
+  factory EmployeeDetails.fromJson(Map<String, dynamic> json) {
+    return EmployeeDetails(
+      employeeId: json['employeeId']?.toString(),
+      username: json['username']?.toString(),
+      gender: json['gender']?.toString(),
+      hometown: json['hometown']?.toString(),
+      birthDate: json['birthDate']?.toString(),
+      contact: json['contact']?.toString(),
+      hireDate: json['hireDate']?.toString(),
+      airport: json['airport']?.toString(),
+      natureOfService: json['NatureofService']?.toString() ?? json['natureOfService']?.toString(),
+      status: json['status']?.toString(),
+    );
+  }
+}
+
 /// API服务
 class ApiService {
   static String get baseUrl => AppConstants.apiBaseUrl;
@@ -355,6 +397,93 @@ class ApiService {
         success: false,
         message: '网络错误: ${e.toString()}',
       );
+    }
+  }
+
+  /// 修改在职状态
+  /// [status] 状态值：null 表示在职，'离职办理' 表示离职申请
+  static Future<AuthResponse> updateStatus({
+    required String employeeId,
+    required String status,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/employee/update-status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'employeeId': employeeId.trim(),
+          'status': status,
+        }),
+      ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return AuthResponse(
+          success: false,
+          message: _messageForNonOkResponse(response),
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return AuthResponse(
+          success: false,
+          message: '修改状态失败，请重试',
+        );
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final result = data['result']?.toString() ?? '';
+
+      if (result == 'success') {
+        return AuthResponse(
+          success: true,
+          message: '离职申请已提交',
+        );
+      }
+      return AuthResponse(
+        success: false,
+        message: _pickServerMessage(data) ?? '修改状态失败，请重试',
+      );
+    } on TimeoutException {
+      return AuthResponse(
+        success: false,
+        message: '请求超时，请检查网络连接',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: '网络错误: ${e.toString()}',
+      );
+    }
+  }
+
+  /// 获取员工详细信息
+  static Future<EmployeeDetails?> getDetails(String employeeId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/employee/details'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'employeeId': employeeId.trim(),
+        }),
+      ).timeout(_timeout, onTimeout: () => throw TimeoutException('请求超时，请检查网络连接'));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return null;
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final result = data['result']?.toString() ?? '';
+
+      if (result == 'success' && data['data'] is Map) {
+        return EmployeeDetails.fromJson(data['data'] as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 

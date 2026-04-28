@@ -242,18 +242,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
+        backgroundColor: AppColors.backgroundLight,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimaryLight, size: 24),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           '注册 / 激活账号',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimaryLight,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -272,7 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: AppColors.textPrimaryLight,
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
@@ -426,7 +426,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   '提交后需等待管理员审核激活',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondaryDark.withValues(alpha: 0.8),
+                    color: AppColors.textSecondaryLight.withValues(alpha: 0.8),
                   ),
                 ),
               ),
@@ -440,7 +440,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     '已有账号？',
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.textSecondaryDark,
+                      color: AppColors.textSecondaryLight,
                     ),
                   ),
                   TextButton(
@@ -473,30 +473,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondaryDark,
+            color: AppColors.textSecondaryLight,
           ),
         ),
         SizedBox(height: Responsive.spacing(context, 8)),
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderDark, width: 1),
+            border: Border.all(color: AppColors.borderLight, width: 1),
           ),
           child: DropdownButtonFormField<Airport>(
             initialValue: _selectedAirport,
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.flight_outlined, color: AppColors.textSecondaryDark, size: 20),
+              prefixIcon: Icon(Icons.flight_outlined, color: AppColors.textSecondaryLight, size: 20),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16),
             ),
             hint: const Text(
               '请选择所属机场',
-              style: TextStyle(color: AppColors.textHintDark, fontSize: 15),
+              style: TextStyle(color: AppColors.textHintLight, fontSize: 15),
             ),
-            dropdownColor: AppColors.surfaceDark,
-            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryDark),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryLight),
             validator: (value) {
               if (value == null) {
                 return '请选择所属机场';
@@ -513,7 +513,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 value: airport,
                 child: Text(
                   '${airport.city} ${airport.name} (${airport.code})',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: Colors.black, fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
               );
@@ -534,30 +534,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondaryDark,
+            color: AppColors.textSecondaryLight,
           ),
         ),
         SizedBox(height: Responsive.spacing(context, 8)),
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderDark, width: 1),
+            border: Border.all(color: AppColors.borderLight, width: 1),
           ),
           child: DropdownButtonFormField<String>(
             value: _selectedNatureOfService,
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.work_outline, color: AppColors.textSecondaryDark, size: 20),
+              prefixIcon: Icon(Icons.work_outline, color: AppColors.textSecondaryLight, size: 20),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16),
             ),
             hint: const Text(
               '请选择服务性质',
-              style: TextStyle(color: AppColors.textHintDark, fontSize: 15),
+              style: TextStyle(color: AppColors.textHintLight, fontSize: 15),
             ),
-            dropdownColor: AppColors.surfaceDark,
-            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryDark),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryLight),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return '请选择服务性质';
@@ -574,7 +574,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 value: service,
                 child: Text(
                   service,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: Colors.black, fontSize: 14),
                 ),
               );
             }).toList(),
@@ -602,16 +602,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondaryDark,
+            color: AppColors.textSecondaryLight,
           ),
         ),
         SizedBox(height: Responsive.spacing(context, 8)),
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderDark, width: 1),
+            border: Border.all(color: AppColors.borderLight, width: 1),
           ),
           child: Row(
             children: [
@@ -622,13 +622,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: keyboardType,
                   validator: validator,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 15,
                   ),
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: const TextStyle(color: AppColors.textHintDark),
-                    prefixIcon: Icon(icon, color: AppColors.textSecondaryDark, size: 20),
+                    hintStyle: const TextStyle(color: AppColors.textHintLight),
+                    prefixIcon: Icon(icon, color: AppColors.textSecondaryLight, size: 20),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),

@@ -111,6 +111,9 @@ class _AppSearchBarState extends State<AppSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).inputDecorationTheme.fillColor,
@@ -121,18 +124,18 @@ class _AppSearchBarState extends State<AppSearchBar> {
         autofocus: widget.autofocus,
         onSubmitted: widget.onSubmitted,
         onChanged: widget.onChanged != null ? _onSearchChanged : null,
-        style: const TextStyle(fontSize: 15),
+        style: TextStyle(fontSize: 15, color: textColor),
         decoration: InputDecoration(
           hintText: widget.hintText,
           hintStyle: TextStyle(
-            color: Colors.grey[500],
+            color: isDark ? Colors.grey[500] : Colors.grey[600],
             fontSize: 15,
           ),
-          prefixIcon: widget.prefix ?? Icon(widget.prefixIcon, color: Colors.grey[500]),
+          prefixIcon: widget.prefix ?? Icon(widget.prefixIcon, color: isDark ? Colors.grey[500] : Colors.grey[600]),
           suffixIcon: widget.showClearButton && _hasText
               ? IconButton(
                   icon: const Icon(Icons.clear, size: 20),
-                  color: Colors.grey[500],
+                  color: isDark ? Colors.grey[500] : Colors.grey[600],
                   onPressed: _handleClear,
                 )
               : null,
@@ -233,6 +236,7 @@ class FilterChipGroup extends StatelessWidget {
 
   Widget _buildAllChip(BuildContext context) {
     final isSelected = selectedStatus == null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FilterChip(
       label: const Text('全部'),
@@ -241,20 +245,22 @@ class FilterChipGroup extends StatelessWidget {
       selectedColor: AppColors.primary.withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary,
       labelStyle: TextStyle(
-        color: isSelected ? AppColors.primary : Colors.grey[700],
+        color: isSelected ? AppColors.primary : (isDark ? Colors.grey[400] : Colors.grey[700]),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.chip),
       ),
       side: BorderSide(
-        color: isSelected ? AppColors.primary : Colors.grey[300]!,
+        color: isSelected ? AppColors.primary : (isDark ? Colors.grey[700]! : Colors.grey[300]!),
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
     );
   }
 
   List<Widget> _buildStatusChips(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return _filterableStatuses.map((status) {
       final isSelected = multiSelect
           ? selectedStatuses?.contains(status) ?? false
@@ -272,14 +278,14 @@ class FilterChipGroup extends StatelessWidget {
           selectedColor: bgColor,
           checkmarkColor: textColor,
           labelStyle: TextStyle(
-            color: isSelected ? textColor : Colors.grey[700],
+            color: isSelected ? textColor : (isDark ? Colors.grey[400] : Colors.grey[700]),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.chip),
           ),
           side: BorderSide(
-            color: isSelected ? textColor : Colors.grey[300]!,
+            color: isSelected ? textColor : (isDark ? Colors.grey[700]! : Colors.grey[300]!),
           ),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         ),

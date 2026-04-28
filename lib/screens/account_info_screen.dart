@@ -21,6 +21,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   bool _isLoading = false;
   bool _isEditing = false;
   bool _isFetching = false;
+  bool _isUpdatingStatus = false;
 
   final _formKey = GlobalKey<FormState>();
   final _genderController = TextEditingController();
@@ -28,6 +29,76 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   final _birthDateController = TextEditingController();
   final _contactController = TextEditingController();
   final _hireDateController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserDetails();
+  }
+
+  Future<void> _fetchUserDetails() async {
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.fetchAndUpdateDetails();
+  }
+
+  /// 提交离职申请
+  Future<void> _submitResignation() async {
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.user;
+    if (user == null || user.employeeId == null) return;
+
+    // 确认操作
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('离职申请'),
+        content: const Text(
+          '确定要提交离职申请吗？提交后将无法撤回。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isUpdatingStatus = true);
+
+    final response = await ApiService.updateStatus(
+      employeeId: user.employeeId!,
+      status: '离职办理',
+    );
+
+    setState(() => _isUpdatingStatus = false);
+
+    if (mounted) {
+      if (response.success) {
+        // 更新本地状态
+        authProvider.updateUserDetails(status: '离职办理');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('离职申请已提交'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -198,7 +269,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   Widget _buildInfoView(BuildContext context, user) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
@@ -222,6 +292,38 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   ),
                 ),
               ),
+              ListTile(
+                leading: Icon(
+                  user?.status == '离职办理' ? Icons.logout : Icons.check_circle,
+                  size: Responsive.iconSize(context, 24),
+                  color: user?.status == '离职办理' ? Colors.red : Colors.green,
+                ),
+                title: Text('在职状态', style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),
+                subtitle: Text(
+                  user?.status ?? '在职',
+                  style: TextStyle(
+                    fontSize: Responsive.fontSize(context, 16),
+                    fontWeight: FontWeight.bold,
+                    color: user?.status == '离职办理' ? Colors.red : Colors.green,
+                  ),
+                ),
+                trailing: _isUpdatingStatus
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : user?.status == '离职办理'
+                        ? const Icon(Icons.pending, color: Colors.red)
+                        : TextButton.icon(
+                            onPressed: _submitResignation,
+                            icon: const Icon(Icons.logout, size: 18),
+                            label: const Text('离职申请'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+              ),
             ],
           ),
         ),
@@ -238,7 +340,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   style: TextStyle(fontSize: Responsive.fontSize(context, 16), color: textPrimary),
                 ),
               ),
-              Divider(height: 1, indent: Responsive.spacing(context, 40)),
               ListTile(
                 leading: Icon(Icons.location_on_outlined, size: Responsive.iconSize(context, 24), color: AppColors.primary),
                 title: Text(l10n.hometown, style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),
@@ -247,7 +348,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   style: TextStyle(fontSize: Responsive.fontSize(context, 16), color: textPrimary),
                 ),
               ),
-              Divider(height: 1, indent: Responsive.spacing(context, 40)),
               ListTile(
                 leading: Icon(Icons.cake_outlined, size: Responsive.iconSize(context, 24), color: AppColors.primary),
                 title: Text(l10n.birthDate, style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),
@@ -256,7 +356,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   style: TextStyle(fontSize: Responsive.fontSize(context, 16), color: textPrimary),
                 ),
               ),
-              Divider(height: 1, indent: Responsive.spacing(context, 40)),
               ListTile(
                 leading: Icon(Icons.phone_outlined, size: Responsive.iconSize(context, 24), color: AppColors.primary),
                 title: Text(l10n.contact, style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),
@@ -265,7 +364,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   style: TextStyle(fontSize: Responsive.fontSize(context, 16), color: textPrimary),
                 ),
               ),
-              Divider(height: 1, indent: Responsive.spacing(context, 40)),
               ListTile(
                 leading: Icon(Icons.calendar_today_outlined, size: Responsive.iconSize(context, 24), color: AppColors.primary),
                 title: Text(l10n.hireDate, style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),

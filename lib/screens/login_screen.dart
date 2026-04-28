@@ -60,12 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+      backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
-            // 状态栏区域
-            _buildStatusBar(),
             // 主内容区域
             Expanded(
               child: SingleChildScrollView(
@@ -87,15 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-                            Text(
-                              l10n.loginHint,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondaryDark,
+                                color: AppColors.textPrimaryLight,
                               ),
                             ),
                             SizedBox(height: Responsive.spacing(context, AppSpacing.lg)),
@@ -171,81 +161,39 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// 状态栏
-  Widget _buildStatusBar() {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            '09:41',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            '5G ▋▋▋',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 头部Logo区域 - 带渐变
+  /// 头部Logo区域 - 使用图片背景
   Widget _buildHeaderArea() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 280,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFF1E3A5F),
-            Color(0xFF0F172A),
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
         children: [
-          // Logo 图标
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.flight,
-              size: 32,
-              color: AppColors.primary,
+          // 背景图片
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/picture_login.jpg',
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'AirBaggage Pro',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '航司行李托运管理系统',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondaryDark,
+          // 底部模糊渐变遮罩
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 120,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.backgroundLight.withValues(alpha: 0),
+                    AppColors.backgroundLight.withValues(alpha: 0.4),
+                    AppColors.backgroundLight.withValues(alpha: 0.85),
+                    AppColors.backgroundLight,
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -253,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// 深色样式输入框
+  /// 浅色样式输入框
   Widget _buildDarkTextField({
     required TextEditingController controller,
     required String hint,
@@ -265,20 +213,20 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderDark, width: 1),
+        border: Border.all(color: AppColors.borderLight, width: 1),
       ),
       child: TextFormField(
         controller: controller,
         obscureText: obscureText,
         validator: validator,
         onFieldSubmitted: onSubmitted,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
+        style: const TextStyle(color: Colors.black, fontSize: 15),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textHintDark),
-          prefixIcon: Icon(prefixIcon, color: AppColors.textSecondaryDark, size: 20),
+          hintStyle: const TextStyle(color: AppColors.textHintLight),
+          prefixIcon: Icon(prefixIcon, color: AppColors.textSecondaryLight, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
@@ -323,13 +271,13 @@ class _LoginScreenState extends State<LoginScreen> {
   /// 底部链接
   Widget _buildBottomLinks() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          '忘记密码？',
+          '还没有账号？',
           style: TextStyle(
             fontSize: 13,
-            color: AppColors.textSecondaryDark,
+            color: AppColors.textSecondaryLight,
           ),
         ),
         InkWell(

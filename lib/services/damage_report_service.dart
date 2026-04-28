@@ -186,6 +186,7 @@ class DamageReportService {
     required double latitude,
     required double longitude,
     required String damageDescription,
+    required String employeeId,
     void Function(String stageLabel)? onStageDone,
   }) async {
     final history = <StageExecution>[];
@@ -316,6 +317,7 @@ class DamageReportService {
           status: BaggageStatusMapper.toBackendLocationStatus(
             LuggageStatus.damaged,
           ),
+          employeeId: employeeId,
         );
         statusSyncCompleted = true;
         addHistory(DamageReportStage.statusSync, '状态同步', true, '行李状态已更新为已损坏');

@@ -61,8 +61,8 @@ class MyApp extends StatelessWidget {
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            // 默认使用深色主题（与UI设计保持一致）
-            themeMode: ThemeMode.dark,
+            // 默认使用浅色主题
+            themeMode: ThemeMode.light,
             home: const AuthWrapper(),
           );
         },

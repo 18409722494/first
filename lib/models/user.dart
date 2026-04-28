@@ -17,6 +17,8 @@ class User {
   final String? contact;
   /// 入职日期
   final String? hireDate;
+  /// 在职状态（null 表示在职，'离职办理' 表示已提交离职申请）
+  final String? status;
 
   User({
     required this.id,
@@ -29,6 +31,7 @@ class User {
     this.birthDate,
     this.contact,
     this.hireDate,
+    this.status,
   });
 
   User copyWith({
@@ -42,6 +45,7 @@ class User {
     String? birthDate,
     String? contact,
     String? hireDate,
+    String? status,
   }) {
     return User(
       id: id ?? this.id,
@@ -54,6 +58,7 @@ class User {
       birthDate: birthDate ?? this.birthDate,
       contact: contact ?? this.contact,
       hireDate: hireDate ?? this.hireDate,
+      status: status ?? this.status,
     );
   }
 
@@ -68,6 +73,7 @@ class User {
       birthDate: json['birthDate']?.toString(),
       contact: json['contact']?.toString(),
       hireDate: json['hireDate']?.toString(),
+      status: json['status']?.toString(),
     );
   }
 
@@ -82,6 +88,7 @@ class User {
       if (birthDate != null) 'birthDate': birthDate,
       if (contact != null) 'contact': contact,
       if (hireDate != null) 'hireDate': hireDate,
+      if (status != null) 'status': status,
     };
   }
 }

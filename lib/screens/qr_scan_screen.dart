@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import '../l10n/app_localizations.dart';
 import '../models/qr_payload.dart';
 import '../models/luggage.dart';
@@ -32,6 +33,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
+  final ImagePicker _imagePicker = ImagePicker();
 
   String? _lastRaw;
 
@@ -445,9 +447,179 @@ class _QrScanScreenState extends State<QrScanScreen> {
             icon: const Icon(Icons.flash_on, color: Colors.white, size: 24),
             onPressed: () => _controller.toggleTorch(),
           ),
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 24),
+            onPressed: _pickImageFromGallery,
+            tooltip: '从相册选择',
+          ),
         ],
       ),
     );
+  }
+
+  /// 从相册选取图片并识别二维码
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      if (!mounted) return;
+
+      // 显示加载中
+      setState(() => _processing = true);
+
+      // 使用 MobileScannerController 扫描图片中的二维码
+      final controller = MobileScannerController(
+        detectionSpeed: DetectionSpeed.normal,
+      );
+
+      // 创建一个临时 widget 来扫描图片
+      final barcode = await _scanQrFromImageFile(image.path, controller);
+
+      await controller.dispose();
+
+      if (barcode != null && barcode.isNotEmpty) {
+        // 处理识别到的二维码
+        await _processQrCode(barcode);
+      } else {
+        if (!mounted) return;
+        _showErrorSnackBar('未在图片中识别到二维码');
+      }
+    } catch (e) {
+      debugPrint('[QrScan] 从相册选取图片失败: $e');
+      if (!mounted) return;
+      _showErrorSnackBar('图片识别失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+      }
+    }
+  }
+
+  /// 从图片文件中扫描二维码
+  Future<String?> _scanQrFromImageFile(String imagePath, MobileScannerController controller) async {
+    try {
+      // 使用图片扫描
+      final value = await controller.analyzeImage(imagePath);
+      if (value != null) {
+        final barcodes = value.barcodes;
+        if (barcodes.isNotEmpty) {
+          return barcodes.first.rawValue;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[QrScan] 扫描图片二维码失败: $e');
+      return null;
+    }
+  }
+
+  /// 处理识别到的二维码内容
+  Future<void> _processQrCode(String raw) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (raw.isEmpty) {
+      _showErrorSnackBar(l10n.qrCodeNoLuggageId);
+      return;
+    }
+
+    debugPrint('[QrScan] 从图片识别到二维码: $raw');
+
+    // 解析二维码
+    final payload = QrPayload.fromRaw(raw);
+    if (payload.luggageId == null || payload.luggageId!.isEmpty) {
+      _showErrorSnackBar(l10n.qrCodeNoLuggageId);
+      return;
+    }
+
+    // 获取行李信息
+    late Luggage luggage;
+    try {
+      final scanResult = await LuggageService.getLuggageForScan(payload.luggageId!);
+      if (!scanResult.success) {
+        _showErrorSnackBar(scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
+        return;
+      }
+      luggage = scanResult.luggage!;
+    } catch (e) {
+      _showErrorSnackBar(l10n.getLuggageFailed(e.toString()));
+      return;
+    }
+
+    // 获取 GPS 并上传位置
+    String locationName = '';
+    final baggageNumber = luggage.tagNumber.isNotEmpty
+        ? luggage.tagNumber
+        : payload.extra['tagNo']?.toString() ?? payload.luggageId ?? '';
+    final employeeId = await StorageService.getEmployeeId();
+
+    try {
+      final serviceEnabled = await LocationService.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        final position = await LocationService.getCurrentDevicePosition();
+        if (position != null) {
+          locationName = '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+          try {
+            await LuggageService.updateScanLocation(
+              baggageNumber: baggageNumber,
+              location: locationName,
+              employeeId: employeeId,
+            );
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    locationName = locationName.isEmpty
+        ? (luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation)
+        : locationName;
+
+    if (!mounted) return;
+
+    // 弹出操作选项菜单
+    final payloadResolved = QrPayload(
+      userId: payload.userId,
+      luggageId: luggage.id,
+      role: payload.role,
+      extra: {
+        ...payload.extra,
+        if (payload.luggageId != null && payload.luggageId!.isNotEmpty)
+          'scannedQrRef': payload.luggageId,
+        if (luggage.tagNumber.isNotEmpty) 'tagNo': luggage.tagNumber,
+      },
+    );
+
+    final choice = await ScanResultDialog.show(
+      context: context,
+      luggage: luggage,
+      rawQr: raw,
+    );
+
+    if (!mounted) return;
+
+    switch (choice) {
+      case 'confirm_arrived':
+        await _handleConfirmArrived(luggage, raw, payloadResolved, locationName);
+        break;
+      case 'report_damage':
+        await _handleReportDamage(luggage, raw, payloadResolved);
+        break;
+      case 'overweight':
+        await _handleOverweight(luggage, raw, payloadResolved);
+        break;
+      case 'contact_passenger':
+        await _handleContactPassenger(luggage, raw, payloadResolved);
+        break;
+      case 'view_detail':
+        await _handleViewDetail(luggage, raw, payloadResolved);
+        break;
+      default:
+        break;
+    }
   }
 
   /// 扫描框
@@ -523,6 +695,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildOperationGrid(),
+                  const SizedBox(height: 12),
+                  // 从相册选择按钮
+                  _buildAlbumSelectButton(),
                   const SizedBox(height: 20),
                   // 手动输入按钮
                   _buildManualInputButton(),
@@ -678,6 +853,37 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 从相册选择按钮
+  Widget _buildAlbumSelectButton() {
+    return InkWell(
+      onTap: _pickImageFromGallery,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDark,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderDark, width: 1),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.photo_library_outlined, color: AppColors.textSecondaryDark, size: 20),
+            SizedBox(width: 8),
+            Text(
+              '从相册选择图片识别',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondaryDark,
               ),
             ),
           ],
