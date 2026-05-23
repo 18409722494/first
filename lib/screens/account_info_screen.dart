@@ -20,7 +20,7 @@ class AccountInfoScreen extends StatefulWidget {
 class _AccountInfoScreenState extends State<AccountInfoScreen> {
   bool _isLoading = false;
   bool _isEditing = false;
-  bool _isFetching = false;
+  final bool _isFetching = false;
   bool _isUpdatingStatus = false;
 
   final _formKey = GlobalKey<FormState>();
@@ -43,6 +43,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
 
   /// 提交离职申请
   Future<void> _submitResignation() async {
+    final l10n = AppLocalizations.of(context)!;
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
     if (user == null || user.employeeId == null) return;
@@ -51,18 +52,16 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('离职申请'),
-        content: const Text(
-          '确定要提交离职申请吗？提交后将无法撤回。',
-        ),
+        title: Text(l10n.resignation),
+        content: Text(l10n.resignationConfirmMsg),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -74,7 +73,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
 
     final response = await ApiService.updateStatus(
       employeeId: user.employeeId!,
-      status: '离职办理',
+      status: l10n.resignationApplication,
     );
 
     setState(() => _isUpdatingStatus = false);
@@ -82,10 +81,10 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
     if (mounted) {
       if (response.success) {
         // 更新本地状态
-        authProvider.updateUserDetails(status: '离职办理');
+        authProvider.updateUserDetails(status: l10n.resignationApplication);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('离职申请已提交'),
+          SnackBar(
+            content: Text(l10n.resignationSubmitted),
             backgroundColor: Colors.green,
           ),
         );
@@ -132,9 +131,10 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
+    final l10n = AppLocalizations.of(context)!;
     if (user == null || user.employeeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法获取用户信息')),
+        SnackBar(content: Text(l10n.unableGetUserInfo)),
       );
       return;
     }
@@ -151,8 +151,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
     );
 
     setState(() => _isLoading = false);
-
-    final l10n = AppLocalizations.of(context)!;
 
     if (response.success) {
       // 保存成功后更新本地用户状态
@@ -294,17 +292,17 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               ),
               ListTile(
                 leading: Icon(
-                  user?.status == '离职办理' ? Icons.logout : Icons.check_circle,
+                  user?.status == l10n.resignationApplication ? Icons.logout : Icons.check_circle,
                   size: Responsive.iconSize(context, 24),
-                  color: user?.status == '离职办理' ? Colors.red : Colors.green,
+                  color: user?.status == l10n.resignationApplication ? Colors.red : Colors.green,
                 ),
                 title: Text('在职状态', style: TextStyle(fontSize: Responsive.fontSize(context, 14), color: textSecondary)),
                 subtitle: Text(
-                  user?.status ?? '在职',
+                  user?.status ?? l10n.onJobStatus,
                   style: TextStyle(
                     fontSize: Responsive.fontSize(context, 16),
                     fontWeight: FontWeight.bold,
-                    color: user?.status == '离职办理' ? Colors.red : Colors.green,
+                    color: user?.status == l10n.resignationApplication ? Colors.red : Colors.green,
                   ),
                 ),
                 trailing: _isUpdatingStatus
@@ -313,12 +311,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : user?.status == '离职办理'
+                    : user?.status == l10n.resignationApplication
                         ? const Icon(Icons.pending, color: Colors.red)
                         : TextButton.icon(
                             onPressed: _submitResignation,
                             icon: const Icon(Icons.logout, size: 18),
-                            label: const Text('离职申请'),
+                            label: Text(l10n.resignation),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.red,
                             ),

@@ -54,7 +54,6 @@ class TodoItem {
     required String baggageNumber,
     required String damageDescription,
     required DateTime timestamp,
-    String? luggageId,
   }) {
     return TodoItem(
       id: 'damage_$id',
@@ -66,7 +65,6 @@ class TodoItem {
       icon: Icons.warning_amber,
       color: AppColors.error,
       tagNumber: baggageNumber,
-      luggageId: luggageId,
       timestamp: timestamp,
     );
   }

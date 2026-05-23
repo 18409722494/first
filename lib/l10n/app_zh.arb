@@ -133,7 +133,7 @@
 
   "queryLuggage": "查询行李",
   "searchLuggageHint": "搜索行李",
-  "searchPlaceholder": "标签号、航班号、乘客姓名或目的地",
+  "searchPlaceholder": "标签号、航班号、乘客姓名或当前位置",
   "scanBarcode": "扫描条形码",
   "statusFilter": "状态过滤",
   "allStatuses": "全部状态",
@@ -159,6 +159,7 @@
   "checkIn": "已办理托运",
   "inTransit": "运输中",
   "arrived": "已到达",
+  "received": "已接收",
   "delivered": "已交付",
   "damaged": "已损坏",
   "lost": "已丢失",
@@ -197,7 +198,13 @@
   "uploadCreateSuccess": "上传/创建成功",
   "luggageInfo": "行李信息",
   "basicInfo": "基本信息",
+  "basicInfoTab": "基本信息",
+  "damageTab": "破损记录",
+  "logTab": "操作日志",
   "historyLog": "历史日志",
+  "noDamageRecord": "暂无破损记录",
+  "noOperationLog": "暂无操作日志",
+  "logSubtitle": "来自后端 GET /baggage/operationLogs",
   "qrCodeResult": "二维码解析结果",
   "luggageDetail": "行李详情",
   "location": "位置",
@@ -229,19 +236,6 @@
   "recordLocation": "记录地点",
   "hashValue": "哈希值",
   "damageDesc": "破损描述",
-  "hashVerification": "证据哈希验证",
-  "hashVerificationNote": "哈希值用于验证图片证据的完整性和真实性",
-  "hashVerified": "哈希验证通过：证据未被篡改",
-  "hashFailed": "哈希验证失败：证据可能被修改",
-  "verifyHash": "验证哈希",
-  "noImageToVerify": "无图片可验证",
-  "hashVerifySuccess": "哈希验证成功，证据未被篡改",
-  "verifyFailed": "验证失败: {error}",
-  "@verifyFailed": {
-    "placeholders": {
-      "error": {"type": "String"}
-    }
-  },
   "hashCopied": "哈希值已复制到剪贴板",
 
   "maxPhotosHint": "最多只能上传3张照片",
@@ -272,8 +266,8 @@
   "luggageWeight": "行李重量 (kg)",
   "enterWeight": "请输入行李重量",
   "invalidWeight": "请输入有效的重量",
-  "destination": "目的地",
-  "enterDestination": "请输入目的地",
+  "destination": "当前位置",
+  "enterDestination": "请输入当前位置",
   "luggageStatus": "行李状态",
   "remarkOptional": "备注",
   "enterRemark": "请输入备注信息（可选）",
@@ -287,6 +281,18 @@
   "max3Photos": "最多上传3张",
   "addLuggage": "添加行李",
 
+  "tagNumber": "行李号",
+  "weightKg": "{weight} kg",
+  "@weightKg": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
+  "contactPhone": "联系手机",
+  "lastUpdated": "最后更新",
+  "updateStatus": "更新状态",
+  "updateLocation": "更新位置",
+
   "processSuccess": "处理成功",
   "processFailed": "处理失败: {error}",
   "@processFailed": {
@@ -294,21 +300,6 @@
       "error": {"type": "String"}
     }
   },
-  "overweightTitle": "超重费用/称重",
-  "weighingInfo": "称重信息",
-  "actualWeight": "行李重量",
-  "enterActualWeight": "请输入实际重量",
-  "feeInfo": "费用信息",
-  "confirmProcess": "确认处理",
-  "luggageInfoLabel": "行李信息",
-  "tagNo": "标签号",
-  "flightNoLabel": "航班号",
-  "passenger": "乘客",
-  "overweightFee": "超重费用",
-  "autoCalc": "自动计算",
-  "additionalFee": "需补缴费用",
-  "overweightNote": "超重费用将自动计算，确认后将通知旅客补缴。",
-
   "passengerContact": "旅客联系/认领",
   "passengerInfo": "旅客信息",
   "name": "姓名",
@@ -327,7 +318,6 @@
   "scanOperationGuide": "在底部导航栏点击「扫码」进入扫码界面，点击扫描按钮对准行李上的二维码即可识别。识别成功后会自动跳转到行李详情页，您可以在此更新行李位置或状态。",
   "luggageListGuide": "在底部导航栏点击「行李」进入行李列表页。您可以通过搜索框按行李标签号或旅客姓名进行搜索，也可以通过筛选按钮按行李状态进行筛选。",
   "damageRegistrationGuide": "发现行李破损时，在扫码结果页面点击「破损登记」按钮，或在行李详情页点击「登记破损」按钮。上传破损照片并填写描述后提交，系统会自动生成破损记录并通知相关人员。",
-  "overweightGuide": "当待办事项中出现超重行李提示时，点击该条进入超重处理页面。核对行李重量，确认超重后选择收费方式（现金/电子支付），完成后更新行李状态。",
   "contactPassengerGuide": "当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。",
   "submitFeedbackGuide": "如果您在使用过程中遇到问题或有改进建议，可以在「我的 → 帮助与支持 → 意见反馈」中填写并提交。我们会认真处理每一条反馈。",
   "themeLanguageGuide": "在「我的 → 系统设置 → 主题设置」中可切换浅色/深色/跟随系统三种模式。在「语言设置」中可切换简体中文或 English。设置会自动保存。",
@@ -343,7 +333,20 @@
   "todoTitle": "待办事项",
   "reload": "重新加载",
   "noTodoItems": "暂无待办事项",
-  "abnormalLuggage": "需要处理的异常行李",
+  "selectFlight": "选择航班",
+  "noFlightHistory": "暂无历史航班记录",
+  "loading": "加载中...",
+  "pleaseSelectFlight": "请选择航班",
+  "noUnprocessedLuggage": "该航班暂无未处理行李",
+  "pleaseSelectFlightFirst": "请先选择航班",
+  "selectFlightFromDropdown": "从上方下拉菜单选择一个航班",
+  "unprocessedLuggageCount": "未处理行李数量: {count}",
+  "@unprocessedLuggageCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "abnormalLuggage": "异常行李",
   "luggageNotFound": "未找到行李: {tag}",
   "@luggageNotFound": {
     "placeholders": {
@@ -466,6 +469,40 @@
   "luggageId": "行李ID",
   "enterLuggageId": "请输入行李ID",
   "damageDescription": "破损描述",
+  "damageLocation": "上报位置",
+  "damageReportTime": "上报时间",
+  "image": "图片",
+  "operation": "操作",
+  "goodMorning": "早上好，{username}",
+  "@goodMorning": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "groundStaff": "地勤行李员 · {airport}",
+  "@groundStaff": {
+    "placeholders": {
+      "airport": {"type": "String"}
+    }
+  },
+  "t3Terminal": "T3航站楼",
+  "scanRegister": "扫码登记",
+  "manualAdd": "手动添加",
+  "unprocessedLuggage": "未处理行李",
+  "damageReport": "破损报告",
+  "luggageSearch": "行李搜索",
+  "luggageMap": "行李地图",
+  "contactPassenger": "联系旅客",
+  "evidenceManagement": "证据管理",
+  "recentProcessing": "最近处理",
+  "noProcessingRecord": "暂无处理记录",
+  "unknownLocation": "未知地点",
+  "overweight": "超重+{weight}kg",
+  "@overweight": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
   "enterDamageDesc": "请描述行李破损情况",
   "locationCoords": "位置: {lat}, {lng}",
   "@locationCoords": {
@@ -481,6 +518,7 @@
   "statusCheckIn": "已办理托运",
   "statusInTransit": "运输中",
   "statusArrived": "已到达",
+  "statusReceived": "已接收",
   "statusDelivered": "已交付",
   "statusDamaged": "已损坏",
   "statusLost": "已丢失",
@@ -669,7 +707,6 @@
   "passengerLabel": "乘客",
   "weightLabel": "重量",
   "confirmArrived": "确认到达",
-  "handleOverweight": "超重处理",
   "contactPassenger": "联系旅客",
 
   "flight": "航班",
@@ -776,5 +813,130 @@
       "total": {"type": "int"}
     }
   },
-  "unprocessed": "待处理"
+  "unprocessed": "待处理",
+
+  "strandedLuggage": "滞留行李",
+  "noStrandedLuggage": "暂无滞留行李",
+  "allLuggageProcessed": "所有行李已处理",
+  "strandedDays": "{days}天滞留",
+  "@strandedDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "getPhoneFailedRetry": "获取电话失败，请重试",
+  "getPhoneFailed": "获取电话失败",
+  "cannotMakeCall": "无法拨打电话",
+  "cannotSendSms": "无法发送短信",
+
+  "fromAlbum": "从相册选择",
+  "manualInput": "手动输入",
+  "inputLuggageNo": "手动输入行李号",
+  "enterLuggageNoHint": "请输入行李号或标签号",
+  "luggageRegister": "行李登记",
+  "confirmClaimLuggage": "确认认领",
+  "takePhotoEvidence": "拍照取证",
+  "gpsUpload": "GPS上传",
+  "enterLuggageRegister": "是否进入行李登记页面？",
+  "confirmClaimPrompt": "请先扫描行李二维码",
+  "enterPhotoEvidence": "是否进入拍照取证页面？",
+  "gpsServiceNotEnabled": "GPS定位服务未开启",
+  "currentGps": "当前GPS",
+  "cannotGetGps": "无法获取GPS位置",
+  "gpsFailed": "GPS获取失败",
+  "gpsRefreshed": "GPS已刷新",
+  "selectFromAlbum": "从相册选择图片识别",
+  "gpsWaiting": "GPS: 等待定位...",
+  "operationOptions": "操作选项",
+  "locationUploadFailed": "位置上传失败",
+  "locationUploadFailedButContinue": "位置上传失败，但不影响操作",
+  "damageType": "破损类型",
+  "shellDamage": "外壳破损",
+  "zipperDamage": "拉链损坏",
+  "wheelDamage": "轮子损坏",
+  "handleBreak": "提手断裂",
+  "contentDamage": "内容物损坏",
+  "scanOrInput": "请扫描或输入行李标签号",
+  "noQrCodeInImage": "未在图片中识别到二维码",
+  "imageRecognitionFailed": "图片识别失败: {error}",
+  "@imageRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseFillDamage": "请详细描述破损情况...",
+  "damageWarningHint": "请如实填写破损情况，证据将经哈希验证",
+  "refresh": "刷新",
+  "resignation": "离职申请",
+  "resignationConfirmMsg": "确定要提交离职申请吗？提交后将无法撤回。",
+  "resignationSubmitted": "离职申请已提交",
+  "unableGetUserInfo": "无法获取用户信息，请重新登录",
+  "cannotGetEmployeeInfo": "无法获取员工信息",
+  "loadFlightListFailed": "加载航班列表失败: {error}",
+  "@loadFlightListFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "loadUnprocessedBaggageFailed": "加载未处理行李失败: {error}",
+  "@loadUnprocessedBaggageFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "selectBaggageFirst": "请先选择要标记为丢失的行李",
+  "confirmMark": "确认标记",
+  "confirmMarkLost": "确认标记",
+  "markCountLuggage": "确定要将 {count} 件行李标记为丢失吗？",
+  "@markCountLuggage": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "baggageNo": "行李号",
+  "successMarkCountLuggage": "成功标记 {count} 件行李为丢失",
+  "@successMarkCountLuggage": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "partiallyFailed": "部分失败：成功 {success} 件，失败 {fail} 件",
+  "@partiallyFailed": {
+    "placeholders": {
+      "success": {"type": "int"},
+      "fail": {"type": "int"}
+    }
+  },
+  "failedBaggage": "失败行李",
+  "markLost": "标记丢失",
+  "processing": "处理中...",
+  "reloading": "重新加载...",
+  "noAccount": "还没有账号？",
+  "registerActivate": "注册/激活账号 →",
+  "userDefault": "User",
+  "emailDefault": "user@example.com",
+  "onJobStatus": "在职",
+  "resignationApplication": "离职办理",
+  "inJobStatus": "在职",
+  "enterEmployeeId": "请输入员工工号",
+  "employeeId": "员工工号",
+  "loginPassword": "登录密码",
+  "fillEmployeeInfo": "填写员工信息",
+  "natureOfService": "服务性质",
+  "selectNatureOfService": "请选择服务性质",
+  "setPassword": "设置密码（6-20位）",
+  "enterSetPassword": "请设置登录密码",
+  "confirmPassword": "确认密码",
+  "enterConfirmPassword": "请再次输入密码",
+  "passwordAtLeast6": "密码至少6位",
+  "passwordsNotMatch": "两次密码不一致",
+  "submitRegister": "提交注册",
+  "afterSubmitAwaitReview": "提交后需等待管理员审核激活",
+  "hasAccount": "已有账号？",
+  "loginNow": "立即登录",
+  "airport": "所属机场",
+  "selectAirport": "请选择所属机场",
+  "natureOfServiceOptions": "行李中转员,值机员,安检员,地勤人员,客服人员"
 }

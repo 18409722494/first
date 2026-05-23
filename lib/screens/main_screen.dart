@@ -5,8 +5,20 @@ import 'luggage_list_screen.dart';
 import 'profile_screen.dart';
 import 'todo_screen.dart';
 
-/// 主界面：底部导航 + 四个页面
-/// 基于 UI 设计风格 (Frame282 底部导航)
+/// ============================================================
+/// 主界面 - 应用Tab导航容器
+/// ============================================================
+/// 功能说明：
+/// - 底部导航栏包含4个Tab：首页、行李、待办、我的
+/// - 根据Tab切换显示不同页面
+/// - 待办Tab显示红点badge提示有未处理事项
+///
+/// 页面构成：
+/// - 首页      → HomeScreen
+/// - 行李列表  → LuggageListScreen
+/// - 待办事项  → TodoScreen
+/// - 个人中心  → ProfileScreen
+/// ============================================================
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 

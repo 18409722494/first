@@ -370,7 +370,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '请如实填写破损情况，证据将经哈希验证',
+                        l10n.damageWarningHint,
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.warning.withValues(alpha: 0.9),
@@ -432,7 +432,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
                           Text(
                             _luggageIdController.text.isNotEmpty
                                 ? _luggageIdController.text
-                                : '行李号',
+                                : l10n.luggageTagNoLabel,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -441,7 +441,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '请扫描或输入行李标签号',
+                            l10n.scanOrInput,
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondaryLight,
@@ -458,30 +458,30 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
               // 行李号输入框
               _buildInputField(
                 controller: _luggageIdController,
-                label: '行李标签号',
-                hint: '扫描或手动输入',
+                label: l10n.luggageTagNoLabel,
+                hint: l10n.scanOrInput,
                 icon: Icons.qr_code,
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
 
               // 破损类型选择
-              _buildSectionTitle('破损类型'),
+              _buildSectionTitle(l10n.damageType),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildDamageTypeTag('外壳破损'),
-                  _buildDamageTypeTag('拉链损坏'),
-                  _buildDamageTypeTag('轮子损坏'),
-                  _buildDamageTypeTag('提手断裂'),
-                  _buildDamageTypeTag('内容物损坏'),
+                  _buildDamageTypeTag(l10n.shellDamage, () => _appendDamageType(l10n.shellDamage)),
+                  _buildDamageTypeTag(l10n.zipperDamage, () => _appendDamageType(l10n.zipperDamage)),
+                  _buildDamageTypeTag(l10n.wheelDamage, () => _appendDamageType(l10n.wheelDamage)),
+                  _buildDamageTypeTag(l10n.handleBreak, () => _appendDamageType(l10n.handleBreak)),
+                  _buildDamageTypeTag(l10n.contentDamage, () => _appendDamageType(l10n.contentDamage)),
                 ],
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
 
               // 破损描述输入框
-              _buildSectionTitle('破损描述'),
+              _buildSectionTitle(l10n.damageDescription),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
               Container(
                 decoration: BoxDecoration(
@@ -497,7 +497,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
                     fontSize: 14,
                   ),
                   decoration: InputDecoration(
-                    hintText: '请详细描述破损情况...',
+                    hintText: l10n.pleaseFillDamage,
                     hintStyle: const TextStyle(color: AppColors.textHintLight),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.all(16),
@@ -609,26 +609,43 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     );
   }
 
-  Widget _buildDamageTypeTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textSecondaryLight,
+  Widget _buildDamageTypeTag(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondaryLight,
+          ),
         ),
       ),
     );
   }
 
+  void _appendDamageType(String type) {
+    final current = _descriptionController.text.trim();
+    if (current.isEmpty) {
+      _descriptionController.text = type;
+    } else {
+      _descriptionController.text = '$current，$type';
+    }
+    _descriptionController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _descriptionController.text.length),
+    );
+  }
+
   Widget _buildLocationCard() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
       decoration: BoxDecoration(
@@ -647,14 +664,16 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
           Expanded(
             child: _position != null
                 ? Text(
-                    'GPS: ${_position!.latitude.toStringAsFixed(6)}°N, ${_position!.longitude.toStringAsFixed(6)}°E',
+                    l10n.locationCoords(
+                        _position!.latitude.toStringAsFixed(6),
+                        _position!.longitude.toStringAsFixed(6)),
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textPrimaryLight,
                     ),
                   )
                 : Text(
-                    'GPS: 等待获取位置...',
+                    l10n.noLocationYet,
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondaryLight,
@@ -664,7 +683,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
           TextButton(
             onPressed: _isLoading ? null : () => _refreshLocation(showFailureSnack: true),
             child: Text(
-              '刷新',
+              l10n.refresh,
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.primary,

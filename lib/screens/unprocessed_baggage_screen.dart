@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../services/baggage_api_service.dart';
 import '../services/luggage_service.dart';
@@ -34,11 +35,12 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
   }
 
   Future<void> _loadFlightNumbers() async {
+    final l10n = AppLocalizations.of(context)!;
     final authProvider = context.read<AuthProvider>();
     final employeeId = authProvider.user?.employeeId;
     if (employeeId == null || employeeId.isEmpty) {
       setState(() {
-        _error = '无法获取员工信息';
+        _error = l10n.cannotGetEmployeeInfo;
       });
       return;
     }
@@ -63,7 +65,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = '加载航班列表失败: $e';
+        _error = l10n.loadFlightListFailed(e.toString());
         _isLoadingFlights = false;
       });
     }
@@ -72,6 +74,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
   Future<void> _loadUnprocessedBaggage() async {
     if (_selectedFlight == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final authProvider = context.read<AuthProvider>();
     final employeeId = authProvider.user?.employeeId;
     if (employeeId == null || employeeId.isEmpty) return;
@@ -99,16 +102,17 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = '加载未处理行李失败: $e';
+        _error = l10n.loadUnprocessedBaggageFailed(e.toString());
         _isLoadingBaggage = false;
       });
     }
   }
 
   Future<void> _markSelectedAsLost() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedBaggage.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先选择要标记为丢失的行李')),
+        SnackBar(content: Text(l10n.selectBaggageToMark)),
       );
       return;
     }
@@ -116,21 +120,21 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认标记'),
+        title: Text(l10n.confirmMark),
         content: Text(
-          '确定要将 ${_selectedBaggage.length} 件行李标记为丢失吗？\n\n行李号：\n${_selectedBaggage.join('\n')}',
+          l10n.markCountLuggage(_selectedBaggage.length),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.error,
             ),
-            child: const Text('确认标记'),
+            child: Text(l10n.confirmMarkLost),
           ),
         ],
       ),
@@ -168,7 +172,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
       if (failCount == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('成功标记 $successCount 件行李为丢失'),
+            content: Text(l10n.markLostSuccess(successCount)),
             backgroundColor: Colors.green,
           ),
         );
@@ -177,7 +181,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '部分失败：成功 $successCount 件，失败 $failCount 件\n失败行李：${failedItems.join(", ")}',
+              l10n.markLostFailed(successCount, failCount),
             ),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 4),
@@ -194,9 +198,10 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('未处理行李'),
+        title: Text(l10n.unprocessedBaggage),
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
       ),
@@ -217,6 +222,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
   }
 
   Widget _buildFlightSelector() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
       color: Colors.white,
@@ -224,7 +230,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '选择航班',
+            l10n.selectFlight,
             style: TextStyle(
               fontSize: Responsive.fontSize(context, 14),
               fontWeight: FontWeight.w600,
@@ -247,7 +253,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
                   SizedBox(width: Responsive.spacing(context, 8)),
                   Expanded(
                     child: Text(
-                      '暂无可用航班',
+                      l10n.noAvailableFlights,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -265,7 +271,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   isExpanded: true,
-                  hint: const Text('请选择航班'),
+                  hint: Text(l10n.selectFlight),
                   value: _selectedFlight,
                   items: _flightNumbers.map((flight) {
                     return DropdownMenuItem<String>(
@@ -288,6 +294,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
   }
 
   Widget _buildBaggageList() {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedFlight == null) {
       return Center(
         child: Column(
@@ -296,7 +303,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
             Icon(Icons.flight_outlined, size: 64, color: Colors.grey[300]),
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             Text(
-              '请先选择航班',
+              l10n.pleaseSelectFlightFirst,
               style: TextStyle(color: Colors.grey[500], fontSize: 15),
             ),
           ],
@@ -319,7 +326,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             ElevatedButton(
               onPressed: _loadUnprocessedBaggage,
-              child: const Text('重新加载'),
+              child: Text(l10n.reload),
             ),
           ],
         ),
@@ -334,7 +341,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
             Icon(Icons.check_circle_outline, size: 64, color: Colors.green[300]),
             SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
             Text(
-              '该航班暂无未处理行李',
+              l10n.noUnprocessedBaggage,
               style: TextStyle(color: Colors.grey[500], fontSize: 15),
             ),
           ],
@@ -419,14 +426,14 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
                       ],
                     ),
                   ),
-                  Container(
+                    Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '待处理',
+                      l10n.unprocessed,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -444,6 +451,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
   }
 
   Widget _buildBottomBar() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
       decoration: BoxDecoration(
@@ -465,7 +473,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '已选择 ${_selectedBaggage.length} 件',
+                    l10n.selectedCount(_selectedBaggage.length),
                     style: TextStyle(
                       fontSize: Responsive.fontSize(context, 14),
                       fontWeight: FontWeight.w600,
@@ -473,7 +481,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
                     ),
                   ),
                   Text(
-                    '共 ${_unprocessedBaggage.length} 件未处理行李',
+                    l10n.totalUnprocessed(_unprocessedBaggage.length),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -502,7 +510,7 @@ class _UnprocessedBaggageScreenState extends State<UnprocessedBaggageScreen> {
                       ),
                     )
                   : const Icon(Icons.warning_amber),
-              label: Text(_isSubmitting ? '处理中...' : '标记丢失'),
+              label: Text(_isSubmitting ? l10n.processing : l10n.markLost),
             ),
           ],
         ),

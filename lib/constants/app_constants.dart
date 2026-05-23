@@ -53,15 +53,6 @@ class AppConstants {
   static String get tiandituAnnotationTileUrl =>
       'https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=$tiandituApiKey';
 
-  // 行李超重规则
-  static const double freeBaggageWeightKg = 20.0;
-  static const double overweightFeePerKg = 100.0;
-
-  static double calculateOverweightFee(double actualWeightKg) {
-    final overweight = actualWeightKg - freeBaggageWeightKg;
-    return overweight > 0 ? overweight * overweightFeePerKg : 0.0;
-  }
-
   // 行李状态超时规则
   /// 无人认领判定时间（小时）
   static const int unclaimedHoursThreshold = 24;

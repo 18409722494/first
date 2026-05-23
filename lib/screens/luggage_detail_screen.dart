@@ -15,6 +15,7 @@ import '../components/status_badge.dart';
 import '../components/empty_state.dart';
 import '../utils/responsive.dart';
 import '../utils/luggage_utils.dart';
+import '../l10n/app_localizations.dart';
 
 /// 行李详情页面
 class LuggageDetailScreen extends StatefulWidget {
@@ -201,13 +202,14 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   Widget build(BuildContext context) {
     final payload = widget.qrPayload;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('行李信息'),
+        title: Text(l10n.luggageDetail),
         actions: [
           IconButton(
-            tooltip: '刷新',
+            tooltip: l10n.reload,
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -219,19 +221,19 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
               length: 3,
               child: Column(
                 children: [
-                  const TabBar(
+                  TabBar(
                     tabs: [
-                      Tab(text: '基本信息'),
-                      Tab(text: '破损记录'),
-                      Tab(text: '操作日志'),
+                      Tab(text: l10n.basicInfoTab),
+                      Tab(text: l10n.damageTab),
+                      Tab(text: l10n.logTab),
                     ],
                   ),
                   Expanded(
                     child: TabBarView(
                       children: [
-                        _buildBasicTab(context, payload, theme),
-                        _buildDamageTab(context, theme),
-                        _buildLogsTab(context, theme),
+                        _buildBasicTab(context, payload, theme, l10n),
+                        _buildDamageTab(context, theme, l10n),
+                        _buildLogsTab(context, theme, l10n),
                       ],
                     ),
                   ),
@@ -244,7 +246,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   // ─────────────────────────────────────────────
   // 基本信息
   // ─────────────────────────────────────────────
-  Widget _buildBasicTab(BuildContext context, QrPayload payload, ThemeData theme) {
+  Widget _buildBasicTab(BuildContext context, QrPayload payload, ThemeData theme, AppLocalizations l10n) {
     final bag = _luggage;
 
     return ListView(
@@ -278,12 +280,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           ),
 
         // 行李基础信息
-        _buildLuggageCard(context, bag, theme),
+        _buildLuggageCard(context, bag, theme, l10n),
       ],
     );
   }
 
-  Widget _buildLuggageCard(BuildContext context, Luggage bag, ThemeData theme) {
+  Widget _buildLuggageCard(BuildContext context, Luggage bag, ThemeData theme, AppLocalizations l10n) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -306,41 +308,41 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
                   child: Icon(Icons.luggage, color: AppColors.primary, size: Responsive.iconSize(context, 18)),
                 ),
                 SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-                Text('行李详情', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                Text(l10n.luggageDetail, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
               ],
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
             const Divider(height: 1),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            _kv('行李号', bag.tagNumber.isNotEmpty ? bag.tagNumber : '-'),
-            _kv('航班', bag.flightNumber.isNotEmpty ? bag.flightNumber : '-'),
-            _kv('旅客', bag.passengerName.isNotEmpty ? bag.passengerName : '-'),
-            _kv('重量', bag.weight > 0 ? '${bag.weight} kg' : '-'),
-            _kv('状态', '', status: bag.status),
-            _kv('当前位置', bag.destination.isNotEmpty
+            _kv(l10n.tagNumber, bag.tagNumber.isNotEmpty ? bag.tagNumber : '-'),
+            _kv(l10n.flightNo, bag.flightNumber.isNotEmpty ? bag.flightNumber : '-'),
+            _kv(l10n.passengerName, bag.passengerName.isNotEmpty ? bag.passengerName : '-'),
+            _kv(l10n.weight, bag.weight > 0 ? l10n.weightKg(bag.weight.toString()) : '-'),
+            _kv(l10n.status, '', status: bag.status),
+            _kv(l10n.destination, bag.destination.isNotEmpty
                 ? LuggageUtils.cleanLocationString(bag.destination)
                 : '-'),
-            _kv('联系手机', bag.contact != null && bag.contact!.isNotEmpty ? bag.contact! : '-'),
-            _kv('最后更新', _formatDateTime(bag.lastUpdated)),
-            _kv('备注', bag.notes.isNotEmpty ? bag.notes : '-'),
+            _kv(l10n.contactPhone, bag.contact != null && bag.contact!.isNotEmpty ? bag.contact! : '-'),
+            _kv(l10n.lastUpdated, _formatDateTime(bag.lastUpdated)),
+            _kv(l10n.note, bag.notes.isNotEmpty ? bag.notes : '-'),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
 
             // 可编辑区
             AppTextField(
               controller: _statusCtrl,
-              label: '状态 status',
+              label: l10n.status,
               prefixIcon: Icons.flag_outlined,
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             AppTextField(
               controller: _locationCtrl,
-              label: '位置 location',
+              label: l10n.location,
               prefixIcon: Icons.location_on_outlined,
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             AppTextField(
               controller: _noteCtrl,
-              label: '备注 note',
+              label: l10n.note,
               prefixIcon: Icons.note_outlined,
               maxLines: 2,
             ),
@@ -349,7 +351,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
               children: [
                 Expanded(
                   child: AppButton(
-                    text: '更新(PUT)',
+                    text: l10n.updateStatus,
                     type: AppButtonType.primary,
                     onPressed: _loading ? null : _update,
                     fullWidth: true,
@@ -358,7 +360,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
                 SizedBox(width: Responsive.spacing(context, AppSpacing.xs)),
                 Expanded(
                   child: AppButton(
-                    text: '更新位置',
+                    text: l10n.updateLocation,
                     icon: Icons.location_on,
                     type: AppButtonType.outline,
                     onPressed: _loading ? null : _updateLocationToBackend,
@@ -376,15 +378,14 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   // ─────────────────────────────────────────────
   // 破损记录
   // ─────────────────────────────────────────────
-  Widget _buildDamageTab(BuildContext context, ThemeData theme) {
+  Widget _buildDamageTab(BuildContext context, ThemeData theme, AppLocalizations l10n) {
     final records = _detail?.abnormalRecords ?? [];
 
     if (records.isEmpty) {
       return Center(
         child: EmptyState(
           icon: Icons.broken_image_outlined,
-          title: '暂无破损记录',
-          subtitle: '来自后端 GET /abnormal-baggage/all',
+          title: l10n.noDamageRecord,
         ),
       );
     }
@@ -394,12 +395,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       itemCount: records.length,
       itemBuilder: (context, index) {
         final r = records[index];
-        return _buildDamageCard(context, r, theme);
+        return _buildDamageCard(context, r, theme, l10n);
       },
     );
   }
 
-  Widget _buildDamageCard(BuildContext context, AbnormalBaggage r, ThemeData theme) {
+  Widget _buildDamageCard(BuildContext context, AbnormalBaggage r, ThemeData theme, AppLocalizations l10n) {
     return Card(
       margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.sm)),
       elevation: 0,
@@ -429,11 +430,10 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
               ],
             ),
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            _kv('破损描述', r.damageDescription),
-            _kv('上报位置', LuggageUtils.cleanLocationString(r.location)),
-            _kv('行李哈希', r.baggageHash.isNotEmpty ? r.baggageHash : '-'),
-            _kv('图片', r.imageUrl.isNotEmpty ? r.imageUrl : '-'),
-            _kv('上报时间', r.formattedDate),
+            _kv(l10n.damageDescription, r.damageDescription),
+            _kv(l10n.damageLocation, LuggageUtils.cleanLocationString(r.location)),
+            _kv(l10n.image, r.imageUrl.isNotEmpty ? r.imageUrl : '-'),
+            _kv(l10n.damageReportTime, r.formattedDate),
           ],
         ),
       ),
@@ -443,15 +443,17 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   // ─────────────────────────────────────────────
   // 操作日志
   // ─────────────────────────────────────────────
-  Widget _buildLogsTab(BuildContext context, ThemeData theme) {
+  // 操作日志
+  // ─────────────────────────────────────────────
+  Widget _buildLogsTab(BuildContext context, ThemeData theme, AppLocalizations l10n) {
     final logs = _detail?.operationLogs ?? [];
 
     if (logs.isEmpty) {
       return Center(
         child: EmptyState(
           icon: Icons.history,
-          title: '暂无操作日志',
-          subtitle: '来自后端 GET /baggage/operationLogs',
+          title: l10n.noOperationLog,
+          subtitle: l10n.logSubtitle,
         ),
       );
     }
@@ -461,12 +463,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       itemCount: logs.length,
       itemBuilder: (context, index) {
         final log = logs[index];
-        return _buildLogItem(context, log, theme);
+        return _buildLogItem(context, log, theme, l10n);
       },
     );
   }
 
-  Widget _buildLogItem(BuildContext context, BaggageOperationLog log, ThemeData theme) {
+  Widget _buildLogItem(BuildContext context, BaggageOperationLog log, ThemeData theme, AppLocalizations l10n) {
     return Container(
       margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.xs)),
       padding: EdgeInsets.all(Responsive.spacing(context, AppSpacing.sm)),
@@ -483,7 +485,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
             children: [
               Expanded(
                 child: Text(
-                  log.action.isNotEmpty ? log.action : '操作',
+                  log.action.isNotEmpty ? log.action : l10n.operation,
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: Responsive.fontSize(context, 13)),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -497,7 +499,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
           ),
           SizedBox(height: Responsive.spacing(context, 2)),
           Text(
-            '操作人: ${log.operatorName}',
+            l10n.operator(log.operatorName),
             style: TextStyle(fontSize: Responsive.fontSize(context, 12), color: theme.colorScheme.onSurfaceVariant),
           ),
           if (log.details.isNotEmpty)

@@ -30,6 +30,8 @@ class AuthProvider with ChangeNotifier {
             email: data['email'] ?? '',
             token: data['token'],
             employeeId: data['employeeId'],
+            airportCode: data['airportCode'],
+            airportName: data['airportName'],
           );
         }
       }
@@ -96,6 +98,8 @@ class AuthProvider with ChangeNotifier {
     String username,
     String password,
     String airport,
+    String airportCode,
+    String airportName,
     String natureOfService,
   ) async {
     _isLoading = true;
@@ -113,6 +117,8 @@ class AuthProvider with ChangeNotifier {
           username: name,
           email: '',
           employeeId: empId,
+          airportCode: airportCode,
+          airportName: airportName,
         );
 
         _isLoading = false;

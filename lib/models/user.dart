@@ -19,6 +19,10 @@ class User {
   final String? hireDate;
   /// 在职状态（null 表示在职，'离职办理' 表示已提交离职申请）
   final String? status;
+  /// 机场代码（如 PKX, PEK）
+  final String? airportCode;
+  /// 机场名称
+  final String? airportName;
 
   User({
     required this.id,
@@ -32,6 +36,8 @@ class User {
     this.contact,
     this.hireDate,
     this.status,
+    this.airportCode,
+    this.airportName,
   });
 
   User copyWith({
@@ -46,6 +52,8 @@ class User {
     String? contact,
     String? hireDate,
     String? status,
+    String? airportCode,
+    String? airportName,
   }) {
     return User(
       id: id ?? this.id,
@@ -59,6 +67,8 @@ class User {
       contact: contact ?? this.contact,
       hireDate: hireDate ?? this.hireDate,
       status: status ?? this.status,
+      airportCode: airportCode ?? this.airportCode,
+      airportName: airportName ?? this.airportName,
     );
   }
 
@@ -74,6 +84,8 @@ class User {
       contact: json['contact']?.toString(),
       hireDate: json['hireDate']?.toString(),
       status: json['status']?.toString(),
+      airportCode: json['airportCode']?.toString(),
+      airportName: json['airportName']?.toString(),
     );
   }
 
@@ -89,6 +101,8 @@ class User {
       if (contact != null) 'contact': contact,
       if (hireDate != null) 'hireDate': hireDate,
       if (status != null) 'status': status,
+      if (airportCode != null) 'airportCode': airportCode,
+      if (airportName != null) 'airportName': airportName,
     };
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/abnormal_baggage.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -17,10 +16,6 @@ class EvidenceDetailScreen extends StatefulWidget {
 }
 
 class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
-  bool _isVerifying = false;
-  bool? _isHashMatch;
-  String? _verifyError;
-
   @override
   Widget build(BuildContext context) {
     final padMd = Responsive.padding(context, AppSpacing.md);
@@ -31,13 +26,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('证据详情'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _copyToClipboard(context),
-            tooltip: '复制哈希值',
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -84,8 +72,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                   _buildInfoCard(context, padSm, spSm, spXs),
                   SizedBox(height: spSm),
                   _buildDescriptionCard(context, spSm, spXs),
-                  SizedBox(height: spSm),
-                  _buildHashVerificationCard(context, spSm, spXs),
                 ],
               ),
             ),
@@ -246,16 +232,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
               spSm,
               spXs,
             ),
-            Divider(color: Colors.grey[200], height: spSm * 2),
-            _buildInfoRow(
-              context,
-              Icons.fingerprint,
-              '哈希值',
-              widget.baggage.baggageHash,
-              spSm,
-              spXs,
-              isMonospace: true,
-            ),
           ],
         ),
       ),
@@ -340,153 +316,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHashVerificationCard(BuildContext context, double spSm, double spXs) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
-      child: Padding(
-        padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.verified_outlined,
-                  size: Responsive.iconSize(context, 18),
-                  color: AppColors.primary,
-                ),
-                SizedBox(width: spSm),
-                Text(
-                  '证据哈希验证',
-                  style: TextStyle(
-                    fontSize: Responsive.fontSize(context, 13),
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: spXs),
-            Text(
-              '哈希值用于验证图片证据的完整性和真实性',
-              style: TextStyle(
-                fontSize: Responsive.fontSize(context, 12),
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: spSm),
-            if (_isVerifying)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else if (_isHashMatch != null)
-              Row(
-                children: [
-                  Icon(
-                    _isHashMatch! ? Icons.check_circle : Icons.error,
-                    color: _isHashMatch! ? AppColors.success : AppColors.error,
-                    size: Responsive.iconSize(context, 20),
-                  ),
-                  SizedBox(width: spSm),
-                  Expanded(
-                    child: Text(
-                      _isHashMatch!
-                          ? '哈希验证通过：证据未被篡改'
-                          : '哈希验证失败：证据可能被修改',
-                      style: TextStyle(
-                        fontSize: Responsive.fontSize(context, 13),
-                        color: _isHashMatch! ? AppColors.success : AppColors.error,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            else
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _verifyHash,
-                  icon: const Icon(Icons.verified_user),
-                  label: const Text('验证哈希'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                  ),
-                ),
-              ),
-            if (_verifyError != null) ...[
-              SizedBox(height: spXs),
-              Text(
-                _verifyError!,
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 12),
-                  color: AppColors.error,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _verifyHash() async {
-    if (widget.baggage.imageUrl.isEmpty) {
-      setState(() {
-        _verifyError = '无图片可验证';
-        _isHashMatch = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isVerifying = true;
-      _isHashMatch = null;
-      _verifyError = null;
-    });
-
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-
-      setState(() {
-        _isVerifying = false;
-        _isHashMatch = true;
-        _verifyError = null;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('哈希验证成功，证据未被篡改'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isVerifying = false;
-        _isHashMatch = false;
-        _verifyError = '验证失败：${e.toString()}';
-      });
-    }
-  }
-
-  void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: widget.baggage.baggageHash));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('哈希值已复制到剪贴板'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

@@ -7,7 +7,6 @@ class AbnormalBaggage {
   final String location;
   final String imageUrl;
   final String damageDescription;
-  final String baggageHash;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,7 +17,6 @@ class AbnormalBaggage {
     required this.location,
     required this.imageUrl,
     required this.damageDescription,
-    required this.baggageHash,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -41,7 +39,6 @@ class AbnormalBaggage {
       location: json['location']?.toString() ?? '',
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
       damageDescription: json['damageDescription']?.toString() ?? json['damage_description']?.toString() ?? '',
-      baggageHash: json['baggageHash']?.toString() ?? json['baggage_hash']?.toString() ?? '',
       createdAt: parseTime(json['createdAt']) ?? parseTime(json['created_at']) ?? DateTime.now(),
       updatedAt: parseTime(json['updatedAt']) ?? parseTime(json['updated_at']) ?? DateTime.now(),
     );
@@ -54,7 +51,6 @@ class AbnormalBaggage {
         'location': location,
         'imageUrl': imageUrl,
         'damageDescription': damageDescription,
-        'baggageHash': baggageHash,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };

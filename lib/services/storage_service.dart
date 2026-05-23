@@ -8,6 +8,8 @@ class StorageService {
   static const String _usernameKey = 'username';
   static const String _emailKey = 'email';
   static const String _employeeIdKey = 'employee_id';
+  static const String _airportCodeKey = 'airport_code';
+  static const String _airportNameKey = 'airport_name';
 
   static SharedPreferences? _prefs;
 
@@ -40,6 +42,8 @@ class StorageService {
     required String username,
     required String email,
     String? employeeId,
+    String? airportCode,
+    String? airportName,
   }) async {
     await _p.setString(_userIdKey, userId);
     await _p.setString(_usernameKey, username);
@@ -48,6 +52,16 @@ class StorageService {
       await _p.setString(_employeeIdKey, employeeId);
     } else {
       await _p.remove(_employeeIdKey);
+    }
+    if (airportCode != null && airportCode.isNotEmpty) {
+      await _p.setString(_airportCodeKey, airportCode);
+    } else {
+      await _p.remove(_airportCodeKey);
+    }
+    if (airportName != null && airportName.isNotEmpty) {
+      await _p.setString(_airportNameKey, airportName);
+    } else {
+      await _p.remove(_airportNameKey);
     }
   }
 
@@ -59,6 +73,8 @@ class StorageService {
       'username': _p.getString(_usernameKey),
       'email': _p.getString(_emailKey),
       'employeeId': _p.getString(_employeeIdKey),
+      'airportCode': _p.getString(_airportCodeKey),
+      'airportName': _p.getString(_airportNameKey),
     };
   }
 
@@ -72,6 +88,8 @@ class StorageService {
     await _p.remove(_usernameKey);
     await _p.remove(_emailKey);
     await _p.remove(_employeeIdKey);
+    await _p.remove(_airportCodeKey);
+    await _p.remove(_airportNameKey);
   }
 
   static Future<bool> isLoggedIn() async {

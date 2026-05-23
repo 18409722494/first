@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/luggage_card.dart';
+import '../l10n/app_localizations.dart';
 import '../models/luggage.dart';
 import '../models/qr_payload.dart';
 import '../services/baggage_api_service.dart';
@@ -10,7 +11,17 @@ import '../utils/responsive.dart';
 import 'qr_scan_screen.dart';
 import 'luggage_detail_screen.dart';
 
-/// 搜索行李页面 - 基于 UI 设计
+/// ============================================================
+/// 行李搜索页面
+/// ============================================================
+/// 功能说明：
+/// - 支持按行李号、旅客姓名进行关键词搜索
+/// - 支持按行李状态进行筛选
+/// - 搜索结果以列表形式展示
+/// - 点击行李卡片可跳转到行李详情页
+///
+/// 数据来源：BaggageApiService.getAllBaggageList() + searchBaggage()
+/// ============================================================
 class SearchLuggageScreen extends StatefulWidget {
   const SearchLuggageScreen({super.key});
 
@@ -31,7 +42,13 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
     super.dispose();
   }
 
+  /// 执行搜索
+  /// 逻辑：
+  /// 1. 获取所有行李数据
+  /// 2. 按关键词过滤（行李号、旅客名模糊匹配）
+  /// 3. 按状态筛选（如已选择）
   Future<void> _performSearch() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
     });
@@ -60,7 +77,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('搜索失败：${e.toString()}'),
+            content: Text(l10n.searchFailedCheckNetwork),
             backgroundColor: AppColors.error,
           ),
         );
@@ -74,6 +91,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
     }
   }
 
+  /// 重置搜索条件，清空输入和结果
   void _resetSearch() {
     setState(() {
       _searchController.clear();
@@ -84,6 +102,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
@@ -91,9 +110,9 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
-        title: const Text(
-          '行李搜索',
-          style: TextStyle(
+        title: Text(
+          l10n.luggageSearch,
+          style: const TextStyle(
             color: AppColors.textPrimaryLight,
             fontWeight: FontWeight.w600,
           ),
@@ -107,7 +126,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                 MaterialPageRoute(builder: (_) => const QrScanScreen()),
               );
             },
-            tooltip: '扫描条形码',
+            tooltip: l10n.scanBarcode,
           ),
         ],
       ),
@@ -136,7 +155,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                             color: AppColors.textPrimaryLight,
                           ),
                           decoration: InputDecoration(
-                            hintText: '搜索行李号/旅客',
+                            hintText: l10n.searchPlaceholder,
                             hintStyle: const TextStyle(
                               color: AppColors.textHintLight,
                               fontSize: 14,
@@ -181,8 +200,8 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            '搜索',
+                          child: Text(
+                            l10n.executeSearch,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -201,7 +220,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
                     scrollDirection: Axis.horizontal,
                     children: [
                       _buildFilterChip(
-                        label: '全部',
+                        label: l10n.allStatuses,
                         isSelected: _selectedStatus == null,
                         onTap: () {
                           setState(() => _selectedStatus = null);
@@ -274,6 +293,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -285,7 +305,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '输入行李号或旅客姓名进行搜索',
+            l10n.enterSearchCondition,
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondaryLight,
@@ -293,7 +313,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '也可点击右上角图标扫描行李条码',
+            l10n.scanOrAddLuggage,
             style: TextStyle(
               fontSize: 12,
               color: AppColors.textHintLight,
@@ -333,6 +353,7 @@ class _SearchLuggageScreenState extends State<SearchLuggageScreen> {
     );
   }
 
+  /// 构造行李卡片的QrPayload（用于跳转到详情页）
   QrPayload _buildQrPayload(Luggage luggage) {
     return QrPayload(
       userId: null,

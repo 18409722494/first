@@ -16,12 +16,14 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
+  static const Color grey = Color(0xFF94A3B8);
 
   // ==================== 行李状态色 ====================
   static const Color checkIn = Color(0xFF3B82F6);
   static const Color inTransit = Color(0xFFF59E0B);
   static const Color arrived = Color(0xFF22C55E);
-  static const Color delivered = Color(0xFF06B6D4);
+  static const Color received = Color(0xFF06B6D4);
+  static const Color delivered = Color(0xFFEC4899);
   static const Color damaged = Color(0xFFEF4444);
   static const Color lost = Color(0xFF94A3B8);
 
@@ -29,7 +31,8 @@ class AppColors {
   static const Color checkInBg = Color(0xFF1E3A5F);
   static const Color inTransitBg = Color(0xFF451A03);
   static const Color arrivedBg = Color(0xFF14532D);
-  static const Color deliveredBg = Color(0xFF164E63);
+  static const Color receivedBg = Color(0xFF164E63);
+  static const Color deliveredBg = Color(0xFF500724);
   static const Color damagedBg = Color(0xFF450A0A);
   static const Color lostBg = Color(0xFF1E293B);
 

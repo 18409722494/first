@@ -196,6 +196,7 @@ class FilterChipGroup extends StatelessWidget {
     LuggageStatus.checkIn,
     LuggageStatus.inTransit,
     LuggageStatus.arrived,
+    LuggageStatus.received,
     LuggageStatus.delivered,
     LuggageStatus.damaged,
     LuggageStatus.lost,
@@ -337,6 +338,8 @@ class FilterChipGroup extends StatelessWidget {
         return AppColors.inTransit;
       case LuggageStatus.arrived:
         return AppColors.arrived;
+      case LuggageStatus.received:
+        return AppColors.received;
       case LuggageStatus.delivered:
         return AppColors.delivered;
       case LuggageStatus.damaged:
@@ -354,6 +357,8 @@ class FilterChipGroup extends StatelessWidget {
         return AppColors.inTransitBg;
       case LuggageStatus.arrived:
         return AppColors.arrivedBg;
+      case LuggageStatus.received:
+        return AppColors.receivedBg;
       case LuggageStatus.delivered:
         return AppColors.deliveredBg;
       case LuggageStatus.damaged:

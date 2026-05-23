@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/luggage.dart';
 import '../providers/auth_provider.dart';
 import '../services/baggage_api_service.dart';
 import '../theme/app_colors.dart';
@@ -13,16 +14,42 @@ import 'damage_report_screen.dart';
 import 'evidence_list_screen.dart';
 import 'luggage_map_screen.dart';
 import 'unprocessed_baggage_screen.dart';
+import 'add_luggage_screen.dart';
 
+/// ============================================================
+/// 首页 - 应用主入口页面
+/// ============================================================
+/// 功能说明：
+/// - 展示欢迎信息和用户头像
+/// - 提供快捷操作入口（扫码、手动添加、破损报告等）
+/// - 显示最近处理的行李记录
+///
+/// 数据来源：
+/// - 用户信息：从 AuthProvider 获取
+/// - 行李数据：从 BaggageApiService.getAllBaggageList() 获取
+///
+/// 页面跳转：
+/// - 点击快捷操作 → 跳转到对应功能页面
+/// ============================================================
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+/// ============================================================
 /// 最近处理行李项数据模型
+/// 用于展示在首页"最近处理"区域
+/// ============================================================
 class RecentLuggageItem {
-  final String tagNumber;
-  final String info;
-  final String status;
-  final Color statusColor;
-  final Color statusTextColor;
-  final Color iconBgColor;
-  final bool isOverweight;
+  final String tagNumber;    // 行李标签号
+  final String info;         // 显示信息（航班+当前位置+重量）
+  final String status;       // 状态文字
+  final Color statusColor;   // 状态背景色
+  final Color statusTextColor; // 状态文字颜色
+  final Color iconBgColor;  // 图标背景色
+  final bool isOverweight;   // 是否超重（>23kg）
 
   const RecentLuggageItem({
     required this.tagNumber,
@@ -35,46 +62,62 @@ class RecentLuggageItem {
   });
 }
 
-/// 首页 - 基于 UI 设计文档 (Frame282)
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
+/// ============================================================
+/// 首页状态管理
+/// ============================================================
 class _HomeScreenState extends State<HomeScreen> {
-  List<RecentLuggageItem> _recentItems = [];
-  bool _isLoadingRecent = true;
+  List<RecentLuggageItem> _recentItems = [];  // 最近处理行李列表
+  bool _isLoadingRecent = true;  // 是否正在加载
 
+  /// 页面初始化时加载行李数据
   @override
   void initState() {
     super.initState();
-    _loadRecentLuggage();
+    // 延迟获取 l10n，因为在 initState 中无法获取
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        _loadRecentLuggage(l10n);
+      }
+    });
   }
 
-  Future<void> _loadRecentLuggage() async {
+  /// 加载最近的行李数据
+  /// 逻辑：从所有行李中按更新时间降序排序，取前2条
+  Future<void> _loadRecentLuggage(AppLocalizations l10n) async {
     setState(() => _isLoadingRecent = true);
 
     try {
       // 获取所有行李列表
       final allLuggage = await BaggageApiService.getAllBaggageList();
+      debugPrint('[HomeScreen] 获取到行李数量: ${allLuggage.length}');
+
+      if (allLuggage.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _recentItems = [];
+            _isLoadingRecent = false;
+          });
+        }
+        return;
+      }
 
       // 按 lastUpdated 降序排序，取前2条
       final sorted = List.from(allLuggage)
         ..sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
 
       final recent = sorted.take(2).map((luggage) {
-        // 判断是否超重
+        // 判断是否超重（标准为23kg）
         final isOverweight = luggage.weight > 23.0;
+        // 拼接显示信息
         final info = isOverweight
-            ? '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : "未知地点"} · 超重+${(luggage.weight - 23.0).toStringAsFixed(1)}kg'
-            : '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : "未知地点"} · ${luggage.weight}kg';
+            ? '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation} · ${l10n.overweight((luggage.weight - 23.0).toStringAsFixed(1))}'
+            : '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation} · ${luggage.weight}kg';
 
         return RecentLuggageItem(
           tagNumber: luggage.tagNumber,
           info: info,
-          status: _getStatusText(luggage),
+          status: _getStatusText(luggage, l10n),
           statusColor: _getStatusBgColor(luggage.status),
           statusTextColor: _getStatusTextColor(luggage.status),
           iconBgColor: _getStatusBgColor(luggage.status),
@@ -99,57 +142,61 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _getStatusText(luggage) {
-    switch (luggage.status.name) {
-      case 'checkIn':
-        return '已托运';
-      case 'inTransit':
-        return '运输中';
-      case 'arrived':
-        return '已到达';
-      case 'delivered':
-        return '已交付';
-      case 'damaged':
-        return '已损坏';
-      case 'lost':
-        return '已丢失';
+  /// 将行李状态枚举转换为显示文字
+  /// 映射关系：checkIn→已托运, inTransit→运输中, arrived→已到达...
+  String _getStatusText(Luggage luggage, AppLocalizations l10n) {
+    switch (luggage.status) {
+      case LuggageStatus.checkIn:
+        return l10n.checkIn;
+      case LuggageStatus.inTransit:
+        return l10n.inTransit;
+      case LuggageStatus.arrived:
+        return l10n.arrived;
+      case LuggageStatus.delivered:
+        return l10n.delivered;
+      case LuggageStatus.damaged:
+        return l10n.damaged;
+      case LuggageStatus.lost:
+        return l10n.lost;
       default:
-        return '已托运';
+        return l10n.checkIn;
     }
   }
 
-  Color _getStatusBgColor(status) {
-    switch (status.name) {
-      case 'checkIn':
+  /// 获取状态对应的浅色背景
+  Color _getStatusBgColor(LuggageStatus status) {
+    switch (status) {
+      case LuggageStatus.checkIn:
         return const Color(0xFFDCFCE7);
-      case 'inTransit':
+      case LuggageStatus.inTransit:
         return const Color(0xFFFEF3C7);
-      case 'arrived':
+      case LuggageStatus.arrived:
         return const Color(0xFFDCFCE7);
-      case 'delivered':
+      case LuggageStatus.delivered:
         return const Color(0xFFDCFCE7);
-      case 'damaged':
+      case LuggageStatus.damaged:
         return const Color(0xFFFEF2F2);
-      case 'lost':
+      case LuggageStatus.lost:
         return const Color(0xFFF1F5F9);
       default:
         return const Color(0xFFDCFCE7);
     }
   }
 
-  Color _getStatusTextColor(status) {
-    switch (status.name) {
-      case 'checkIn':
+  /// 获取状态对应的文字颜色
+  Color _getStatusTextColor(LuggageStatus status) {
+    switch (status) {
+      case LuggageStatus.checkIn:
         return const Color(0xFF16A34A);
-      case 'inTransit':
+      case LuggageStatus.inTransit:
         return const Color(0xFFD97706);
-      case 'arrived':
+      case LuggageStatus.arrived:
         return const Color(0xFF16A34A);
-      case 'delivered':
+      case LuggageStatus.delivered:
         return const Color(0xFF16A34A);
-      case 'damaged':
+      case LuggageStatus.damaged:
         return const Color(0xFFDC2626);
-      case 'lost':
+      case LuggageStatus.lost:
         return const Color(0xFF64748B);
       default:
         return const Color(0xFF16A34A);
@@ -197,6 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final username = authProvider.user?.username ?? l10n.employee;
+    final airportName = authProvider.user?.airportName;
 
     return Container(
       width: double.infinity,
@@ -216,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '早上好，$username',
+                  l10n.goodMorning(username),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -226,11 +274,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '国航 · 地勤行李员 · T3航站楼',
+                Text(
+                  l10n.groundStaff(airportName ?? l10n.t3Terminal),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: Colors.white70,
                   ),
@@ -300,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.qr_code_scanner,
-                label: '扫码登记',
+                label: l10n.scanRegister,
                 bgColor: const Color(0xFFEFF6FF),
                 textColor: AppColors.primaryDark,
               ),
@@ -310,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.add_circle_outline,
-                label: '手动添加',
+                label: l10n.manualAdd,
                 bgColor: const Color(0xFFF0FDF4),
                 textColor: const Color(0xFF15803D),
               ),
@@ -320,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.warning_outlined,
-                label: '未处理行李',
+                label: l10n.unprocessedLuggage,
                 bgColor: const Color(0xFFFFFBEB),
                 textColor: const Color(0xFFC2410C),
               ),
@@ -330,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.warning_amber_outlined,
-                label: '破损报告',
+                label: l10n.damageReport,
                 bgColor: const Color(0xFFFEF2F2),
                 textColor: const Color(0xFFB91C1C),
               ),
@@ -345,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.search,
-                label: '行李搜索',
+                label: l10n.luggageSearch,
                 bgColor: const Color(0xFFF5F3FF),
                 textColor: const Color(0xFF6D28D9),
               ),
@@ -355,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.map_outlined,
-                label: '行李地图',
+                label: l10n.luggageMap,
                 bgColor: const Color(0xFFF0F9FF),
                 textColor: const Color(0xFF0369A1),
               ),
@@ -365,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.phone_outlined,
-                label: '联系旅客',
+                label: l10n.contactPassenger,
                 bgColor: const Color(0xFFFFFBEB),
                 textColor: const Color(0xFFB45309),
               ),
@@ -375,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _buildActionButton(
                 context,
                 icon: Icons.shield_outlined,
-                label: '证据管理',
+                label: l10n.evidenceManagement,
                 bgColor: const Color(0xFFF0FDFA),
                 textColor: const Color(0xFF0F766E),
               ),
@@ -423,54 +471,37 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 处理快捷操作点击
+  /// 处理快捷操作点击，根据 label 跳转到对应页面
   void _handleActionTap(BuildContext context, String label) {
-    switch (label) {
-      case '扫码登记':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QrScanScreen()),
-        );
-        break;
-      case '行李搜索':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SearchLuggageScreen()),
-        );
-        break;
-      case '破损报告':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const DamageReportScreen()),
-        );
-        break;
-      case '证据管理':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const EvidenceListScreen()),
-        );
-        break;
-      case '行李地图':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const LuggageMapScreen()),
-        );
-        break;
-      case '未处理行李':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const UnprocessedBaggageScreen()),
-        );
-        break;
-      default:
-        break;
+    // 根据国际化 label 查找对应路由
+    final l10n = AppLocalizations.of(context)!;
+    final routeMap = {
+      l10n.scanRegister: const QrScanScreen(),
+      l10n.luggageSearch: const SearchLuggageScreen(),
+      l10n.damageReport: const DamageReportScreen(),
+      l10n.evidenceManagement: const EvidenceListScreen(),
+      l10n.luggageMap: const LuggageMapScreen(),
+      l10n.unprocessedLuggage: const UnprocessedBaggageScreen(),
+      l10n.manualAdd: const AddLuggageScreen(),
+    };
+
+    final route = routeMap[label];
+    if (route != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => route));
     }
   }
 
   /// 最近处理区
   Widget _buildRecentSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
-              '最近处理',
-              style: TextStyle(
+            Text(
+              l10n.recentProcessing,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimaryLight,
@@ -489,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_isLoadingRecent)
           const SizedBox.shrink()
         else if (_recentItems.isEmpty)
-          _buildEmptyRecentItem(context)
+          _buildEmptyRecentItem(context, l10n)
         else
           ...List.generate(_recentItems.length, (index) {
             final item = _recentItems[index];
@@ -515,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 空状态
-  Widget _buildEmptyRecentItem(BuildContext context) {
+  Widget _buildEmptyRecentItem(BuildContext context, AppLocalizations l10n) {
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -534,7 +565,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 12),
           Text(
-            '暂无处理记录',
+            l10n.noProcessingRecord,
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondaryLight.withValues(alpha: 0.7),

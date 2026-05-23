@@ -13,6 +13,7 @@ import '../components/status_badge.dart';
 import '../components/app_button.dart';
 import '../utils/responsive.dart';
 import '../widgets/location_search_bar.dart';
+import '../l10n/app_localizations.dart';
 import 'luggage_detail_screen.dart';
 
 /// 行李地图页面
@@ -57,17 +58,40 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     super.dispose();
   }
 
+  /// 滞留行李筛选条件：状态不为已接收，且超过24小时无位置更新
+  List<Luggage> _filterStrandedLuggages(List<Luggage> all) {
+    return all.where((l) {
+      // 状态不是已接收
+      if (l.status == LuggageStatus.received) return false;
+      if (l.status == LuggageStatus.delivered) return false;
+      // 有有效的GPS坐标
+      if (l.latitude == null || l.longitude == null) return false;
+      // 超过24小时无更新
+      final hoursSinceUpdate = DateTime.now().difference(l.lastUpdated).inHours;
+      if (hoursSinceUpdate < 24) return false;
+      return true;
+    }).toList();
+  }
+
+  /// 统计滞留行李信息
+  int _totalCount = 0;
+  int _strandedCount = 0;
+
   Future<void> _loadLuggageData() async {
     setState(() => _isLoading = true);
     try {
       final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
-      final list = result.items;
+      final allItems = result.items;
+      final strandedItems = _filterStrandedLuggages(allItems);
+
       setState(() {
-        _luggages = list;
+        _totalCount = allItems.length;
+        _strandedCount = strandedItems.length;
+        _luggages = strandedItems;
         _isLoading = false;
         _error = null;
       });
-      _rebuildMarkerCache(list);
+      _rebuildMarkerCache(strandedItems);
     } catch (e) {
       setState(() {
         _luggages = [];
@@ -209,6 +233,8 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
         return AppColors.inTransit;
       case LuggageStatus.arrived:
         return AppColors.arrived;
+      case LuggageStatus.received:
+        return AppColors.received;
       case LuggageStatus.delivered:
         return AppColors.delivered;
       case LuggageStatus.damaged:
@@ -229,7 +255,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('行李地图'),
+        title: const Text('滞留行李监控'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -276,7 +302,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
           if (_error != null) _buildErrorBanner(),
           _buildSearchBar(),
           _buildZoomControls(),
-          _buildLegend(),
+          _buildStatisticsCard(),
         ],
       ),
     );
@@ -470,7 +496,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildStatisticsCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Positioned(
       bottom: 100,
@@ -488,7 +514,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '行李状态',
+                '滞留行李统计',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: Responsive.fontSize(context, 13),
@@ -496,12 +522,16 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-              _legendItem(AppColors.checkIn, '已办理托运', isDark),
-              _legendItem(AppColors.inTransit, '运输中', isDark),
-              _legendItem(AppColors.arrived, '已到达', isDark),
-              _legendItem(AppColors.delivered, '已交付', isDark),
-              _legendItem(AppColors.damaged, '已损坏', isDark),
-              _legendItem(AppColors.lost, '已丢失', isDark),
+              _statItem(AppColors.warning, '滞留行李', '$_strandedCount 件', isDark),
+              _statItem(AppColors.grey, '行李总数', '$_totalCount 件', isDark),
+              Divider(height: Responsive.spacing(context, AppSpacing.sm + 2), color: isDark ? Colors.white24 : Colors.black12),
+              Text(
+                '筛选条件：状态不为已交付/已接收\n且超过24小时无位置更新',
+                style: TextStyle(
+                  fontSize: Responsive.fontSize(context, 11),
+                  color: isDark ? Colors.white54 : Colors.black54,
+                ),
+              ),
             ],
           ),
         ),
@@ -509,7 +539,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     );
   }
 
-  Widget _legendItem(Color color, String label, bool isDark) {
+  Widget _statItem(Color color, String label, String value, bool isDark) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: Responsive.spacing(context, 2)),
       child: Row(
@@ -529,6 +559,15 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
             style: TextStyle(
               fontSize: Responsive.fontSize(context, 12),
               color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: Responsive.fontSize(context, 12),
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -692,6 +731,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       decoration: BoxDecoration(
@@ -784,7 +824,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                 _infoRow(
                   context,
                   Icons.location_on,
-                  '目的地',
+                  l10n.destination,
                   luggage.destination,
                   isDark,
                 ),

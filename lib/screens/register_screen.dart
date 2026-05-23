@@ -212,6 +212,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _usernameController.text.trim(),
         _passwordController.text,
         _selectedAirport?.fullName ?? '',
+        _selectedAirport?.code ?? '',
+        _selectedAirport?.name ?? '',
         _selectedNatureOfService ?? '',
       );
 
@@ -239,6 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final padMd = Responsive.padding(context, AppSpacing.md);
 
     return Scaffold(
@@ -250,9 +253,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimaryLight, size: 24),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          '注册 / 激活账号',
-          style: TextStyle(
+        title: Text(
+          l10n.registerTitle,
+          style: const TextStyle(
             color: AppColors.textPrimaryLight,
             fontWeight: FontWeight.w600,
           ),
@@ -268,7 +271,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               // 标题
               Text(
-                '填写员工信息',
+                l10n.fillEmployeeInfo,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -280,15 +283,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 用户名
               _buildInputField(
                 controller: _usernameController,
-                label: '用户名',
-                hint: '请输入用户名',
+                label: l10n.username,
+                hint: l10n.enterUsernameLabel,
                 icon: Icons.person_outline,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return '请输入用户名';
+                    return l10n.enterUsernameLabel;
                   }
                   if (value.length < 2) {
-                    return '用户名至少2个字符';
+                    return l10n.usernameMinLength;
                   }
                   return null;
                 },
@@ -298,16 +301,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 员工工号
               _buildInputField(
                 controller: _employeeIdController,
-                label: '员工工号',
-                hint: '请输入员工工号',
+                label: l10n.employeeId,
+                hint: l10n.enterEmployeeId,
                 icon: Icons.badge_outlined,
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '请输入员工工号';
+                    return l10n.enterEmployeeId;
                   }
                   if (value.trim().length < 4) {
-                    return '工号格式不正确';
+                    return l10n.employeeIdFormatWrong;
                   }
                   return null;
                 },
@@ -328,8 +331,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 设置密码
               _buildInputField(
                 controller: _passwordController,
-                label: '设置密码（6-20位）',
-                hint: '请设置登录密码',
+                label: l10n.setPassword,
+                hint: l10n.enterSetPassword,
                 icon: Icons.lock_outline,
                 obscureText: _obscurePassword,
                 suffixIcon: IconButton(
@@ -344,10 +347,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return '请设置密码';
+                    return l10n.enterSetPassword;
                   }
                   if (value.length < 6) {
-                    return '密码至少6位';
+                    return l10n.passwordAtLeast6;
                   }
                   return null;
                 },
@@ -357,8 +360,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 确认密码
               _buildInputField(
                 controller: _confirmPasswordController,
-                label: '确认密码',
-                hint: '请再次输入密码',
+                label: l10n.confirmPassword,
+                hint: l10n.enterConfirmPassword,
                 icon: Icons.lock_outline,
                 obscureText: _obscureConfirmPassword,
                 suffixIcon: IconButton(
@@ -373,10 +376,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return '请确认密码';
+                    return l10n.enterConfirmPassword;
                   }
                   if (value != _passwordController.text) {
-                    return '两次密码不一致';
+                    return l10n.passwordsMismatch;
                   }
                   return null;
                 },
@@ -408,7 +411,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             )
                           : Text(
-                              '提交注册',
+                              l10n.submitRegister,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -423,7 +426,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // 提示
               Center(
                 child: Text(
-                  '提交后需等待管理员审核激活',
+                  l10n.afterSubmitAwaitReview,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondaryLight.withValues(alpha: 0.8),
@@ -437,7 +440,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '已有账号？',
+                    l10n.hasAccount,
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondaryLight,
@@ -445,8 +448,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      '立即登录',
+                    child: Text(
+                      l10n.loginNow,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -465,12 +468,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   /// 机场下拉选择器
   Widget _buildAirportDropdown() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '所属机场',
-          style: TextStyle(
+        Text(
+          l10n.airport,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: AppColors.textSecondaryLight,
@@ -486,20 +490,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           child: DropdownButtonFormField<Airport>(
             initialValue: _selectedAirport,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               prefixIcon: Icon(Icons.flight_outlined, color: AppColors.textSecondaryLight, size: 20),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16),
             ),
-            hint: const Text(
-              '请选择所属机场',
+            hint: Text(
+              l10n.selectAirport,
               style: TextStyle(color: AppColors.textHintLight, fontSize: 15),
             ),
             dropdownColor: Colors.white,
             icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryLight),
             validator: (value) {
               if (value == null) {
-                return '请选择所属机场';
+                return l10n.selectAirport;
               }
               return null;
             },
@@ -526,12 +530,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   /// 服务性质下拉选择器
   Widget _buildNatureOfServiceDropdown() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '服务性质',
-          style: TextStyle(
+        Text(
+          l10n.natureOfService,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: AppColors.textSecondaryLight,
@@ -546,21 +551,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             border: Border.all(color: AppColors.borderLight, width: 1),
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedNatureOfService,
-            decoration: const InputDecoration(
+            initialValue: _selectedNatureOfService,
+            decoration: InputDecoration(
               prefixIcon: Icon(Icons.work_outline, color: AppColors.textSecondaryLight, size: 20),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16),
             ),
-            hint: const Text(
-              '请选择服务性质',
+            hint: Text(
+              l10n.selectNatureOfService,
               style: TextStyle(color: AppColors.textHintLight, fontSize: 15),
             ),
             dropdownColor: Colors.white,
             icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondaryLight),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return '请选择服务性质';
+                return l10n.selectNatureOfService;
               }
               return null;
             },

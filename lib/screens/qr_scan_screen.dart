@@ -12,7 +12,6 @@ import '../theme/app_colors.dart';
 import '../components/scan_result_dialog.dart';
 import 'luggage_detail_screen.dart';
 import 'damage_report_screen.dart';
-import 'overweight_screen.dart';
 import 'contact_passenger_screen.dart';
 import 'add_luggage_screen.dart';
 
@@ -72,10 +71,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
       late Luggage luggage;
       try {
         // 使用新的 ScanResult 方法获取更好的错误提示
-        final scanResult = await LuggageService.getLuggageForScan(payload.luggageId!);
+        final scanResult =
+            await LuggageService.getLuggageForScan(payload.luggageId!);
         if (!scanResult.success) {
           if (!mounted) return;
-          _showErrorSnackBar(scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
+          _showErrorSnackBar(
+              scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
           return;
         }
         luggage = scanResult.luggage!;
@@ -113,9 +114,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
         final serviceEnabled = await LocationService.isLocationServiceEnabled();
 
         if (!serviceEnabled) {
-          debugPrint('[QrScan] GPS服务未开启，使用行李目的地');
-          locationName =
-              luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
+          debugPrint('[QrScan] GPS服务未开启，使用行李当前位置');
+          locationName = luggage.destination.isNotEmpty
+              ? luggage.destination
+              : l10n.unknownLocation;
           // 尝试上传位置信息（即使GPS不可用也记录当前位置）
           try {
             await LuggageService.updateScanLocation(
@@ -123,7 +125,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
               location: locationName,
               employeeId: employeeId,
             );
-            debugPrint('[QrScan] 位置上传成功（使用目的地）');
+            debugPrint('[QrScan] 位置上传成功（使用当前位置）');
           } catch (e) {
             debugPrint('[QrScan] 位置上传失败: $e');
             // 不阻塞流程，只是提示
@@ -157,9 +159,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
               }
             }
           } else {
-            debugPrint('[QrScan] GPS获取失败，使用行李目的地');
-            locationName =
-                luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
+            debugPrint('[QrScan] GPS获取失败，使用行李当前位置');
+            locationName = luggage.destination.isNotEmpty
+                ? luggage.destination
+                : l10n.unknownLocation;
             // 仍然尝试上传
             try {
               await LuggageService.updateScanLocation(
@@ -172,8 +175,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
         }
       } catch (e) {
         debugPrint('[QrScan] GPS/位置更新异常: $e');
-        locationName =
-            luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation;
+        locationName = luggage.destination.isNotEmpty
+            ? luggage.destination
+            : l10n.unknownLocation;
       }
 
       // 停止相机
@@ -194,13 +198,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
       switch (choice) {
         case 'confirm_arrived':
-          await _handleConfirmArrived(luggage, raw, payloadResolved, locationName);
+          await _handleConfirmArrived(
+              luggage, raw, payloadResolved, locationName);
           break;
         case 'report_damage':
           await _handleReportDamage(luggage, raw, payloadResolved);
-          break;
-        case 'overweight':
-          await _handleOverweight(luggage, raw, payloadResolved);
           break;
         case 'contact_passenger':
           await _handleContactPassenger(luggage, raw, payloadResolved);
@@ -211,7 +213,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
         default:
           break;
       }
-
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -248,13 +249,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
         return;
       }
       final employeeId = await StorageService.getEmployeeId();
-      final finalLocation = locationName.isNotEmpty ? locationName : luggage.destination;
+      final finalLocation =
+          locationName.isNotEmpty ? locationName : luggage.destination;
 
       // 更新行李位置和状态到后端
       await LuggageService.updateScanLocation(
         baggageNumber: baggageNumber,
         location: finalLocation,
-        status: BaggageStatusMapper.toBackendLocationStatus(LuggageStatus.arrived),
+        status:
+            BaggageStatusMapper.toBackendLocationStatus(LuggageStatus.arrived),
         employeeId: employeeId,
       );
 
@@ -277,22 +280,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => DamageReportScreen(
-          luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+          luggageId:
+              luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
           luggageDbId: luggage.id,
         ),
-      ),
-    );
-  }
-
-  Future<void> _handleOverweight(
-    Luggage luggage,
-    String raw,
-    QrPayload payload,
-  ) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OverweightScreen(luggage: luggage),
       ),
     );
   }
@@ -384,7 +375,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
                           const SizedBox(height: 16),
                           Text(
                             l10n.processing,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
@@ -409,7 +401,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
         children: [
           Text(
             '09:41',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
           ),
           Text(
             '5G',
@@ -429,7 +422,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
+            icon:
+                const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
             onPressed: () => Navigator.of(context).pop(),
           ),
           Expanded(
@@ -448,9 +442,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
             onPressed: () => _controller.toggleTorch(),
           ),
           IconButton(
-            icon: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 24),
+            icon: const Icon(Icons.photo_library_outlined,
+                color: Colors.white, size: 24),
             onPressed: _pickImageFromGallery,
-            tooltip: '从相册选择',
+            tooltip: l10n.fromAlbum,
           ),
         ],
       ),
@@ -459,6 +454,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 从相册选取图片并识别二维码
   Future<void> _pickImageFromGallery() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -487,12 +483,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
         await _processQrCode(barcode);
       } else {
         if (!mounted) return;
-        _showErrorSnackBar('未在图片中识别到二维码');
+        _showErrorSnackBar(l10n.noQrCodeInImage);
       }
     } catch (e) {
       debugPrint('[QrScan] 从相册选取图片失败: $e');
       if (!mounted) return;
-      _showErrorSnackBar('图片识别失败: $e');
+      _showErrorSnackBar(l10n.imageRecognitionFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -501,7 +497,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
   }
 
   /// 从图片文件中扫描二维码
-  Future<String?> _scanQrFromImageFile(String imagePath, MobileScannerController controller) async {
+  Future<String?> _scanQrFromImageFile(
+      String imagePath, MobileScannerController controller) async {
     try {
       // 使用图片扫描
       final value = await controller.analyzeImage(imagePath);
@@ -539,9 +536,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
     // 获取行李信息
     late Luggage luggage;
     try {
-      final scanResult = await LuggageService.getLuggageForScan(payload.luggageId!);
+      final scanResult =
+          await LuggageService.getLuggageForScan(payload.luggageId!);
       if (!scanResult.success) {
-        _showErrorSnackBar(scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
+        _showErrorSnackBar(
+            scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
         return;
       }
       luggage = scanResult.luggage!;
@@ -562,7 +561,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
       if (serviceEnabled) {
         final position = await LocationService.getCurrentDevicePosition();
         if (position != null) {
-          locationName = '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+          locationName =
+              '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
           try {
             await LuggageService.updateScanLocation(
               baggageNumber: baggageNumber,
@@ -575,7 +575,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
     } catch (_) {}
 
     locationName = locationName.isEmpty
-        ? (luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation)
+        ? (luggage.destination.isNotEmpty
+            ? luggage.destination
+            : l10n.unknownLocation)
         : locationName;
 
     if (!mounted) return;
@@ -603,13 +605,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
     switch (choice) {
       case 'confirm_arrived':
-        await _handleConfirmArrived(luggage, raw, payloadResolved, locationName);
+        await _handleConfirmArrived(
+            luggage, raw, payloadResolved, locationName);
         break;
       case 'report_damage':
         await _handleReportDamage(luggage, raw, payloadResolved);
-        break;
-      case 'overweight':
-        await _handleOverweight(luggage, raw, payloadResolved);
         break;
       case 'contact_passenger':
         await _handleContactPassenger(luggage, raw, payloadResolved);
@@ -660,18 +660,21 @@ class _QrScanScreenState extends State<QrScanScreen> {
               color: AppColors.surfaceDark,
               child: Row(
                 children: [
-                  const Icon(Icons.location_on, color: AppColors.textSecondaryDark, size: 18),
+                  const Icon(Icons.location_on,
+                      color: AppColors.textSecondaryDark, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _lastRaw == null
-                          ? 'GPS: 等待定位...'
+                          ? l10n.gpsWaiting
                           : 'GPS: ${_lastRaw!.substring(0, _lastRaw!.length > 20 ? 20 : _lastRaw!.length)}...',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryDark),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textSecondaryDark),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh, color: AppColors.textSecondaryDark, size: 16),
+                    icon: const Icon(Icons.refresh,
+                        color: AppColors.textSecondaryDark, size: 16),
                     onPressed: _refreshGps,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -685,8 +688,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '操作选项',
+                  Text(
+                    l10n.operationOptions,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -712,34 +715,44 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 操作按钮网格
   Widget _buildOperationGrid() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
-        Expanded(child: _buildOperationItem(Icons.luggage_outlined, '行李登记', _handleLuggageRegister)),
+        Expanded(
+            child: _buildOperationItem(
+                Icons.luggage_outlined, l10n.luggageRegister, _handleLuggageRegister)),
         const SizedBox(width: 12),
-        Expanded(child: _buildOperationItem(Icons.check_circle_outline, '确认认领', _handleConfirmClaim)),
+        Expanded(
+            child: _buildOperationItem(
+                Icons.check_circle_outline, l10n.confirmClaimLuggage, _handleConfirmClaim)),
         const SizedBox(width: 12),
-        Expanded(child: _buildOperationItem(Icons.camera_alt_outlined, '拍照取证', _handlePhotoEvidence)),
+        Expanded(
+            child: _buildOperationItem(
+                Icons.camera_alt_outlined, l10n.takePhotoEvidence, _handlePhotoEvidence)),
         const SizedBox(width: 12),
-        Expanded(child: _buildOperationItem(Icons.upload_outlined, 'GPS上传', _handleGpsUpload)),
+        Expanded(
+            child: _buildOperationItem(
+                Icons.upload_outlined, l10n.gpsUpload, _handleGpsUpload)),
       ],
     );
   }
 
   /// 行李登记
   void _handleLuggageRegister() async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('行李登记'),
-        content: const Text('是否进入行李登记页面？'),
+        title: Text(l10n.luggageRegister),
+        content: Text(l10n.enterLuggageRegister),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -754,24 +767,26 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 确认认领 - 需要先扫码
   void _handleConfirmClaim() async {
-    _showTipSnackBar('请先扫描行李二维码');
+    final l10n = AppLocalizations.of(context)!;
+    _showTipSnackBar(l10n.confirmClaimPrompt);
   }
 
   /// 拍照取证
   void _handlePhotoEvidence() async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('拍照取证'),
-        content: const Text('是否进入拍照取证页面？'),
+        title: Text(l10n.takePhotoEvidence),
+        content: Text(l10n.enterPhotoEvidence),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -786,20 +801,22 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// GPS上传
   void _handleGpsUpload() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final serviceEnabled = await LocationService.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showTipSnackBar('GPS定位服务未开启');
+        _showTipSnackBar(l10n.gpsServiceNotEnabled);
         return;
       }
       final position = await LocationService.getCurrentDevicePosition();
       if (position != null) {
-        _showTipSnackBar('当前GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}');
+        _showTipSnackBar(
+            '${l10n.currentGps}: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}');
       } else {
-        _showTipSnackBar('无法获取GPS位置');
+        _showTipSnackBar(l10n.cannotGetGps);
       }
     } catch (e) {
-      _showTipSnackBar('GPS获取失败');
+      _showTipSnackBar(l10n.gpsFailed);
     }
   }
 
@@ -811,23 +828,25 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 刷新GPS位置
   Future<void> _refreshGps() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final serviceEnabled = await LocationService.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showTipSnackBar('GPS定位服务未开启');
+        _showTipSnackBar(l10n.gpsServiceNotEnabled);
         return;
       }
       final position = await LocationService.getCurrentDevicePosition();
       if (position != null) {
         setState(() {
-          _lastRaw = '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+          _lastRaw =
+              '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
         });
-        _showTipSnackBar('GPS已刷新');
+        _showTipSnackBar(l10n.gpsRefreshed);
       } else {
-        _showTipSnackBar('无法获取GPS位置');
+        _showTipSnackBar(l10n.cannotGetGps);
       }
     } catch (e) {
-      _showTipSnackBar('GPS获取失败');
+      _showTipSnackBar(l10n.gpsFailed);
     }
   }
 
@@ -863,6 +882,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 从相册选择按钮
   Widget _buildAlbumSelectButton() {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: _pickImageFromGallery,
       borderRadius: BorderRadius.circular(12),
@@ -873,13 +893,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.borderDark, width: 1),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.photo_library_outlined, color: AppColors.textSecondaryDark, size: 20),
+            Icon(Icons.photo_library_outlined,
+                color: AppColors.textSecondaryDark, size: 20),
             SizedBox(width: 8),
             Text(
-              '从相册选择图片识别',
+              l10n.selectFromAlbum,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -894,6 +915,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   /// 手动输入按钮
   Widget _buildManualInputButton() {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: _showManualInputDialog,
       borderRadius: BorderRadius.circular(12),
@@ -904,37 +926,38 @@ class _QrScanScreenState extends State<QrScanScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.borderDark, width: 1),
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.edit, color: AppColors.textSecondaryDark, size: 20),
-            SizedBox(width: 8),
-            Text(
-              '手动输入行李号',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondaryDark,
-              ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.edit, color: AppColors.textSecondaryDark, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            l10n.manualInput,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondaryDark,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
       ),
     );
   }
 
   /// 手动输入行李号对话框
   void _showManualInputDialog() async {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('手动输入行李号'),
+        title: Text(l10n.inputLuggageNo),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: '请输入行李号或标签号',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.enterLuggageNoHint,
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
           textCapitalization: TextCapitalization.characters,
@@ -942,11 +965,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -972,10 +995,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
       late Luggage luggage;
       try {
         // 使用新的 ScanResult 方法
-        final scanResult = await LuggageService.getLuggageForScan(baggageNumber);
+        final scanResult =
+            await LuggageService.getLuggageForScan(baggageNumber);
         if (!scanResult.success) {
           if (!mounted) return;
-          _showErrorSnackBar(scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
+          _showErrorSnackBar(
+              scanResult.errorMessage ?? l10n.getLuggageFailed('未知错误'));
           return;
         }
         luggage = scanResult.luggage!;
@@ -996,10 +1021,13 @@ class _QrScanScreenState extends State<QrScanScreen> {
         if (serviceEnabled) {
           position = await LocationService.getCurrentDevicePosition();
           if (position != null) {
-            locationName = '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+            locationName =
+                '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
             try {
               await LuggageService.updateScanLocation(
-                baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : baggageNumber,
+                baggageNumber: luggage.tagNumber.isNotEmpty
+                    ? luggage.tagNumber
+                    : baggageNumber,
                 location: locationName,
                 employeeId: employeeId,
               );
@@ -1014,7 +1042,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
       } catch (_) {}
 
       locationName = locationName.isEmpty
-          ? (luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation)
+          ? (luggage.destination.isNotEmpty
+              ? luggage.destination
+              : l10n.unknownLocation)
           : locationName;
 
       if (!mounted) return;
@@ -1030,34 +1060,35 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
       switch (choice) {
         case 'confirm_arrived':
-          await _handleConfirmArrived(luggage, baggageNumber, QrPayload(
-            userId: null,
-            luggageId: luggage.id,
-            role: 'manual',
-            extra: {'tagNo': luggage.tagNumber},
-          ), locationName);
+          await _handleConfirmArrived(
+              luggage,
+              baggageNumber,
+              QrPayload(
+                userId: null,
+                luggageId: luggage.id,
+                role: 'manual',
+                extra: {'tagNo': luggage.tagNumber},
+              ),
+              locationName);
           break;
         case 'report_damage':
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => DamageReportScreen(
-                luggageId: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+                luggageId: luggage.tagNumber.isNotEmpty
+                    ? luggage.tagNumber
+                    : luggage.id,
                 luggageDbId: luggage.id,
               ),
             ),
           );
           break;
-        case 'overweight':
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => OverweightScreen(luggage: luggage)),
-          );
-          break;
         case 'contact_passenger':
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ContactPassengerScreen(luggage: luggage)),
+            MaterialPageRoute(
+                builder: (_) => ContactPassengerScreen(luggage: luggage)),
           );
           break;
         case 'view_detail':
@@ -1124,7 +1155,8 @@ class _ScanOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ScanOverlayPainter oldDelegate) =>
-      oldDelegate.scanTop != scanTop || oldDelegate.scanAreaSize != scanAreaSize;
+      oldDelegate.scanTop != scanTop ||
+      oldDelegate.scanAreaSize != scanAreaSize;
 }
 
 /// 扫描线动画

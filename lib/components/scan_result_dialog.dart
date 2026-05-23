@@ -11,7 +11,6 @@ import 'status_badge.dart';
 /// 在扫码后自动获取GPS并上传位置后弹出，提供快捷操作选项：
 /// - 确认到达（更新状态 → arrived）
 /// - 标记破损（跳转破损报告页）
-/// - 超重处理（跳转超重费用页）
 /// - 联系旅客（跳转联系方式页）
 /// - 查看详情（跳转行李详情页）
 class ScanResultDialog extends StatelessWidget {
@@ -27,7 +26,6 @@ class ScanResultDialog extends StatelessWidget {
   /// 返回值语义：
   /// - 'confirm_arrived'   → 留在扫码页，不额外导航
   /// - 'report_damage'     → 跳转破损报告页
-  /// - 'overweight'        → 跳转超重费用页
   /// - 'contact_passenger' → 跳转联系方式页
   /// - 'view_detail'       → 跳转行李详情页
   /// - null                → 用户按返回/取消，留在扫码页
@@ -219,32 +217,22 @@ class ScanResultDialog extends StatelessWidget {
             children: [
               Expanded(
                 child: _ActionButton(
-                  icon: Icons.scale_outlined,
-                  label: '超重处理',
-                  color: AppColors.warning,
-                  onTap: () => Navigator.of(context).pop<String>('overweight'),
-                ),
-              ),
-              SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
-              Expanded(
-                child: _ActionButton(
                   icon: Icons.phone_outlined,
                   label: '联系旅客',
                   color: AppColors.primary,
                   onTap: () => Navigator.of(context).pop<String>('contact_passenger'),
                 ),
               ),
+              SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.info_outline,
+                  label: '查看详情',
+                  color: AppColors.textSecondary,
+                  onTap: () => Navigator.of(context).pop<String>('view_detail'),
+                ),
+              ),
             ],
-          ),
-          SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-          SizedBox(
-            width: double.infinity,
-            child: _ActionButton(
-              icon: Icons.info_outline,
-              label: '查看详情',
-              color: AppColors.textSecondary,
-              onTap: () => Navigator.of(context).pop<String>('view_detail'),
-            ),
           ),
         ],
       ),

@@ -325,7 +325,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contactUs => '联系我们';
 
   @override
-  String get contactPhone => '400-123-4567';
+  String get contactPhone => '联系手机';
 
   @override
   String get helpSupportNote => '帮助与支持说明';
@@ -366,7 +366,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchLuggageHint => '搜索行李';
 
   @override
-  String get searchPlaceholder => '标签号、航班号、乘客姓名或目的地';
+  String get searchPlaceholder => '标签号、航班号、乘客姓名或当前位置';
 
   @override
   String get scanBarcode => '扫描条形码';
@@ -413,6 +413,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get arrived => '已到达';
+
+  @override
+  String get received => '已接收';
 
   @override
   String get delivered => '已交付';
@@ -472,7 +475,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get unknownLocation => '未知位置';
+  String get unknownLocation => '未知地点';
 
   @override
   String get updateSuccess => '更新成功';
@@ -487,7 +490,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get basicInfo => '基本信息';
 
   @override
+  String get basicInfoTab => '基本信息';
+
+  @override
+  String get damageTab => '破损记录';
+
+  @override
+  String get logTab => '操作日志';
+
+  @override
   String get historyLog => '历史日志';
+
+  @override
+  String get noDamageRecord => '暂无破损记录';
+
+  @override
+  String get noOperationLog => '暂无操作日志';
+
+  @override
+  String get logSubtitle => '来自后端 GET /baggage/operationLogs';
 
   @override
   String get qrCodeResult => '二维码解析结果';
@@ -529,7 +550,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String baggageNo(String no) {
-    return '行李号: $no';
+    return '行李号';
   }
 
   @override
@@ -552,32 +573,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get damageDesc => '破损描述';
-
-  @override
-  String get hashVerification => '证据哈希验证';
-
-  @override
-  String get hashVerificationNote => '哈希值用于验证图片证据的完整性和真实性';
-
-  @override
-  String get hashVerified => '哈希验证通过：证据未被篡改';
-
-  @override
-  String get hashFailed => '哈希验证失败：证据可能被修改';
-
-  @override
-  String get verifyHash => '验证哈希';
-
-  @override
-  String get noImageToVerify => '无图片可验证';
-
-  @override
-  String get hashVerifySuccess => '哈希验证成功，证据未被篡改';
-
-  @override
-  String verifyFailed(String error) {
-    return '验证失败: $error';
-  }
 
   @override
   String get hashCopied => '哈希值已复制到剪贴板';
@@ -641,10 +636,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get invalidWeight => '请输入有效的重量';
 
   @override
-  String get destination => '目的地';
+  String get destination => '当前位置';
 
   @override
-  String get enterDestination => '请输入目的地';
+  String get enterDestination => '请输入当前位置';
 
   @override
   String get luggageStatus => '行李状态';
@@ -683,54 +678,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addLuggage => '添加行李';
 
   @override
+  String get tagNumber => '行李号';
+
+  @override
+  String weightKg(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get lastUpdated => '最后更新';
+
+  @override
+  String get updateStatus => '更新状态';
+
+  @override
+  String get updateLocation => '更新位置';
+
+  @override
   String get processSuccess => '处理成功';
 
   @override
   String processFailed(String error) {
     return '处理失败: $error';
   }
-
-  @override
-  String get overweightTitle => '超重费用/称重';
-
-  @override
-  String get weighingInfo => '称重信息';
-
-  @override
-  String get actualWeight => '行李重量';
-
-  @override
-  String get enterActualWeight => '请输入实际重量';
-
-  @override
-  String get feeInfo => '费用信息';
-
-  @override
-  String get confirmProcess => '确认处理';
-
-  @override
-  String get luggageInfoLabel => '行李信息';
-
-  @override
-  String get tagNo => '标签号';
-
-  @override
-  String get flightNoLabel => '航班号';
-
-  @override
-  String get passenger => '乘客';
-
-  @override
-  String get overweightFee => '超重费用';
-
-  @override
-  String get autoCalc => '自动计算';
-
-  @override
-  String get additionalFee => '需补缴费用';
-
-  @override
-  String get overweightNote => '超重费用将自动计算，确认后将通知旅客补缴。';
 
   @override
   String get passengerContact => '旅客联系/认领';
@@ -787,10 +757,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '发现行李破损时，在扫码结果页面点击「破损登记」按钮，或在行李详情页点击「登记破损」按钮。上传破损照片并填写描述后提交，系统会自动生成破损记录并通知相关人员。';
 
   @override
-  String get overweightGuide =>
-      '当待办事项中出现超重行李提示时，点击该条进入超重处理页面。核对行李重量，确认超重后选择收费方式（现金/电子支付），完成后更新行李状态。';
-
-  @override
   String get contactPassengerGuide =>
       '当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。';
 
@@ -824,7 +790,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noTodoItems => '暂无待办事项';
 
   @override
-  String get abnormalLuggage => '需要处理的异常行李';
+  String get selectFlight => '选择航班';
+
+  @override
+  String get noFlightHistory => '暂无历史航班记录';
+
+  @override
+  String get pleaseSelectFlight => '请选择航班';
+
+  @override
+  String get noUnprocessedLuggage => '该航班暂无未处理行李';
+
+  @override
+  String get pleaseSelectFlightFirst => '请先选择航班';
+
+  @override
+  String get selectFlightFromDropdown => '从上方下拉菜单选择一个航班';
+
+  @override
+  String unprocessedLuggageCount(int count) {
+    return '未处理行李数量: $count';
+  }
+
+  @override
+  String get abnormalLuggage => '异常行李';
 
   @override
   String luggageNotFound(String tag) {
@@ -866,7 +855,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get switchCamera => '切换摄像头';
 
   @override
-  String get processing => '正在处理...';
+  String get processing => '处理中...';
 
   @override
   String get alignQRCode => '对准二维码进行识别';
@@ -1007,6 +996,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get damageDescription => '破损描述';
 
   @override
+  String get damageLocation => '上报位置';
+
+  @override
+  String get damageReportTime => '上报时间';
+
+  @override
+  String get image => '图片';
+
+  @override
+  String get operation => '操作';
+
+  @override
+  String goodMorning(String username) {
+    return '早上好，$username';
+  }
+
+  @override
+  String groundStaff(String airport) {
+    return '地勤行李员 · $airport';
+  }
+
+  @override
+  String get t3Terminal => 'T3航站楼';
+
+  @override
+  String get scanRegister => '扫码登记';
+
+  @override
+  String get manualAdd => '手动添加';
+
+  @override
+  String get unprocessedLuggage => '未处理行李';
+
+  @override
+  String get damageReport => '破损报告';
+
+  @override
+  String get luggageSearch => '行李搜索';
+
+  @override
+  String get contactPassenger => '联系旅客';
+
+  @override
+  String get evidenceManagement => '证据管理';
+
+  @override
+  String get recentProcessing => '最近处理';
+
+  @override
+  String get noProcessingRecord => '暂无处理记录';
+
+  @override
+  String overweight(String weight) {
+    return '超重+${weight}kg';
+  }
+
+  @override
   String get enterDamageDesc => '请描述行李破损情况';
 
   @override
@@ -1031,6 +1077,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statusArrived => '已到达';
+
+  @override
+  String get statusReceived => '已接收';
 
   @override
   String get statusDelivered => '已交付';
@@ -1287,6 +1336,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get baggageNoLabel => '行李号';
 
   @override
+  String get flightNoLabel => '航班号';
+
+  @override
   String get passengerLabel => '乘客';
 
   @override
@@ -1294,12 +1346,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get confirmArrived => '确认到达';
-
-  @override
-  String get handleOverweight => '超重处理';
-
-  @override
-  String get contactPassenger => '联系旅客';
 
   @override
   String get flight => '航班';
@@ -1369,7 +1415,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get passwordMinLength => '密码长度至少6位';
 
   @override
-  String get noAccount => '还没有员工账号？';
+  String get noAccount => '还没有账号？';
 
   @override
   String get goToRegister => '前往员工注册/激活';
@@ -1429,7 +1475,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get register => '注册';
 
   @override
-  String get hasAccount => '已有账户？';
+  String get hasAccount => '已有账号？';
 
   @override
   String get loginNow => '立即登录';
@@ -1477,9 +1523,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unprocessedBaggage => '未处理行李';
 
   @override
-  String get selectFlight => '选择航班';
-
-  @override
   String get noAvailableFlights => '暂无可用航班';
 
   @override
@@ -1516,4 +1559,240 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unprocessed => '待处理';
+
+  @override
+  String get strandedLuggage => '滞留行李';
+
+  @override
+  String get noStrandedLuggage => '暂无滞留行李';
+
+  @override
+  String get allLuggageProcessed => '所有行李已处理';
+
+  @override
+  String strandedDays(int days) {
+    return '$days天滞留';
+  }
+
+  @override
+  String get getPhoneFailedRetry => '获取电话失败，请重试';
+
+  @override
+  String get getPhoneFailed => '获取电话失败';
+
+  @override
+  String get cannotMakeCall => '无法拨打电话';
+
+  @override
+  String get cannotSendSms => '无法发送短信';
+
+  @override
+  String get fromAlbum => '从相册选择';
+
+  @override
+  String get manualInput => '手动输入';
+
+  @override
+  String get inputLuggageNo => '手动输入行李号';
+
+  @override
+  String get enterLuggageNoHint => '请输入行李号或标签号';
+
+  @override
+  String get luggageRegister => '行李登记';
+
+  @override
+  String get confirmClaimLuggage => '确认认领';
+
+  @override
+  String get takePhotoEvidence => '拍照取证';
+
+  @override
+  String get gpsUpload => 'GPS上传';
+
+  @override
+  String get enterLuggageRegister => '是否进入行李登记页面？';
+
+  @override
+  String get confirmClaimPrompt => '请先扫描行李二维码';
+
+  @override
+  String get enterPhotoEvidence => '是否进入拍照取证页面？';
+
+  @override
+  String get gpsServiceNotEnabled => 'GPS定位服务未开启';
+
+  @override
+  String get currentGps => '当前GPS';
+
+  @override
+  String get cannotGetGps => '无法获取GPS位置';
+
+  @override
+  String get gpsFailed => 'GPS获取失败';
+
+  @override
+  String get gpsRefreshed => 'GPS已刷新';
+
+  @override
+  String get selectFromAlbum => '从相册选择图片识别';
+
+  @override
+  String get gpsWaiting => 'GPS: 等待定位...';
+
+  @override
+  String get operationOptions => '操作选项';
+
+  @override
+  String get locationUploadFailed => '位置上传失败';
+
+  @override
+  String get locationUploadFailedButContinue => '位置上传失败，但不影响操作';
+
+  @override
+  String get damageType => '破损类型';
+
+  @override
+  String get shellDamage => '外壳破损';
+
+  @override
+  String get zipperDamage => '拉链损坏';
+
+  @override
+  String get wheelDamage => '轮子损坏';
+
+  @override
+  String get handleBreak => '提手断裂';
+
+  @override
+  String get contentDamage => '内容物损坏';
+
+  @override
+  String get scanOrInput => '请扫描或输入行李标签号';
+
+  @override
+  String get noQrCodeInImage => '未在图片中识别到二维码';
+
+  @override
+  String imageRecognitionFailed(String error) {
+    return '图片识别失败: $error';
+  }
+
+  @override
+  String get pleaseFillDamage => '请详细描述破损情况...';
+
+  @override
+  String get damageWarningHint => '请如实填写破损情况，证据将经哈希验证';
+
+  @override
+  String get resignation => '离职申请';
+
+  @override
+  String get resignationConfirmMsg => '确定要提交离职申请吗？提交后将无法撤回。';
+
+  @override
+  String get resignationSubmitted => '离职申请已提交';
+
+  @override
+  String get unableGetUserInfo => '无法获取用户信息，请重新登录';
+
+  @override
+  String get cannotGetEmployeeInfo => '无法获取员工信息';
+
+  @override
+  String loadFlightListFailed(String error) {
+    return '加载航班列表失败: $error';
+  }
+
+  @override
+  String loadUnprocessedBaggageFailed(String error) {
+    return '加载未处理行李失败: $error';
+  }
+
+  @override
+  String get selectBaggageFirst => '请先选择要标记为丢失的行李';
+
+  @override
+  String get confirmMark => '确认标记';
+
+  @override
+  String markCountLuggage(int count) {
+    return '确定要将 $count 件行李标记为丢失吗？';
+  }
+
+  @override
+  String successMarkCountLuggage(int count) {
+    return '成功标记 $count 件行李为丢失';
+  }
+
+  @override
+  String partiallyFailed(int success, int fail) {
+    return '部分失败：成功 $success 件，失败 $fail 件';
+  }
+
+  @override
+  String get failedBaggage => '失败行李';
+
+  @override
+  String get markLost => '标记丢失';
+
+  @override
+  String get reloading => '重新加载...';
+
+  @override
+  String get registerActivate => '注册/激活账号 →';
+
+  @override
+  String get userDefault => 'User';
+
+  @override
+  String get emailDefault => 'user@example.com';
+
+  @override
+  String get onJobStatus => '在职';
+
+  @override
+  String get resignationApplication => '离职办理';
+
+  @override
+  String get inJobStatus => '在职';
+
+  @override
+  String get loginPassword => '登录密码';
+
+  @override
+  String get fillEmployeeInfo => '填写员工信息';
+
+  @override
+  String get natureOfService => '服务性质';
+
+  @override
+  String get selectNatureOfService => '请选择服务性质';
+
+  @override
+  String get setPassword => '设置密码（6-20位）';
+
+  @override
+  String get enterSetPassword => '请设置登录密码';
+
+  @override
+  String get passwordAtLeast6 => '密码至少6位';
+
+  @override
+  String get passwordsNotMatch => '两次密码不一致';
+
+  @override
+  String get submitRegister => '提交注册';
+
+  @override
+  String get afterSubmitAwaitReview => '提交后需等待管理员审核激活';
+
+  @override
+  String get airport => '所属机场';
+
+  @override
+  String get selectAirport => '请选择所属机场';
+
+  @override
+  String get natureOfServiceOptions => '行李中转员,值机员,安检员,地勤人员,客服人员';
 }

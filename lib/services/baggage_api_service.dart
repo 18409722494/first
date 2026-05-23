@@ -233,7 +233,8 @@ class BaggageApiService {
       // 后端表字段为 baggageStatus；旧字段名 status 作回退
       status: _parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['flightTime'] ?? json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
-      lastUpdated: parseTime(json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      lastUpdated: parseTime(json['baggage_change_time'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      // 优先使用 currentLocation（当前位置），回退到 destination
       destination: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
           json['remark']?.toString() ??
@@ -589,6 +590,45 @@ class BaggageApiService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// 获取行李对应的旅客手机号
+  /// 请求: { baggageNumber: "13DIJO" }
+  /// 响应: { result: "success", data: { contact: "15716316855" } }
+  static Future<String?> getPassengerContact(String baggageNumber) async {
+    try {
+      final body = <String, dynamic>{
+        'baggageNumber': baggageNumber.trim(),
+      };
+
+      debugPrint('[BaggageApiService] POST /baggage/contact: $body');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/baggage/contact'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
+
+      debugPrint('[BaggageApiService] 响应: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final map = jsonDecode(response.body) as Map<String, dynamic>;
+        final result = map['result']?.toString().toLowerCase();
+        if (result == 'success') {
+          final data = map['data'] as Map<String, dynamic>?;
+          return data?['contact']?.toString();
+        } else {
+          debugPrint('[BaggageApiService] getPassengerContact 业务失败: $result');
+          return null;
+        }
+      } else {
+        debugPrint('[BaggageApiService] getPassengerContact HTTP错误: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('[BaggageApiService] getPassengerContact 异常: $e');
+      return null;
     }
   }
 }

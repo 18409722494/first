@@ -139,7 +139,7 @@ class LuggageCard extends StatelessWidget {
         Expanded(
           child: _InfoItem(
             icon: Icons.flight_land,
-            label: '目的地',
+            label: '当前位置',
             value: luggage.destination,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

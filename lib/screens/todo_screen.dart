@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../utils/responsive.dart';
+import '../l10n/app_localizations.dart';
 
 /// 待办事项页面
 class TodoScreen extends StatefulWidget {
@@ -145,7 +146,6 @@ class _TodoScreenState extends State<TodoScreen> {
         baggageNumber: r.baggageNumber,
         damageDescription: r.damageDescription,
         timestamp: r.timestamp,
-        luggageId: r.baggageHash.isEmpty ? null : null,
       )).toList();
     } catch (_) {
       return [];
@@ -170,6 +170,7 @@ class _TodoScreenState extends State<TodoScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
@@ -177,7 +178,7 @@ class _TodoScreenState extends State<TodoScreen> {
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         elevation: 0,
         title: Text(
-          '待办事项',
+          l10n.todoTitle,
           style: TextStyle(
             color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             fontWeight: FontWeight.w600,
@@ -199,7 +200,7 @@ class _TodoScreenState extends State<TodoScreen> {
                     ),
                   )
                 : const Icon(Icons.refresh, color: AppColors.primary),
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -230,6 +231,7 @@ class _TodoScreenState extends State<TodoScreen> {
 
   Widget _buildFlightSelector(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.md)),
@@ -255,7 +257,7 @@ class _TodoScreenState extends State<TodoScreen> {
               ),
               SizedBox(width: Responsive.spacing(context, 8)),
               Text(
-                '选择航班',
+                l10n.selectFlight,
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 14),
                   fontWeight: FontWeight.w600,
@@ -276,7 +278,7 @@ class _TodoScreenState extends State<TodoScreen> {
           if (_selectedFlight != null) ...[
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
             Text(
-              '未处理行李数量: ${_items.length}',
+              l10n.unprocessedLuggageCount(_items.length),
               style: TextStyle(
                 fontSize: Responsive.fontSize(context, 12),
                 color: AppColors.warning,
@@ -290,6 +292,7 @@ class _TodoScreenState extends State<TodoScreen> {
 
   Widget _buildFlightDropdown(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     if (_isLoadingFlights) {
       return Container(
@@ -309,7 +312,7 @@ class _TodoScreenState extends State<TodoScreen> {
             Icon(Icons.hourglass_empty, size: 18, color: AppColors.textHintDark),
             SizedBox(width: Responsive.spacing(context, 8)),
             Text(
-              '加载中...',
+              l10n.loading,
               style: TextStyle(
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
@@ -337,7 +340,7 @@ class _TodoScreenState extends State<TodoScreen> {
             Icon(Icons.info_outline, size: 18, color: AppColors.textHintDark),
             SizedBox(width: Responsive.spacing(context, 8)),
             Text(
-              '暂无历史航班记录',
+              l10n.noFlightHistory,
               style: TextStyle(
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
@@ -366,7 +369,7 @@ class _TodoScreenState extends State<TodoScreen> {
               Icon(Icons.airplanemode_active, size: 18, color: AppColors.primary),
               SizedBox(width: Responsive.spacing(context, 8)),
               Text(
-                '请选择航班',
+                l10n.pleaseSelectFlight,
                 style: TextStyle(
                   color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
                 ),
@@ -401,6 +404,9 @@ class _TodoScreenState extends State<TodoScreen> {
   }
 
   Widget _buildTodoList(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_isLoading && _items.isEmpty && _selectedFlight != null) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -429,7 +435,7 @@ class _TodoScreenState extends State<TodoScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('重新加载'),
+              child: Text(l10n.reload),
             ),
           ],
         ),
@@ -448,7 +454,7 @@ class _TodoScreenState extends State<TodoScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _selectedFlight != null ? '该航班暂无未处理行李' : '请先选择航班',
+              _selectedFlight != null ? l10n.noUnprocessedLuggage : l10n.pleaseSelectFlightFirst,
               style: const TextStyle(
                 fontSize: 15,
                 color: AppColors.textSecondaryLight,
@@ -456,9 +462,9 @@ class _TodoScreenState extends State<TodoScreen> {
             ),
             if (_selectedFlight == null) ...[
               const SizedBox(height: 8),
-              const Text(
-                '从上方下拉菜单选择一个航班',
-                style: TextStyle(
+              Text(
+                l10n.selectFlightFromDropdown,
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textHintLight,
                 ),
@@ -479,12 +485,12 @@ class _TodoScreenState extends State<TodoScreen> {
           // 标题和数量
           Row(
             children: [
-              const Text(
-                '异常行李',
+              Text(
+                l10n.abnormalLuggage,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimaryLight,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(width: 8),

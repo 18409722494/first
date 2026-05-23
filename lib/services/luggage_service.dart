@@ -18,8 +18,10 @@ class ScanResult {
 
   const ScanResult._({required this.success, this.errorMessage, this.luggage});
 
-  factory ScanResult.success(Luggage luggage) => ScanResult._(success: true, luggage: luggage);
-  factory ScanResult.failure(String message) => ScanResult._(success: false, errorMessage: message);
+  factory ScanResult.success(Luggage luggage) =>
+      ScanResult._(success: true, luggage: luggage);
+  factory ScanResult.failure(String message) =>
+      ScanResult._(success: false, errorMessage: message);
 }
 
 /// 行李核心服务
@@ -59,7 +61,8 @@ class LuggageService {
 
   /// 扫码解析出的可能是数据库 id，也可能是行李号 [baggageNumber]，依次尝试解析。
   /// 返回 [ScanResult] 包含成功/失败状态和详细信息
-  static Future<ScanResult> getLuggageForScan(String luggageIdOrBaggageNumber) async {
+  static Future<ScanResult> getLuggageForScan(
+      String luggageIdOrBaggageNumber) async {
     final key = luggageIdOrBaggageNumber.trim();
     if (key.isEmpty) {
       return ScanResult.failure('缺少行李标识');
@@ -97,7 +100,8 @@ class LuggageService {
       debugPrint('[LuggageService] 模糊搜索失败: $e');
     }
 
-    final errorMsg = '未找到行李: $key\n\n可能原因:\n1. 行李尚未录入系统\n2. 行李标签号有误\n3. 网络连接不稳定';
+    final errorMsg =
+        '未找到行李: $key\n\n可能原因:\n1. 行李尚未录入系统\n2. 行李标签号有误\n3. 网络连接不稳定';
     debugPrint('[LuggageService] 所有查询方式均失败: $errorMsg');
     return ScanResult.failure(errorMsg);
   }
@@ -150,7 +154,8 @@ class LuggageService {
   /// 更新行李信息
   /// [luggageId] 行李 ID
   /// [patch] 要更新的字段
-  static Future<Luggage> updateLuggage(String luggageId, Map<String, dynamic> patch) async {
+  static Future<Luggage> updateLuggage(
+      String luggageId, Map<String, dynamic> patch) async {
     // 获取当前行李
     final luggage = await getLuggageById(luggageId);
 
@@ -168,7 +173,8 @@ class LuggageService {
       await BaggageApiService.updateBaggageLocation(
         baggageNumber: updatedLuggage.tagNumber,
         location: updatedLuggage.destination,
-        status: BaggageStatusMapper.toBackendLocationStatus(updatedLuggage.status),
+        status:
+            BaggageStatusMapper.toBackendLocationStatus(updatedLuggage.status),
       );
     } catch (e) {
       debugPrint('[LuggageService] updateLuggage 同步后端失败: $e');
@@ -210,18 +216,11 @@ class LuggageService {
     return BaggageApiService.getTodayStatistics();
   }
 
-  /// 获取需要处理的超重行李列表（重量 > 免费额度）
-  static Future<List<Luggage>> getOverweightLuggage() async {
-    final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
-    return result.items
-        .where((item) => item.weight > AppConstants.freeBaggageWeightKg)
-        .toList();
-  }
-
   /// 获取无人认领行李列表（已到达但超过 [hours] 小时未交付）
   static Future<List<Luggage>> getUnclaimedLuggage({int? hours}) async {
     final thresholdHours = hours ?? AppConstants.unclaimedHoursThreshold;
-    final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
+    final result =
+        await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
     final threshold = DateTime.now().subtract(Duration(hours: thresholdHours));
     return result.items
         .where((item) =>
@@ -246,7 +245,8 @@ class LuggageService {
     String? status,
     String? employeeId,
   }) async {
-    debugPrint('[LuggageService] 更新行李位置: baggageNumber=$baggageNumber, location=$location');
+    debugPrint(
+        '[LuggageService] 更新行李位置: baggageNumber=$baggageNumber, location=$location');
 
     // 如果没有传入 employeeId，从本地存储读取
     String? resolvedEmployeeId = employeeId;
@@ -354,7 +354,8 @@ class LuggageService {
       return false;
     }
     return BaggageApiService.addOperationLog(
-      baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+      baggageNumber:
+          luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
       phone: phone,
       action: action,
       location: location,
@@ -368,7 +369,8 @@ class LuggageService {
   // ─────────────────────────────────────────────
 
   /// 获取指定行李的破损记录（按行李号过滤）
-  static Future<List<AbnormalBaggage>> getAbnormalRecords(String baggageNumber) =>
+  static Future<List<AbnormalBaggage>> getAbnormalRecords(
+          String baggageNumber) =>
       BaggageApiService.getAbnormalRecords(baggageNumber);
 
   // ─────────────────────────────────────────────

@@ -1,17 +1,14 @@
 import 'package:flutter/foundation.dart';
 import '../models/luggage.dart';
 import '../services/evidence_service.dart';
-import '../services/hash_service.dart';
 import '../services/baggage_api_service.dart';
 import '../services/oss_service.dart';
 
 /// 破损报告提交阶段枚举
 enum DamageReportStage {
-  hash,
   ossSignature,
   ossUpload,
   businessApi,
-  verify,
   statusSync,
 }
 
@@ -83,16 +80,12 @@ class DamageReportResult {
   /// 人类可读的阶段名称
   String get stageLabel {
     switch (failedStage) {
-      case DamageReportStage.hash:
-        return '哈希计算';
       case DamageReportStage.ossSignature:
         return 'OSS 签名获取';
       case DamageReportStage.ossUpload:
         return 'OSS 图片上传';
       case DamageReportStage.businessApi:
         return '业务接口提交';
-      case DamageReportStage.verify:
-        return '哈希校验';
       case DamageReportStage.statusSync:
         return '状态同步';
       case null:
@@ -172,10 +165,9 @@ class DamageReportService {
   /// 提交破损报告（带事务性保证）
   ///
   /// 流程:
-  /// 1. 哈希计算
-  /// 2. 图片上传到 OSS
-  /// 3. 业务接口提交破损记录
-  /// 4. 同步行李状态为"已损坏"
+  /// 1. 图片上传到 OSS
+  /// 2. 业务接口提交破损记录
+  /// 3. 同步行李状态为"已损坏"
   ///
   /// 如果状态同步失败，会明确返回 [DamageReportResult.statusSyncCompleted = false]
   /// 调用方应检查此字段并提示用户
@@ -204,26 +196,7 @@ class DamageReportService {
     }
 
     try {
-      // ── 阶段 1：哈希计算 ──────────────────────────────
-      try {
-        final hash = await HashService.calculateDamageEvidenceHash(
-          imageBytes: imageBytes,
-          luggageId: luggageId,
-          timestamp: timestamp,
-          latitude: latitude,
-          longitude: longitude,
-        );
-        addHistory(DamageReportStage.hash, '哈希计算', true, '哈希计算完成: ${hash.substring(0, 16)}...');
-      } catch (e) {
-        addHistory(DamageReportStage.hash, '哈希计算', false, '哈希计算失败: $e');
-        return DamageReportResult.fail(
-          stage: DamageReportStage.hash,
-          exceptionMessage: e.toString(),
-          executionHistory: history,
-        );
-      }
-
-      // ── 阶段 2：图片上传 ──────────────────────────────
+      // ── 阶段 1：图片上传 ──────────────────────────────
       String photoUrl;
       try {
         photoUrl = await OssService.uploadImage(imageBytes);
@@ -248,7 +221,7 @@ class DamageReportService {
         );
       }
 
-      // ── 阶段 3：业务接口提交 ─────────────────────────
+      // ── 阶段 2：业务接口提交 ─────────────────────────
       final tag = luggageId.trim();
       final apiResult = await EvidenceService.uploadAbnormalBaggageDetailed(
         baggageNumber: tag,
@@ -256,13 +229,6 @@ class DamageReportService {
         location: '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}',
         imageUrl: photoUrl,
         damageDescription: damageDescription.trim(),
-        baggageHash: await HashService.calculateDamageEvidenceHash(
-          imageBytes: imageBytes,
-          luggageId: luggageId,
-          timestamp: timestamp,
-          latitude: latitude,
-          longitude: longitude,
-        ),
       );
 
       if (!apiResult.isSuccess) {
@@ -276,37 +242,7 @@ class DamageReportService {
       }
       addHistory(DamageReportStage.businessApi, '业务提交', true, '破损记录已提交');
 
-      // ── 阶段 4：可选二次校验 ─────────────────────────
-      try {
-        final verifyResult = await EvidenceService.verifyEvidenceHash(
-          await HashService.calculateDamageEvidenceHash(
-            imageBytes: imageBytes,
-            luggageId: luggageId,
-            timestamp: timestamp,
-            latitude: latitude,
-            longitude: longitude,
-          ),
-        );
-        if (verifyResult.verified && !verifyResult.matches) {
-          addHistory(DamageReportStage.verify, '哈希校验', false, '校验未通过');
-          return DamageReportResult.fail(
-            stage: DamageReportStage.verify,
-            responseBody: verifyResult.message ?? '哈希校验失败',
-            executionHistory: history,
-          );
-        }
-        addHistory(
-          DamageReportStage.verify,
-          '哈希校验',
-          true,
-          verifyResult.verified && verifyResult.matches ? '校验通过' : '跳过校验',
-        );
-      } catch (e) {
-        // 校验失败不阻断流程，只记录
-        addHistory(DamageReportStage.verify, '哈希校验', true, '校验跳过: $e');
-      }
-
-      // ── 阶段 5：同步行李状态 ─────────────────────────
+      // ── 阶段 3：同步行李状态 ─────────────────────────
       bool statusSyncCompleted = false;
       String? statusSyncError;
       try {
@@ -324,7 +260,6 @@ class DamageReportService {
       } catch (e) {
         statusSyncError = e.toString();
         addHistory(DamageReportStage.statusSync, '状态同步', false, '状态同步失败: $e');
-        // 注意：这里不返回失败，因为破损记录已经成功提交
       }
 
       // 返回结果

@@ -4,6 +4,7 @@ import '../models/luggage.dart';
 import '../theme/app_spacing.dart';
 import '../components/empty_state.dart';
 import '../utils/responsive.dart';
+import '../l10n/app_localizations.dart';
 
 /// 旅客联系/认领页
 /// 显示旅客信息及通话记录
@@ -21,9 +22,10 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('旅客联系/认领'),
+        title: Text(l10n.passengerContact),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
@@ -38,11 +40,11 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('行李信息', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
+                    Text(l10n.luggageInfo, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                    Text('标签号: ${widget.luggage.tagNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                    Text('航班号: ${widget.luggage.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                    Text('目的地: ${widget.luggage.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.luggageTagNoLabel}: ${widget.luggage.tagNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.flightNo}: ${widget.luggage.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.destination}: ${widget.luggage.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ],
                 ),
               ),
@@ -50,7 +52,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
             // 旅客信息
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            Text('旅客信息', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
+            Text(l10n.passengerInfo, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             Card(
               child: Padding(

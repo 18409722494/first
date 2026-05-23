@@ -56,9 +56,7 @@ class LuggageDetailService {
     }
 
     // 3. 完全兜底：仅用扫码数据构造
-    if (luggage == null) {
-      luggage = _buildFromQrOnly(qrPayload, rawQr);
-    }
+    luggage ??= _buildFromQrOnly(qrPayload, rawQr);
 
     // 4. 并发拉取操作日志和破损记录
     final effectiveTagNo = luggage.tagNumber.trim().isNotEmpty

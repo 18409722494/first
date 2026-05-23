@@ -93,11 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             // 工号输入框
                             _buildDarkTextField(
                               controller: _employeeIdController,
-                              hint: '员工工号',
+                              hint: l10n.employeeId,
                               prefixIcon: Icons.badge_outlined,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return '请输入员工工号';
+                                  return l10n.enterEmployeeId;
                                 }
                                 return null;
                               },
@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             // 用户名输入框
                             _buildDarkTextField(
                               controller: _usernameController,
-                              hint: '用户名',
+                              hint: l10n.username,
                               prefixIcon: Icons.person_outline,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             // 密码输入框
                             _buildDarkTextField(
                               controller: _passwordController,
-                              hint: '登录密码',
+                              hint: l10n.password,
                               prefixIcon: Icons.lock_outline,
                               obscureText: true,
                               validator: (value) {
@@ -270,12 +270,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// 底部链接
   Widget _buildBottomLinks() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          '还没有账号？',
-          style: TextStyle(
+        Text(
+          l10n.noAccount,
+          style: const TextStyle(
             fontSize: 13,
             color: AppColors.textSecondaryLight,
           ),
@@ -288,9 +289,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           },
-          child: const Text(
-            '注册/激活账号 →',
-            style: TextStyle(
+          child: Text(
+            l10n.goToRegister,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.primary,

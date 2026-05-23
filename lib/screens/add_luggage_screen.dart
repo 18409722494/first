@@ -11,6 +11,7 @@ import '../components/status_badge.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/responsive.dart';
+import '../l10n/app_localizations.dart';
 
 /// 添加行李页面
 /// 用于手动录入行李信息
@@ -65,10 +66,11 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
   /// 上传图片
   Future<void> _uploadImage() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_images.length >= 3) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('最多只能上传3张照片')),
+        SnackBar(content: Text(l10n.maxPhotosHint)),
       );
       return;
     }
@@ -89,12 +91,12 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('照片上传成功')),
+        SnackBar(content: Text(l10n.photoUploadSuccess)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('上传失败：$e')),
+        SnackBar(content: Text(l10n.uploadFailed(e.toString()))),
       );
     } finally {
       setState(() {
@@ -105,6 +107,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
   /// 提交表单
   Future<void> _submitForm() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -113,16 +116,16 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('提示'),
-          content: const Text('您还没有上传行李照片，这是定责的重要依据。确定要继续吗？'),
+          title: Text(l10n.hint),
+          content: Text(l10n.noPhotoHint),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('继续'),
+              child: Text(l10n.continueAction),
             ),
           ],
         ),
@@ -152,7 +155,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
         checkInTime: DateTime.now(),
         lastUpdated: DateTime.now(),
         destination: _destinationController.text.trim(),
-        notes: '${_notesController.text.trim()} ${_images.isNotEmpty ? '[已上传${_images.length}张照片]' : ''} ${currentUser != null ? '[操作员工：${currentUser.username}]' : ''}',
+        notes: '${_notesController.text.trim()} ${_images.isNotEmpty ? '[已上传${_images.length}张照片]' : ''} ${currentUser != null ? '[${l10n.operatorEmployee}：${currentUser.username}]' : ''}',
         latitude: _latitude,
         longitude: _longitude,
       );
@@ -161,8 +164,8 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('行李信息添加成功！'),
+        SnackBar(
+          content: Text(l10n.addLuggageSuccess),
           backgroundColor: AppColors.success,
         ),
       );
@@ -173,7 +176,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('添加失败：${e.toString()}'),
+          content: Text(l10n.addFailed(e.toString())),
           backgroundColor: AppColors.error,
         ),
       );
@@ -188,9 +191,10 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('添加行李信息'),
+        title: Text(l10n.addLuggageInfo),
       ),
       body: Column(
         children: [
@@ -205,12 +209,12 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     // 行李标签号
                     AppTextField(
                       controller: _tagNumberController,
-                      label: '行李标签号',
-                      hint: '请输入行李标签号',
+                      label: l10n.luggageTagNoLabel,
+                      hint: l10n.enterLuggageTagNo,
                       keyboardType: TextInputType.text,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入行李标签号';
+                          return l10n.enterLuggageTagNo;
                         }
                         return null;
                       },
@@ -220,12 +224,12 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     // 航班号
                     AppTextField(
                       controller: _flightNumberController,
-                      label: '航班号',
-                      hint: '请输入航班号',
+                      label: l10n.flightNo,
+                      hint: l10n.enterFlightNo,
                       keyboardType: TextInputType.text,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入航班号';
+                          return l10n.enterFlightNo;
                         }
                         return null;
                       },
@@ -235,12 +239,12 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     // 乘客姓名
                     AppTextField(
                       controller: _passengerNameController,
-                      label: '乘客姓名',
-                      hint: '请输入乘客姓名',
+                      label: l10n.passengerName,
+                      hint: l10n.enterPassengerName,
                       keyboardType: TextInputType.text,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入乘客姓名';
+                          return l10n.enterPassengerName;
                         }
                         return null;
                       },
@@ -250,30 +254,30 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     // 行李重量
                     AppTextField(
                       controller: _weightController,
-                      label: '行李重量 (kg)',
-                      hint: '请输入行李重量',
+                      label: l10n.luggageWeight,
+                      hint: l10n.enterWeight,
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入行李重量';
+                          return l10n.enterWeight;
                         }
                         if (double.tryParse(value) == null) {
-                          return '请输入有效的重量';
+                          return l10n.invalidWeight;
                         }
                         return null;
                       },
                     ),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
 
-                    // 目的地
+                    // 当前位置
                     AppTextField(
                       controller: _destinationController,
-                      label: '目的地',
-                      hint: '请输入目的地',
+                      label: l10n.destination,
+                      hint: l10n.enterDestination,
                       keyboardType: TextInputType.text,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入目的地';
+                          return l10n.enterDestination;
                         }
                         return null;
                       },
@@ -282,7 +286,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
 
                     // 行李状态
                     Text(
-                      '行李状态',
+                      l10n.luggageStatus,
                       style: TextStyle(
                         fontSize: Responsive.fontSize(context, 12),
                         fontWeight: FontWeight.w500,
@@ -303,8 +307,8 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     // 备注
                     AppTextField(
                       controller: _notesController,
-                      label: '备注',
-                      hint: '请输入备注信息（可选）',
+                      label: l10n.remarkOptional,
+                      hint: l10n.enterRemark,
                       maxLines: 2,
                     ),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
@@ -314,8 +318,8 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                       builder: (context, authProvider, child) {
                         final currentUser = authProvider.user;
                         return AppTextField(
-                          controller: TextEditingController(text: currentUser?.username ?? '未知用户'),
-                          label: '操作员工',
+                          controller: TextEditingController(text: currentUser?.username ?? l10n.unknownUser),
+                          label: l10n.operatorEmployee,
                           readOnly: true,
                         );
                       },
@@ -328,7 +332,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                         Expanded(
                           child: AppTextField(
                             controller: TextEditingController(text: _latitude.toStringAsFixed(6)),
-                            label: '纬度',
+                            label: l10n.latitude,
                             readOnly: true,
                           ),
                         ),
@@ -336,7 +340,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                         Expanded(
                           child: AppTextField(
                             controller: TextEditingController(text: _longitude.toStringAsFixed(6)),
-                            label: '经度',
+                            label: l10n.longitude,
                             readOnly: true,
                           ),
                         ),
@@ -344,7 +348,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                     ),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
                     Text(
-                      '位置信息将自动获取',
+                      l10n.autoLocation,
                       style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: AppColors.textSecondary),
                     ),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
@@ -354,12 +358,12 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '上传照片',
+                          l10n.uploadPhoto,
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: Responsive.fontSize(context, 13)),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '请上传行李外观照片，作为定责依据',
+                          l10n.uploadPhotoHint,
                           style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: AppColors.textSecondary),
                         ),
                         SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
@@ -436,11 +440,11 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
                                       Icon(Icons.add_photo_alternate, size: Responsive.iconSize(context, 28), color: Colors.grey[400]),
                                       SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
                                       Text(
-                                        _isUploading ? '上传中...' : '点击上传照片',
+                                        _isUploading ? l10n.processing : l10n.tapUploadPhoto,
                                         style: TextStyle(color: Colors.grey[600], fontSize: Responsive.fontSize(context, 13)),
                                       ),
                                       Text(
-                                        '最多上传3张',
+                                        l10n.max3Photos,
                                         style: TextStyle(fontSize: Responsive.fontSize(context, 11), color: Colors.grey[500]),
                                       ),
                                     ],
@@ -461,7 +465,7 @@ class _AddLuggageScreenState extends State<AddLuggageScreen> {
           AppBottomBar(
             children: [
               AppButton(
-                text: '添加行李',
+                text: l10n.addLuggage,
                 type: AppButtonType.primary,
                 fullWidth: true,
                 isLoading: _isLoading,

@@ -7,6 +7,7 @@ enum LuggageStatus {
   checkIn('已办理托运'),
   inTransit('运输中'),
   arrived('已到达'),
+  received('已接收'),
   delivered('已交付'),
   damaged('已损坏'),
   lost('已丢失');
@@ -14,39 +15,43 @@ enum LuggageStatus {
   /// 中文默认显示名
   final String displayName;
 
-  /// 状态文字颜色
+  /// 状态文字颜色（与 AppColors 保持一致）
   Color get color {
     switch (this) {
       case LuggageStatus.checkIn:
-        return const Color(0xFF2196F3); // 蓝色
+        return const Color(0xFF3B82F6); // 蓝色
       case LuggageStatus.inTransit:
-        return const Color(0xFF050D22); // 深蓝
+        return const Color(0xFFF59E0B); // 橙色
       case LuggageStatus.arrived:
-        return const Color(0xFF4CAF50); // 绿色
+        return const Color(0xFF22C55E); // 绿色
+      case LuggageStatus.received:
+        return const Color(0xFF06B6D4); // 青色
       case LuggageStatus.delivered:
-        return const Color(0xFF75210E); // 深红
+        return const Color(0xFFEC4899); // 粉色
       case LuggageStatus.damaged:
-        return const Color(0xFFBDBB41); // 黄色
+        return const Color(0xFFEF4444); // 红色
       case LuggageStatus.lost:
-        return const Color(0xFF9E9E9E); // 灰色
+        return const Color(0xFF94A3B8); // 灰色
     }
   }
 
-  /// 状态背景浅色（适合 Chip/Container 背景）
+  /// 状态背景浅色（与 AppColors 保持一致）
   Color get bgColor {
     switch (this) {
       case LuggageStatus.checkIn:
-        return const Color(0xFFE3F2FD);
+        return const Color(0xFFDBEAFE); // 浅蓝
       case LuggageStatus.inTransit:
-        return const Color(0xFFE8EAF6);
+        return const Color(0xFFFEF3C7); // 浅黄
       case LuggageStatus.arrived:
-        return const Color(0xFFE8F5E9);
+        return const Color(0xFFDCFCE7); // 浅绿
+      case LuggageStatus.received:
+        return const Color(0xFFE0F7FA); // 浅青
       case LuggageStatus.delivered:
-        return const Color(0xFFFBE9E7);
+        return const Color(0xFFFCE7F3); // 浅粉
       case LuggageStatus.damaged:
-        return const Color(0xFFFFFDE7);
+        return const Color(0xFFFEE2E2); // 浅红
       case LuggageStatus.lost:
-        return const Color(0xFFF5F5F5);
+        return const Color(0xFFF1F5F9); // 浅灰
     }
   }
 
@@ -66,6 +71,8 @@ class Luggage {
   final LuggageStatus status;
   final DateTime checkInTime;
   final DateTime lastUpdated;
+  /// 当前位置（对应后端 currentLocation 字段）
+  /// 注意：此字段存储的是行李当前位置
   final String destination;
   final String notes;
   final double? latitude;
@@ -115,7 +122,7 @@ class Luggage {
       weight: parseDouble(json['weight'] ?? json['weightKg'] ?? json['weight_kg']) ?? 0.0,
       status: parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
-      lastUpdated: parseTime(json['lastUpdated'] ?? json['last_updated'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      lastUpdated: parseTime(json['baggage_change_time'] ?? json['lastUpdated'] ?? json['last_updated'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
       destination: json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
           json['note']?.toString() ??
@@ -204,6 +211,12 @@ class BaggageStatusMapper {
       case '已到达':
       case '到达':
         return LuggageStatus.arrived;
+      case '已接收':
+      case '接收':
+      case '已领取':
+      case '领取':
+      case 'received':
+        return LuggageStatus.received;
       case '已交付':
       case '交付':
         return LuggageStatus.delivered;
@@ -251,6 +264,8 @@ class BaggageStatusMapper {
         return '运输中';
       case LuggageStatus.arrived:
         return '已达';
+      case LuggageStatus.received:
+        return '已接收';
       case LuggageStatus.delivered:
         return '已交付';
       case LuggageStatus.damaged:
