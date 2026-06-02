@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
@@ -42,19 +41,13 @@ class LuggageService {
     String? ownerId,
     int page = 1,
     int pageSize = 20,
+    bool forceRefresh = false,
   }) async {
-    // 统一使用后端 API 分页
     final result = await BaggageApiService.getAllBaggage(
       page: page,
       pageSize: pageSize,
+      forceRefresh: forceRefresh,
     );
-
-    // 如果需要按 ownerId 过滤（前端本地过滤）
-    if (ownerId != null && result.items.isNotEmpty) {
-      // 由于后端 API 可能不支持 ownerId 过滤，这里做本地过滤
-      // 注意：实际项目中应让后端支持此参数
-      debugPrint('[LuggageService] ownerId 过滤在本地执行，请确认后端是否支持');
-    }
 
     return result;
   }
@@ -68,23 +61,18 @@ class LuggageService {
       return ScanResult.failure('缺少行李标识');
     }
 
-    debugPrint('[LuggageService] 扫码查询行李: $key');
-
     // 方式1: 通过行李号搜索（最常用）
     try {
-      debugPrint('[LuggageService] 方式1: 通过行李号搜索 $key');
       final byTag = await BaggageApiService.getBaggageByNumber(key);
       if (byTag != null) {
-        debugPrint('[LuggageService] 行李号搜索成功: ${byTag.tagNumber}');
         return ScanResult.success(byTag);
       }
     } catch (e) {
-      debugPrint('[LuggageService] 行李号搜索失败: $e');
+      // 忽略错误，继续尝试其他方式
     }
 
     // 方式2: 模糊搜索（从全部行李中查找包含关键词的）
     try {
-      debugPrint('[LuggageService] 方式2: 模糊搜索 $key');
       final result = await BaggageApiService.getAllBaggageList();
       final found = result.firstWhereOrNull(
         (item) =>
@@ -93,16 +81,14 @@ class LuggageService {
             item.passengerName.toLowerCase().contains(key.toLowerCase()),
       );
       if (found != null) {
-        debugPrint('[LuggageService] 模糊搜索成功: ${found.tagNumber}');
         return ScanResult.success(found);
       }
     } catch (e) {
-      debugPrint('[LuggageService] 模糊搜索失败: $e');
+      // 忽略错误
     }
 
     final errorMsg =
         '未找到行李: $key\n\n可能原因:\n1. 行李尚未录入系统\n2. 行李标签号有误\n3. 网络连接不稳定';
-    debugPrint('[LuggageService] 所有查询方式均失败: $errorMsg');
     return ScanResult.failure(errorMsg);
   }
 
@@ -136,17 +122,13 @@ class LuggageService {
   /// 返回添加后的行李对象
   static Future<Luggage> addLuggage(Luggage luggage) async {
     try {
-      // 使用 POST /baggage/location 接口将行李信息上报
       await BaggageApiService.updateBaggageLocation(
         baggageNumber: luggage.tagNumber,
         location: luggage.destination,
         status: BaggageStatusMapper.toBackendLocationStatus(luggage.status),
       );
-      debugPrint('[LuggageService] addLuggage 成功: ${luggage.tagNumber}');
       return luggage;
     } catch (e) {
-      debugPrint('[LuggageService] addLuggage 失败，返回本地对象: $e');
-      // 如果后端调用失败，仍然返回行李对象（前端本地使用）
       return luggage;
     }
   }
@@ -177,7 +159,7 @@ class LuggageService {
             BaggageStatusMapper.toBackendLocationStatus(updatedLuggage.status),
       );
     } catch (e) {
-      debugPrint('[LuggageService] updateLuggage 同步后端失败: $e');
+      // 忽略同步错误
     }
 
     return updatedLuggage;
@@ -216,11 +198,64 @@ class LuggageService {
     return BaggageApiService.getTodayStatistics();
   }
 
-  /// 获取无人认领行李列表（已到达但超过 [hours] 小时未交付）
+  /// 标记行李为滞留状态
+  ///
+  /// 调用 POST /baggage/location 直接修改数据库 status 字段为"滞留"
+  static Future<bool> markAsStranded(Luggage luggage) async {
+    try {
+      final result = await BaggageApiService.updateBaggageLocation(
+        baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
+        location: luggage.destination,
+        status: '滞留',
+      );
+      return result['result'] == 'success' ||
+          result['success'] == true ||
+          result['code']?.toString() == '0' ||
+          !result.containsKey('result');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 获取滞留行李列表
+  ///
+  /// 从后端获取状态为"滞留"的行李，同时对"已到达"超时的行李自动标记为滞留
+  static Future<List<Luggage>> getStrandedLuggage() async {
+    final thresholdHours = AppConstants.strandedHoursThreshold;
+    final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
+    final now = DateTime.now();
+    final threshold = now.subtract(Duration(hours: thresholdHours));
+
+    final List<Luggage> strandedList = [];
+    final List<Luggage> candidates = [];
+
+    for (final item in result.items) {
+      if (item.status == LuggageStatus.stranded) {
+        strandedList.add(item);
+      } else if (item.status == LuggageStatus.arrived &&
+          item.lastUpdated.isBefore(threshold)) {
+        candidates.add(item);
+      }
+    }
+
+    // 对超时未更新的"已到达"行李，自动标记为滞留
+    for (final luggage in candidates) {
+      await markAsStranded(luggage);
+      strandedList.add(luggage.copyWith(
+        status: LuggageStatus.stranded,
+        strandedAt: now,
+      ));
+    }
+
+    return strandedList;
+  }
+
+  /// 获取无人认领行李列表（已到达但超过阈值小时未交付）
+  /// [废弃：请使用 getStrandedLuggage]
+  @Deprecated('请使用 getStrandedLuggage，本方法不再自动标记状态')
   static Future<List<Luggage>> getUnclaimedLuggage({int? hours}) async {
-    final thresholdHours = hours ?? AppConstants.unclaimedHoursThreshold;
-    final result =
-        await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
+    final thresholdHours = hours ?? AppConstants.strandedHoursThreshold;
+    final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
     final threshold = DateTime.now().subtract(Duration(hours: thresholdHours));
     return result.items
         .where((item) =>
@@ -245,42 +280,31 @@ class LuggageService {
     String? status,
     String? employeeId,
   }) async {
-    debugPrint(
-        '[LuggageService] 更新行李位置: baggageNumber=$baggageNumber, location=$location');
-
-    // 如果没有传入 employeeId，从本地存储读取
     String? resolvedEmployeeId = employeeId;
     if (resolvedEmployeeId == null || resolvedEmployeeId.isEmpty) {
       resolvedEmployeeId = await StorageService.getEmployeeId();
-      debugPrint('[LuggageService] 从本地读取员工工号: $resolvedEmployeeId');
     }
 
-    // 尝试更新位置（最多重试2次）
     const maxRetries = 2;
     String? lastError;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        debugPrint('[LuggageService] 位置更新第$attempt次尝试');
         final result = await BaggageApiService.updateBaggageLocation(
           baggageNumber: baggageNumber,
           location: location,
           status: status,
           employeeId: resolvedEmployeeId,
         );
-        debugPrint('[LuggageService] 位置更新成功: $result');
         return result;
       } catch (e) {
         lastError = e.toString();
-        debugPrint('[LuggageService] 位置更新第$attempt次失败: $e');
         if (attempt < maxRetries) {
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
     }
 
-    // 所有重试都失败
-    debugPrint('[LuggageService] 位置更新全部失败，最后错误: $lastError');
     throw Exception('更新行李位置失败: $lastError\n\n请检查:\n1. 网络连接是否正常\n2. 后端服务是否可用');
   }
 
@@ -311,7 +335,6 @@ class LuggageService {
         details: details,
       );
     } catch (e) {
-      debugPrint('[LuggageService] 记录操作日志失败: $e');
       return false;
     }
   }
@@ -350,7 +373,6 @@ class LuggageService {
   }) async {
     final phone = luggage.contact?.trim();
     if (phone == null || phone.isEmpty) {
-      debugPrint('[LuggageService] addScanOperationLog: 行李缺少联系方式，跳过日志记录');
       return false;
     }
     return BaggageApiService.addOperationLog(
@@ -382,9 +404,11 @@ class LuggageService {
   static Future<LuggageDetailInfo> getBaggageDetail({
     required QrPayload qrPayload,
     required String rawQr,
+    bool forceRefresh = false,
   }) =>
       LuggageDetailService.getBaggageDetail(
         qrPayload: qrPayload,
         rawQr: rawQr,
+        forceRefresh: forceRefresh,
       );
 }

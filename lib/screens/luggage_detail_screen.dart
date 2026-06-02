@@ -32,7 +32,8 @@ class LuggageDetailScreen extends StatefulWidget {
   State<LuggageDetailScreen> createState() => _LuggageDetailScreenState();
 }
 
-class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
+class _LuggageDetailScreenState extends State<LuggageDetailScreen>
+    with WidgetsBindingObserver {
   bool _loading = true;
   String? _error;
   LuggageDetailInfo? _detail;
@@ -44,15 +45,24 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusCtrl.dispose();
     _locationCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -65,6 +75,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       final detail = await LuggageService.getBaggageDetail(
         qrPayload: widget.qrPayload,
         rawQr: widget.raw,
+        forceRefresh: true,
       );
       _detail = detail;
       _statusCtrl.text = detail.luggage.status.displayName;
@@ -95,10 +106,11 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
 
   /// 获取当前扫描位置并更新到后端
   Future<void> _updateLocationToBackend() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_locationCtrl.text.trim().isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先输入位置信息')),
+        SnackBar(content: Text(l10n.pleaseEnterLocation)),
       );
       return;
     }
@@ -122,12 +134,12 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('位置与状态已同步到后端')),
+        SnackBar(content: Text(l10n.locationSynced)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('更新位置失败: $e')),
+        SnackBar(content: Text(l10n.updateFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -135,6 +147,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
   }
 
   Future<void> _update() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _loading = true;
       _error = null;
@@ -190,7 +203,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
       _statusCtrl.text = updated.status.displayName;
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('更新成功')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.updateSuccess)));
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -453,7 +466,6 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen> {
         child: EmptyState(
           icon: Icons.history,
           title: l10n.noOperationLog,
-          subtitle: l10n.logSubtitle,
         ),
       );
     }

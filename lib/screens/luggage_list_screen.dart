@@ -191,7 +191,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
             case 'checkIn': return l10n.checkIn;
             case 'inTransit': return l10n.inTransit;
             case 'arrived': return l10n.arrived;
-            case 'delivered': return l10n.delivered;
+            case 'received': return l10n.received;
             case 'damaged': return l10n.damaged;
             case 'lost': return l10n.lost;
             default: return key;

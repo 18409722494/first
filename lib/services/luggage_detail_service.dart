@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
 import '../models/luggage.dart';
@@ -17,9 +16,11 @@ import 'luggage_service.dart';
 class LuggageDetailService {
   /// 优先从 /baggage/all 接口获取行李详情，同时并发拉取操作日志和破损记录。
   /// 全部失败时基于扫码 [qrPayload] 构造基础信息。
+  /// [forceRefresh] 为 true 时跳过缓存直接请求网络
   static Future<LuggageDetailInfo> getBaggageDetail({
     required QrPayload qrPayload,
     required String rawQr,
+    bool forceRefresh = false,
   }) async {
     // 从 QR 中提取行李号
     final tagNo = (qrPayload.extra['tagNo'] ??
@@ -33,16 +34,14 @@ class LuggageDetailService {
     Luggage? luggage;
     if (tagNo.isNotEmpty) {
       try {
-        final found = await BaggageApiService.getBaggageByNumber(tagNo);
+        final found = await BaggageApiService.getBaggageByNumber(tagNo, forceRefresh: forceRefresh);
         if (found != null) {
           luggage = _mergeApiAndQr(found, qrPayload);
         }
       } catch (e) {
-        debugPrint('[LuggageDetailService] 通过行李号获取失败: $e');
+        // 忽略错误
       }
     }
-
-    // 2. 如果行李号查询失败，尝试通过 ID 查询
     if (luggage == null) {
       final luggageId = qrPayload.luggageId?.trim() ?? '';
       if (luggageId.isNotEmpty) {
@@ -50,7 +49,7 @@ class LuggageDetailService {
           final found = await LuggageService.getLuggageById(luggageId);
           luggage = _mergeApiAndQr(found, qrPayload);
         } catch (e) {
-          debugPrint('[LuggageDetailService] 通过ID获取失败: $e');
+          // 忽略错误
         }
       }
     }

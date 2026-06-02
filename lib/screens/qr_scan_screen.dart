@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -107,14 +107,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
           : payload.extra['tagNo']?.toString() ?? payload.luggageId ?? '';
       final employeeId = await StorageService.getEmployeeId();
 
-      debugPrint('[QrScan] 开始获取GPS和上传位置');
-
       try {
         // ① 检查 GPS 服务开关
         final serviceEnabled = await LocationService.isLocationServiceEnabled();
 
         if (!serviceEnabled) {
-          debugPrint('[QrScan] GPS服务未开启，使用行李当前位置');
           locationName = luggage.destination.isNotEmpty
               ? luggage.destination
               : l10n.unknownLocation;
@@ -125,23 +122,18 @@ class _QrScanScreenState extends State<QrScanScreen> {
               location: locationName,
               employeeId: employeeId,
             );
-            debugPrint('[QrScan] 位置上传成功（使用当前位置）');
           } catch (e) {
-            debugPrint('[QrScan] 位置上传失败: $e');
-            // 不阻塞流程，只是提示
             if (mounted) {
-              _showTipSnackBar('位置上传失败: $e');
+              _showTipSnackBar(l10n.locationUploadFailed(e.toString()));
             }
           }
         } else {
           // ② 多级降级定位
-          debugPrint('[QrScan] 开始获取GPS位置');
           position = await LocationService.getCurrentDevicePosition();
 
           if (position != null) {
             locationName =
                 '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
-            debugPrint('[QrScan] GPS获取成功: $locationName');
 
             // ③ 上传到后端
             try {
@@ -150,20 +142,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 location: locationName,
                 employeeId: employeeId,
               );
-              debugPrint('[QrScan] 位置上传成功');
             } catch (e) {
-              debugPrint('[QrScan] 位置上传失败: $e');
-              // 位置上传失败不影响后续操作
               if (mounted) {
-                _showTipSnackBar('位置上传失败，但不影响操作');
+                _showTipSnackBar(l10n.locationUploadFailedButContinue);
               }
             }
           } else {
-            debugPrint('[QrScan] GPS获取失败，使用行李当前位置');
             locationName = luggage.destination.isNotEmpty
                 ? luggage.destination
                 : l10n.unknownLocation;
-            // 仍然尝试上传
             try {
               await LuggageService.updateScanLocation(
                 baggageNumber: baggageNumber,
@@ -174,7 +161,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
           }
         }
       } catch (e) {
-        debugPrint('[QrScan] GPS/位置更新异常: $e');
         locationName = luggage.destination.isNotEmpty
             ? luggage.destination
             : l10n.unknownLocation;
@@ -486,7 +472,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
         _showErrorSnackBar(l10n.noQrCodeInImage);
       }
     } catch (e) {
-      debugPrint('[QrScan] 从相册选取图片失败: $e');
       if (!mounted) return;
       _showErrorSnackBar(l10n.imageRecognitionFailed(e.toString()));
     } finally {
@@ -510,7 +495,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
       }
       return null;
     } catch (e) {
-      debugPrint('[QrScan] 扫描图片二维码失败: $e');
       return null;
     }
   }
@@ -523,8 +507,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _showErrorSnackBar(l10n.qrCodeNoLuggageId);
       return;
     }
-
-    debugPrint('[QrScan] 从图片识别到二维码: $raw');
 
     // 解析二维码
     final payload = QrPayload.fromRaw(raw);
@@ -989,8 +971,6 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _lastRaw = baggageNumber;
     });
 
-    debugPrint('[QrScan] 手动输入行李号: $baggageNumber');
-
     try {
       late Luggage luggage;
       try {
@@ -1032,9 +1012,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 employeeId: employeeId,
               );
             } catch (e) {
-              debugPrint('[QrScan] 手动输入位置上传失败: $e');
               if (mounted) {
-                _showTipSnackBar('位置上传失败');
+                _showTipSnackBar(l10n.locationUploadFailed(e.toString()));
               }
             }
           }
@@ -1227,3 +1206,4 @@ class _ScanLinePainter extends CustomPainter {
 extension<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+

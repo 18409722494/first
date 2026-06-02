@@ -160,7 +160,6 @@
   "inTransit": "运输中",
   "arrived": "已到达",
   "received": "已接收",
-  "delivered": "已交付",
   "damaged": "已损坏",
   "lost": "已丢失",
   "unknownStatus": "未知状态",
@@ -318,7 +317,7 @@
   "scanOperationGuide": "在底部导航栏点击「扫码」进入扫码界面，点击扫描按钮对准行李上的二维码即可识别。识别成功后会自动跳转到行李详情页，您可以在此更新行李位置或状态。",
   "luggageListGuide": "在底部导航栏点击「行李」进入行李列表页。您可以通过搜索框按行李标签号或旅客姓名进行搜索，也可以通过筛选按钮按行李状态进行筛选。",
   "damageRegistrationGuide": "发现行李破损时，在扫码结果页面点击「破损登记」按钮，或在行李详情页点击「登记破损」按钮。上传破损照片并填写描述后提交，系统会自动生成破损记录并通知相关人员。",
-  "contactPassengerGuide": "当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。",
+  "contactPassengerGuide": "当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已接收」。",
   "submitFeedbackGuide": "如果您在使用过程中遇到问题或有改进建议，可以在「我的 → 帮助与支持 → 意见反馈」中填写并提交。我们会认真处理每一条反馈。",
   "themeLanguageGuide": "在「我的 → 系统设置 → 主题设置」中可切换浅色/深色/跟随系统三种模式。在「语言设置」中可切换简体中文或 English。设置会自动保存。",
   "notificationGuide": "应用会在出现待办事项时推送通知，包括超重行李、无人认领行李、破损登记等。在「系统设置 → 通知设置」中可以分别开启或关闭各类型的通知。",
@@ -519,9 +518,112 @@
   "statusInTransit": "运输中",
   "statusArrived": "已到达",
   "statusReceived": "已接收",
-  "statusDelivered": "已交付",
   "statusDamaged": "已损坏",
   "statusLost": "已丢失",
+
+  "updateLuggageStatus": "更新行李状态",
+  "selectStatus": "选择状态",
+  "unableGetEmployeeId": "无法获取员工工号",
+  "luggageMarkedAs": "行李 {tag} 已标记为: {status}",
+  "@luggageMarkedAs": {
+    "placeholders": {
+      "tag": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "loadingFailed": "加载失败: {error}",
+  "@loadingFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "updateFailed": "更新失败: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "strandedLuggageMonitor": "滞留行李监控",
+  "refresh": "刷新",
+  "more": "更多",
+  "showAllLuggage": "显示全部行李",
+  "locateLuggage": "定位行李",
+  "loadingLuggageData": "加载行李数据...",
+  "mapTileLoadFailed": "地图瓦片加载失败，请检查网络",
+  "closeHint": "关闭提示",
+  "strandedLuggageStats": "滞留行李统计",
+  "strandedLuggage": "滞留行李",
+  "totalLuggage": "行李总数",
+  "filterCondition": "筛选条件",
+  "flight": "航班",
+  "updateTime": "更新时间",
+  "status": "状态",
+  "remark": "备注",
+  "viewDetail": "查看详情",
+  "passenger": "乘客",
+  "weight": "重量",
+  "location": "当前位置",
+  "unableGetUserInfo": "无法获取用户信息，请重新登录",
+  "locationUploadFailed": "位置上传失败: {error}",
+  "@locationUploadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "locationUploadFailedButContinue": "位置上传失败，但不影响操作",
+  "all": "全部",
+  "stopTransit": "停止托运",
+  "confirm": "确认",
+  "selectNewStatus": "请选择新的状态",
+  "name": "姓名",
+  "phoneNumber": "手机号",
+  "email": "邮箱",
+  "callLog": "通话记录",
+  "makeCall": "拨打电话",
+  "sendMessage": "发送短信",
+  "claimConfirmation": "认领确认",
+  "confirmPassengerIdentity": "请确认旅客身份后，点击下方按钮完成认领流程。",
+  "confirmClaim": "确认认领",
+  "claimSuccess": "认领成功",
+  "claimFailed": "认领失败: {error}",
+  "@claimFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotMakeCall": "无法拨打电话",
+  "callFailed": "拨打失败: {error}",
+  "@callFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotSendMessage": "无法发送短信",
+  "messageSendFailed": "发送失败: {error}",
+  "@messageSendFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "employmentStatus": "在职状态",
+  "passwordChangeFailed": "密码修改失败: {error}",
+  "@passwordChangeFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "pleaseEnterLocation": "请先输入位置信息",
+  "locationSynced": "位置与状态已同步到后端",
+  "updateLocationFailed": "更新位置失败: {error}",
+  "@updateLocationFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "updateSuccess": "更新成功",
+  "close": "关闭",
+  "damageRegistration": "破损登记",
+  "reportDamage": "上报破损",
 
   "daysAgo": "{days}天前",
   "@daysAgo": {
@@ -816,6 +918,15 @@
   "unprocessed": "待处理",
 
   "strandedLuggage": "滞留行李",
+  "strandedLuggageTodoItem": "滞留行李",
+  "strandedHoursUnclaimed": "{tagNumber}（旅客: {passengerName}）到达超过 {hours} 小时未认领",
+  "@strandedHoursUnclaimed": {
+    "placeholders": {
+      "tagNumber": {"type": "String"},
+      "passengerName": {"type": "String"},
+      "hours": {"type": "int"}
+    }
+  },
   "noStrandedLuggage": "暂无滞留行李",
   "allLuggageProcessed": "所有行李已处理",
   "strandedDays": "{days}天滞留",

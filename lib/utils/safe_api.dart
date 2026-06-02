@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// 统一 API 调用封装
 /// - 自动解析 HTTP 错误
 /// - 支持空值降级
@@ -35,7 +33,6 @@ Future<T?> safeApiCall<T>(
     return await apiCall();
   } catch (e) {
     if (propagate) rethrow;
-    debugPrint('[safeApiCall${errorLabel != null ? ' [$errorLabel]' : ''}] $e');
     return fallback;
   }
 }

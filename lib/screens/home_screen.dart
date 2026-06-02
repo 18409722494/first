@@ -15,6 +15,7 @@ import 'evidence_list_screen.dart';
 import 'luggage_map_screen.dart';
 import 'unprocessed_baggage_screen.dart';
 import 'add_luggage_screen.dart';
+import 'contact_passenger_screen.dart';
 
 /// ============================================================
 /// 首页 - 应用主入口页面
@@ -90,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // 获取所有行李列表
       final allLuggage = await BaggageApiService.getAllBaggageList();
-      debugPrint('[HomeScreen] 获取到行李数量: ${allLuggage.length}');
 
       if (allLuggage.isEmpty) {
         if (mounted) {
@@ -132,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      debugPrint('[HomeScreen] 加载最近处理行李失败: $e');
       if (mounted) {
         setState(() {
           _recentItems = [];
@@ -152,14 +151,14 @@ class _HomeScreenState extends State<HomeScreen> {
         return l10n.inTransit;
       case LuggageStatus.arrived:
         return l10n.arrived;
-      case LuggageStatus.delivered:
-        return l10n.delivered;
+      case LuggageStatus.received:
+        return l10n.received;
       case LuggageStatus.damaged:
         return l10n.damaged;
       case LuggageStatus.lost:
         return l10n.lost;
-      default:
-        return l10n.checkIn;
+      case LuggageStatus.stranded:
+        return l10n.strandedLuggage;
     }
   }
 
@@ -167,19 +166,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Color _getStatusBgColor(LuggageStatus status) {
     switch (status) {
       case LuggageStatus.checkIn:
-        return const Color(0xFFDCFCE7);
+        return const Color(0xFFDBEAFE); // 浅蓝
       case LuggageStatus.inTransit:
-        return const Color(0xFFFEF3C7);
+        return const Color(0xFFFEF3C7); // 浅黄
       case LuggageStatus.arrived:
-        return const Color(0xFFDCFCE7);
-      case LuggageStatus.delivered:
-        return const Color(0xFFDCFCE7);
+        return const Color(0xFFDCFCE7); // 浅绿
+      case LuggageStatus.received:
+        return const Color(0xFFE0F7FA); // 浅青
       case LuggageStatus.damaged:
-        return const Color(0xFFFEF2F2);
+        return const Color(0xFFFEE2E2); // 浅红
       case LuggageStatus.lost:
-        return const Color(0xFFF1F5F9);
-      default:
-        return const Color(0xFFDCFCE7);
+        return const Color(0xFFF1F5F9); // 浅灰
+      case LuggageStatus.stranded:
+        return const Color(0xFFFFF7ED); // 浅橙
     }
   }
 
@@ -187,19 +186,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Color _getStatusTextColor(LuggageStatus status) {
     switch (status) {
       case LuggageStatus.checkIn:
-        return const Color(0xFF16A34A);
+        return const Color(0xFF2563EB); // 蓝色
       case LuggageStatus.inTransit:
-        return const Color(0xFFD97706);
+        return const Color(0xFFF59E0B); // 橙色
       case LuggageStatus.arrived:
-        return const Color(0xFF16A34A);
-      case LuggageStatus.delivered:
-        return const Color(0xFF16A34A);
+        return const Color(0xFF22C55E); // 绿色
+      case LuggageStatus.received:
+        return const Color(0xFF06B6D4); // 青色
       case LuggageStatus.damaged:
-        return const Color(0xFFDC2626);
+        return const Color(0xFFEF4444); // 红色
       case LuggageStatus.lost:
-        return const Color(0xFF64748B);
-      default:
-        return const Color(0xFF16A34A);
+        return const Color(0xFF94A3B8); // 灰色
+      case LuggageStatus.stranded:
+        return const Color(0xFFF97316); // 橙色
     }
   }
 
@@ -483,6 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
       l10n.luggageMap: const LuggageMapScreen(),
       l10n.unprocessedLuggage: const UnprocessedBaggageScreen(),
       l10n.manualAdd: const AddLuggageScreen(),
+      l10n.contactPassenger: const ContactPassengerScreen(),
     };
 
     final route = routeMap[label];

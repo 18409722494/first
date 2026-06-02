@@ -63,7 +63,6 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     return all.where((l) {
       // 状态不是已接收
       if (l.status == LuggageStatus.received) return false;
-      if (l.status == LuggageStatus.delivered) return false;
       // 有有效的GPS坐标
       if (l.latitude == null || l.longitude == null) return false;
       // 超过24小时无更新
@@ -235,12 +234,12 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
         return AppColors.arrived;
       case LuggageStatus.received:
         return AppColors.received;
-      case LuggageStatus.delivered:
-        return AppColors.delivered;
       case LuggageStatus.damaged:
         return AppColors.damaged;
       case LuggageStatus.lost:
         return AppColors.lost;
+      case LuggageStatus.stranded:
+        return AppColors.stranded;
     }
   }
 
@@ -253,18 +252,19 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('滞留行李监控'),
+        title: Text(l10n.strandedLuggageMonitor),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
             onPressed: _loadLuggageData,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            tooltip: '更多',
+            tooltip: l10n.more,
             onSelected: (v) {
               if (v == 'fit') _fitAllMarkers();
               if (v == 'location') _goToLuggage();
@@ -276,7 +276,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
                   children: [
                     Icon(Icons.fit_screen, size: Responsive.iconSize(context, 20)),
                     SizedBox(width: Responsive.spacing(context, AppSpacing.sm + 4)),
-                    Text('显示全部行李', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                    Text(l10n.showAllLuggage, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ],
                 ),
               ),
@@ -286,7 +286,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
                   children: [
                     Icon(Icons.luggage, size: Responsive.iconSize(context, 20)),
                     SizedBox(width: Responsive.spacing(context, AppSpacing.sm + 4)),
-                    Text('定位行李', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                    Text(l10n.locateLuggage, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ],
                 ),
               ),
@@ -367,6 +367,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   Widget _buildLoadingOverlay() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: Colors.black26,
       child: Center(
@@ -385,7 +386,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: Responsive.spacing(context, AppSpacing.md)),
-                Text('加载行李数据...', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                Text(l10n.loadingLuggageData, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
               ],
             ),
           ),
@@ -444,6 +445,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   Widget _buildTileErrorBanner() {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Positioned(
       top: _error != null ? 72 : 0,
@@ -477,7 +479,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
               SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
               Expanded(
                 child: Text(
-                  '地图瓦片加载失败，请检查网络',
+                  l10n.mapTileLoadFailed,
                   style: TextStyle(
                     color: isDark ? Colors.red.shade200 : Colors.red.shade800,
                     fontSize: Responsive.fontSize(context, 13),
@@ -487,7 +489,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
               IconButton(
                 icon: Icon(Icons.refresh, size: Responsive.iconSize(context, 20), color: isDark ? Colors.red.shade300 : Colors.red.shade700),
                 onPressed: () => setState(() => _tileError = false),
-                tooltip: '关闭提示',
+                tooltip: l10n.closeHint,
               ),
             ],
           ),
@@ -497,6 +499,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   Widget _buildStatisticsCard() {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Positioned(
       bottom: 100,
@@ -514,7 +517,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '滞留行李统计',
+                l10n.strandedLuggageStats,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: Responsive.fontSize(context, 13),
@@ -522,11 +525,11 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
                 ),
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-              _statItem(AppColors.warning, '滞留行李', '$_strandedCount 件', isDark),
-              _statItem(AppColors.grey, '行李总数', '$_totalCount 件', isDark),
+              _statItem(AppColors.warning, l10n.strandedLuggage, '$_strandedCount 件', isDark),
+              _statItem(AppColors.grey, l10n.totalLuggage(_totalCount), '件', isDark),
               Divider(height: Responsive.spacing(context, AppSpacing.sm + 2), color: isDark ? Colors.white24 : Colors.black12),
               Text(
-                '筛选条件：状态不为已交付/已接收\n且超过24小时无位置更新',
+                '${l10n.filterCondition}：${l10n.statusReceived}\n且超过24小时无位置更新',
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 11),
                   color: isDark ? Colors.white54 : Colors.black54,
@@ -816,7 +819,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                 _infoRow(
                   context,
                   Icons.flight,
-                  '航班',
+                  l10n.flight,
                   luggage.flightNumber,
                   isDark,
                 ),
@@ -824,7 +827,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                 _infoRow(
                   context,
                   Icons.location_on,
-                  l10n.destination,
+                  l10n.location,
                   luggage.destination,
                   isDark,
                 ),
@@ -832,7 +835,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                 _infoRow(
                   context,
                   Icons.schedule,
-                  '更新时间',
+                  l10n.updateTime,
                   _formatTime(luggage.lastUpdated),
                   isDark,
                 ),
@@ -840,7 +843,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                 _infoRow(
                   context,
                   Icons.info_outline,
-                  '状态',
+                  l10n.status,
                   '',
                   isDark,
                   trailing: StatusBadge(status: luggage.status),
@@ -850,8 +853,8 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                   _infoRow(
                     context,
                     Icons.note,
-                    '备注',
-                    luggage.notes,
+                    l10n.remark(luggage.notes),
+                    '',
                     isDark,
                   ),
                 ],
@@ -866,7 +869,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
               MediaQuery.of(context).padding.bottom + Responsive.padding(context, AppSpacing.lg),
             ),
             child: AppButton(
-              text: '查看详情',
+              text: l10n.viewDetail,
               icon: Icons.visibility,
               fullWidth: true,
               onPressed: onViewDetail,

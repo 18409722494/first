@@ -72,12 +72,12 @@ class StatusBadge extends StatelessWidget {
         return const Color(0xFFDCFCE7); // 浅绿
       case LuggageStatus.received:
         return const Color(0xFFE0F7FA); // 浅青
-      case LuggageStatus.delivered:
-        return const Color(0xFFFCE7F3); // 浅粉
       case LuggageStatus.damaged:
         return const Color(0xFFFEE2E2); // 浅红
       case LuggageStatus.lost:
         return const Color(0xFFF1F5F9); // 浅灰
+      case LuggageStatus.stranded:
+        return const Color(0xFFFFF7ED); // 浅橙
     }
   }
 
@@ -186,12 +186,12 @@ class StatusBadgeSelector extends StatelessWidget {
         return const Color(0xFFDCFCE7);
       case LuggageStatus.received:
         return const Color(0xFFE0F7FA);
-      case LuggageStatus.delivered:
-        return const Color(0xFFFCE7F3);
       case LuggageStatus.damaged:
         return const Color(0xFFFEE2E2);
       case LuggageStatus.lost:
         return const Color(0xFFF1F5F9);
+      case LuggageStatus.stranded:
+        return const Color(0xFFFFF7ED); // 浅橙
     }
   }
 }

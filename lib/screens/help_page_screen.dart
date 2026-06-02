@@ -32,7 +32,7 @@ class HelpPageScreen extends StatelessWidget {
       _HelpItem(
         icon: Icons.phone,
         title: '联系旅客',
-        content: '当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。',
+        content: '当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已接收」。',
       ),
       _HelpItem(
         icon: Icons.edit_note,

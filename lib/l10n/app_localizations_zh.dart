@@ -93,7 +93,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cancel => '取消';
 
   @override
-  String get confirm => '确定';
+  String get confirm => '确认';
 
   @override
   String get logout => '退出';
@@ -144,7 +144,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bindPhone => '绑定手机';
 
   @override
-  String get phoneNumber => '手机号码';
+  String get phoneNumber => '手机号';
 
   @override
   String get verifyCode => '验证码';
@@ -390,7 +390,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String remark(String note) {
-    return '备注: $note';
+    return '备注';
   }
 
   @override
@@ -416,9 +416,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get received => '已接收';
-
-  @override
-  String get delivered => '已交付';
 
   @override
   String get damaged => '已损坏';
@@ -452,7 +449,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String totalLuggage(int count) {
-    return '共 $count 个行李';
+    return '行李总数';
   }
 
   @override
@@ -517,7 +514,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get luggageDetail => '行李详情';
 
   @override
-  String get location => '位置';
+  String get location => '当前位置';
 
   @override
   String get note => '备注';
@@ -758,7 +755,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contactPassengerGuide =>
-      '当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。';
+      '当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已接收」。';
 
   @override
   String get submitFeedbackGuide =>
@@ -1082,13 +1079,146 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusReceived => '已接收';
 
   @override
-  String get statusDelivered => '已交付';
-
-  @override
   String get statusDamaged => '已损坏';
 
   @override
   String get statusLost => '已丢失';
+
+  @override
+  String get updateLuggageStatus => '更新行李状态';
+
+  @override
+  String get selectStatus => '选择状态';
+
+  @override
+  String get unableGetEmployeeId => '无法获取员工工号';
+
+  @override
+  String luggageMarkedAs(String tag, String status) {
+    return '行李 $tag 已标记为: $status';
+  }
+
+  @override
+  String loadingFailed(String error) {
+    return '加载失败: $error';
+  }
+
+  @override
+  String updateFailed(String error) {
+    return '更新失败: $error';
+  }
+
+  @override
+  String get strandedLuggageMonitor => '滞留行李监控';
+
+  @override
+  String get more => '更多';
+
+  @override
+  String get showAllLuggage => '显示全部行李';
+
+  @override
+  String get locateLuggage => '定位行李';
+
+  @override
+  String get loadingLuggageData => '加载行李数据...';
+
+  @override
+  String get mapTileLoadFailed => '地图瓦片加载失败，请检查网络';
+
+  @override
+  String get closeHint => '关闭提示';
+
+  @override
+  String get strandedLuggageStats => '滞留行李统计';
+
+  @override
+  String get strandedLuggage => '滞留行李';
+
+  @override
+  String get filterCondition => '筛选条件';
+
+  @override
+  String get flight => '航班';
+
+  @override
+  String get updateTime => '更新时间';
+
+  @override
+  String get viewDetail => '查看详情';
+
+  @override
+  String get passenger => '乘客';
+
+  @override
+  String get weight => '重量';
+
+  @override
+  String get unableGetUserInfo => '无法获取用户信息，请重新登录';
+
+  @override
+  String locationUploadFailed(String error) {
+    return '位置上传失败';
+  }
+
+  @override
+  String get locationUploadFailedButContinue => '位置上传失败，但不影响操作';
+
+  @override
+  String get stopTransit => '停止托运';
+
+  @override
+  String get selectNewStatus => '请选择新的状态';
+
+  @override
+  String get callLog => '通话记录';
+
+  @override
+  String get makeCall => '拨打电话';
+
+  @override
+  String get sendMessage => '发送短信';
+
+  @override
+  String get claimConfirmation => '认领确认';
+
+  @override
+  String get confirmPassengerIdentity => '请确认旅客身份后，点击下方按钮完成认领流程。';
+
+  @override
+  String claimFailed(String error) {
+    return '认领失败: $error';
+  }
+
+  @override
+  String get cannotMakeCall => '无法拨打电话';
+
+  @override
+  String callFailed(String error) {
+    return '拨打失败: $error';
+  }
+
+  @override
+  String get cannotSendMessage => '无法发送短信';
+
+  @override
+  String messageSendFailed(String error) {
+    return '发送失败: $error';
+  }
+
+  @override
+  String get employmentStatus => '在职状态';
+
+  @override
+  String passwordChangeFailed(String error) {
+    return '密码修改失败: $error';
+  }
+
+  @override
+  String get pleaseEnterLocation => '请先输入位置信息';
+
+  @override
+  String get reportDamage => '上报破损';
 
   @override
   String daysAgo(int days) {
@@ -1348,12 +1478,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmArrived => '确认到达';
 
   @override
-  String get flight => '航班';
-
-  @override
-  String get weight => '重量';
-
-  @override
   String get confirmDelete => '确认删除';
 
   @override
@@ -1561,7 +1685,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unprocessed => '待处理';
 
   @override
-  String get strandedLuggage => '滞留行李';
+  String get strandedLuggageTodoItem => '滞留行李';
+
+  @override
+  String strandedHoursUnclaimed(
+      String tagNumber, String passengerName, int hours) {
+    return '$tagNumber（旅客: $passengerName）到达超过 $hours 小时未认领';
+  }
 
   @override
   String get noStrandedLuggage => '暂无滞留行李';
@@ -1579,9 +1709,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get getPhoneFailed => '获取电话失败';
-
-  @override
-  String get cannotMakeCall => '无法拨打电话';
 
   @override
   String get cannotSendSms => '无法发送短信';
@@ -1644,12 +1771,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get operationOptions => '操作选项';
 
   @override
-  String get locationUploadFailed => '位置上传失败';
-
-  @override
-  String get locationUploadFailedButContinue => '位置上传失败，但不影响操作';
-
-  @override
   String get damageType => '破损类型';
 
   @override
@@ -1692,9 +1813,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resignationSubmitted => '离职申请已提交';
-
-  @override
-  String get unableGetUserInfo => '无法获取用户信息，请重新登录';
 
   @override
   String get cannotGetEmployeeInfo => '无法获取员工信息';

@@ -209,6 +209,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -253,7 +254,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
+            child: Text(l10n.close),
           ),
         ],
       ),

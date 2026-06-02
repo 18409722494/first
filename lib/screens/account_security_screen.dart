@@ -95,7 +95,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                     final user = authProvider.user;
                     if (user == null || user.employeeId == null) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('无法获取用户信息，请重新登录')),
+                        SnackBar(content: Text(l10n.unableGetUserInfo)),
                       );
                       return;
                     }
@@ -145,7 +145,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('密码修改失败: $e'),
+          content: Text(l10n.passwordChangeFailed(e.toString())),
           backgroundColor: Colors.red,
         ),
       );

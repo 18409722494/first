@@ -330,7 +330,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactUs => 'Contact Us';
 
   @override
-  String get contactPhone => '400-123-4567';
+  String get contactPhone => 'Contact Phone';
 
   @override
   String get helpSupportNote => 'Help & Support Notice';
@@ -396,7 +396,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String remark(String note) {
-    return 'Remark: $note';
+    return 'Remark';
   }
 
   @override
@@ -422,9 +422,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get received => 'Received';
-
-  @override
-  String get delivered => 'Delivered';
 
   @override
   String get damaged => 'Damaged';
@@ -458,7 +455,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String totalLuggage(int count) {
-    return '$count luggage items';
+    return 'Total Luggage';
   }
 
   @override
@@ -473,7 +470,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterLocationFirst => 'Please enter location info first';
 
   @override
-  String get locationSynced => 'Location and status synced to server';
+  String get locationSynced => 'Location and status synced to backend';
 
   @override
   String updateLocationFailed(int code) {
@@ -484,7 +481,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownLocation => 'Unknown Location';
 
   @override
-  String get updateSuccess => 'Update successful';
+  String get updateSuccess => 'Update Success';
 
   @override
   String get uploadCreateSuccess => 'Upload/Create successful';
@@ -496,25 +493,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get basicInfo => 'Basic Info';
 
   @override
-  String get basicInfoTab => '基本信息';
+  String get basicInfoTab => 'Basic Info';
 
   @override
-  String get damageTab => '破损记录';
+  String get damageTab => 'Damage Record';
 
   @override
-  String get logTab => '操作日志';
+  String get logTab => 'Operation Log';
 
   @override
   String get historyLog => 'History';
 
   @override
-  String get noDamageRecord => '暂无破损记录';
+  String get noDamageRecord => 'No damage records';
 
   @override
-  String get noOperationLog => '暂无操作日志';
+  String get noOperationLog => 'No operation logs';
 
   @override
-  String get logSubtitle => '来自后端 GET /baggage/operationLogs';
+  String get logSubtitle => 'From backend GET /baggage/operationLogs';
 
   @override
   String get qrCodeResult => 'QR Code Result';
@@ -685,7 +682,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addLuggage => 'Add Luggage';
 
   @override
-  String get tagNumber => '行李号';
+  String get tagNumber => 'Tag Number';
 
   @override
   String weightKg(String weight) {
@@ -693,13 +690,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get lastUpdated => '最后更新';
+  String get lastUpdated => 'Last Updated';
 
   @override
-  String get updateStatus => '更新状态';
+  String get updateStatus => 'Update Status';
 
   @override
-  String get updateLocation => '更新位置';
+  String get updateLocation => 'Update Location';
 
   @override
   String get processSuccess => 'Processed successfully';
@@ -747,7 +744,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmClaim => 'Confirm Claim';
 
   @override
-  String get claimSuccess => 'Claim successful';
+  String get claimSuccess => 'Claim Success';
 
   @override
   String get scanOperation => 'Scan Operation';
@@ -766,7 +763,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactPassengerGuide =>
-      'When an unclaimed luggage item appears in To-Do, tap it to enter the contact passenger page. System shows passenger contact info. Tap call to dial directly. Update status to \'Delivered\' after successful contact.';
+      'When an unclaimed luggage item appears in To-Do, tap it to enter the contact passenger page. System shows passenger contact info. Tap call to dial directly. Update status to \'Received\' after successful contact.';
 
   @override
   String get submitFeedbackGuide =>
@@ -801,23 +798,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectFlight => 'Select Flight';
 
   @override
-  String get noFlightHistory => '暂无历史航班记录';
+  String get noFlightHistory => 'No flight history';
 
   @override
-  String get pleaseSelectFlight => '请选择航班';
+  String get pleaseSelectFlight => 'Please select a flight';
 
   @override
-  String get noUnprocessedLuggage => '该航班暂无未处理行李';
+  String get noUnprocessedLuggage => 'No unprocessed luggage for this flight';
 
   @override
-  String get pleaseSelectFlightFirst => '请先选择航班';
+  String get pleaseSelectFlightFirst => 'Please select a flight first';
 
   @override
-  String get selectFlightFromDropdown => '从上方下拉菜单选择一个航班';
+  String get selectFlightFromDropdown =>
+      'Select a flight from the dropdown above';
 
   @override
   String unprocessedLuggageCount(int count) {
-    return '未处理行李数量: $count';
+    return 'Unprocessed luggage count: $count';
   }
 
   @override
@@ -1009,60 +1007,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get damageDescription => 'Damage Description';
 
   @override
-  String get damageLocation => '上报位置';
+  String get damageLocation => 'Report Location';
 
   @override
-  String get damageReportTime => '上报时间';
+  String get damageReportTime => 'Report Time';
 
   @override
-  String get image => '图片';
+  String get image => 'Image';
 
   @override
-  String get operation => '操作';
+  String get operation => 'Operation';
 
   @override
   String goodMorning(String username) {
-    return '早上好，$username';
+    return 'Good morning, $username';
   }
 
   @override
   String groundStaff(String airport) {
-    return '地勤行李员 · $airport';
+    return 'Ground Staff · $airport';
   }
 
   @override
-  String get t3Terminal => 'T3航站楼';
+  String get t3Terminal => 'T3 Terminal';
 
   @override
-  String get scanRegister => '扫码登记';
+  String get scanRegister => 'Scan & Register';
 
   @override
-  String get manualAdd => '手动添加';
+  String get manualAdd => 'Manual Add';
 
   @override
-  String get unprocessedLuggage => '未处理行李';
+  String get unprocessedLuggage => 'Unprocessed Luggage';
 
   @override
-  String get damageReport => '破损报告';
+  String get damageReport => 'Damage Report';
 
   @override
-  String get luggageSearch => '行李搜索';
+  String get luggageSearch => 'Luggage Search';
 
   @override
   String get contactPassenger => 'Contact Passenger';
 
   @override
-  String get evidenceManagement => '证据管理';
+  String get evidenceManagement => 'Evidence Management';
 
   @override
-  String get recentProcessing => '最近处理';
+  String get recentProcessing => 'Recent Processing';
 
   @override
-  String get noProcessingRecord => '暂无处理记录';
+  String get noProcessingRecord => 'No processing records';
 
   @override
   String overweight(String weight) {
-    return '超重+${weight}kg';
+    return 'Overweight +${weight}kg';
   }
 
   @override
@@ -1096,13 +1094,150 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusReceived => 'Received';
 
   @override
-  String get statusDelivered => 'Delivered';
-
-  @override
   String get statusDamaged => 'Damaged';
 
   @override
   String get statusLost => 'Lost';
+
+  @override
+  String get updateLuggageStatus => 'Update Luggage Status';
+
+  @override
+  String get selectStatus => 'Select Status';
+
+  @override
+  String get unableGetEmployeeId => 'Unable to get employee ID';
+
+  @override
+  String luggageMarkedAs(String tag, String status) {
+    return 'Luggage $tag marked as: $status';
+  }
+
+  @override
+  String loadingFailed(String error) {
+    return 'Loading failed: $error';
+  }
+
+  @override
+  String updateFailed(String error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String get strandedLuggageMonitor => 'Stranded Luggage Monitor';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get showAllLuggage => 'Show All Luggage';
+
+  @override
+  String get locateLuggage => 'Locate Luggage';
+
+  @override
+  String get loadingLuggageData => 'Loading luggage data...';
+
+  @override
+  String get mapTileLoadFailed =>
+      'Map tiles failed to load, please check network';
+
+  @override
+  String get closeHint => 'Close Hint';
+
+  @override
+  String get strandedLuggageStats => 'Stranded Luggage Statistics';
+
+  @override
+  String get strandedLuggage => 'Stranded Luggage';
+
+  @override
+  String get filterCondition => 'Filter Condition';
+
+  @override
+  String get flight => 'Flight';
+
+  @override
+  String get updateTime => 'Update Time';
+
+  @override
+  String get viewDetail => 'View Detail';
+
+  @override
+  String get passenger => 'Passenger';
+
+  @override
+  String get weight => 'Weight';
+
+  @override
+  String get unableGetUserInfo =>
+      'Unable to get user info, please log in again';
+
+  @override
+  String locationUploadFailed(String error) {
+    return 'Location upload failed';
+  }
+
+  @override
+  String get locationUploadFailedButContinue =>
+      'Location upload failed, but operation continues';
+
+  @override
+  String get stopTransit => 'Stop Transit';
+
+  @override
+  String get selectNewStatus => 'Please select a new status';
+
+  @override
+  String get callLog => 'Call Log';
+
+  @override
+  String get makeCall => 'Make Call';
+
+  @override
+  String get sendMessage => 'Send Message';
+
+  @override
+  String get claimConfirmation => 'Claim Confirmation';
+
+  @override
+  String get confirmPassengerIdentity =>
+      'Please confirm passenger identity, then tap the button below to complete the claim process.';
+
+  @override
+  String claimFailed(String error) {
+    return 'Claim failed: $error';
+  }
+
+  @override
+  String get cannotMakeCall => 'Cannot make phone call';
+
+  @override
+  String callFailed(String error) {
+    return 'Call failed: $error';
+  }
+
+  @override
+  String get cannotSendMessage => 'Cannot send message';
+
+  @override
+  String messageSendFailed(String error) {
+    return 'Message send failed: $error';
+  }
+
+  @override
+  String get employmentStatus => 'Employment Status';
+
+  @override
+  String passwordChangeFailed(String error) {
+    return 'Password change failed: $error';
+  }
+
+  @override
+  String get pleaseEnterLocation => 'Please enter location info first';
+
+  @override
+  String get reportDamage => 'Report Damage';
 
   @override
   String daysAgo(int days) {
@@ -1374,12 +1509,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmArrived => 'Confirm Arrived';
 
   @override
-  String get flight => 'Flight';
-
-  @override
-  String get weight => 'Weight';
-
-  @override
   String get confirmDelete => 'Confirm Delete';
 
   @override
@@ -1589,7 +1718,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unprocessed => 'Pending';
 
   @override
-  String get strandedLuggage => 'Stranded Luggage';
+  String get strandedLuggageTodoItem => 'Stranded Luggage';
+
+  @override
+  String strandedHoursUnclaimed(
+      String tagNumber, String passengerName, int hours) {
+    return '$tagNumber (Passenger: $passengerName) arrived over $hours hours unclaimed';
+  }
 
   @override
   String get noStrandedLuggage => 'No Stranded Luggage';
@@ -1607,9 +1742,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get getPhoneFailed => 'Failed to get phone';
-
-  @override
-  String get cannotMakeCall => 'Cannot make phone call';
 
   @override
   String get cannotSendSms => 'Cannot send SMS';
@@ -1672,13 +1804,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get operationOptions => 'Operation Options';
 
   @override
-  String get locationUploadFailed => 'Location upload failed';
-
-  @override
-  String get locationUploadFailedButContinue =>
-      'Location upload failed, but operation continues';
-
-  @override
   String get damageType => 'Damage Type';
 
   @override
@@ -1723,10 +1848,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resignationSubmitted => 'Resignation submitted';
-
-  @override
-  String get unableGetUserInfo =>
-      'Unable to get user info, please log in again';
 
   @override
   String get cannotGetEmployeeInfo => 'Cannot get employee info';

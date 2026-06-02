@@ -9,6 +9,9 @@ import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../utils/responsive.dart';
 import '../l10n/app_localizations.dart';
+import '../constants/app_constants.dart';
+import 'evidence_detail_screen.dart';
+import 'contact_passenger_screen.dart';
 
 /// 待办事项页面
 class TodoScreen extends StatefulWidget {
@@ -37,6 +40,8 @@ class _TodoScreenState extends State<TodoScreen> {
   Future<void> _loadTodoItems() async {
     if (_isLoading || _hasLoaded) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -53,7 +58,7 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '加载失败: $e';
+        _error = l10n.loadingFailed(e.toString());
         _isLoading = false;
         _hasLoaded = true;
       });
@@ -90,6 +95,8 @@ class _TodoScreenState extends State<TodoScreen> {
   Future<void> _onFlightSelected(String? flight) async {
     if (flight == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _selectedFlight = flight;
       _items = [];
@@ -123,7 +130,7 @@ class _TodoScreenState extends State<TodoScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '加载失败: $e';
+          _error = l10n.loadingFailed(e.toString());
           _isLoading = false;
         });
       }
@@ -154,13 +161,14 @@ class _TodoScreenState extends State<TodoScreen> {
 
   Future<List<TodoItem>> _fetchUnclaimedTodos() async {
     try {
-      final list = await LuggageService.getUnclaimedLuggage();
+      final list = await LuggageService.getStrandedLuggage();
       return list.map((luggage) => TodoItem.fromUnclaimedLuggage(
         tagNumber: luggage.tagNumber,
         luggageId: luggage.id,
         passengerName: luggage.passengerName,
         arrivedAt: luggage.lastUpdated,
-        unclaimedHours: 24,
+        strandedHours: AppConstants.strandedHoursThreshold,
+        luggage: luggage,
       )).toList();
     } catch (_) {
       return [];
@@ -534,9 +542,18 @@ class _TodoScreenState extends State<TodoScreen> {
 
   Widget _buildTodoItem(BuildContext context, TodoItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return GestureDetector(
-      onTap: () => _showStatusDialog(context, item),
+      onTap: () {
+        if (item.type == TodoType.damage) {
+          _handleDamageItemTap(context, item);
+        } else if (item.type == TodoType.unclaimed) {
+          _handleUnclaimedItemTap(context, item);
+        } else {
+          _showStatusDialog(context, item);
+        }
+      },
       child: Container(
         padding: EdgeInsets.all(Responsive.padding(context, 12)),
         decoration: BoxDecoration(
@@ -568,7 +585,9 @@ class _TodoScreenState extends State<TodoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.title,
+                    item.type == TodoType.unclaimed
+                        ? l10n.strandedLuggage
+                        : item.title,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: Responsive.fontSize(context, 14),
@@ -602,6 +621,7 @@ class _TodoScreenState extends State<TodoScreen> {
   void _showStatusDialog(BuildContext context, TodoItem item) {
     if (item.type != TodoType.unprocessed) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String? selectedStatus;
     bool isSubmitting = false;
@@ -620,7 +640,7 @@ class _TodoScreenState extends State<TodoScreen> {
                 Icon(Icons.edit_note, color: AppColors.primary),
                 SizedBox(width: Responsive.spacing(context, 8)),
                 Text(
-                  '更新行李状态',
+                  l10n.updateLuggageStatus,
                   style: TextStyle(
                     color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   ),
@@ -640,7 +660,7 @@ class _TodoScreenState extends State<TodoScreen> {
                 ),
                 SizedBox(height: Responsive.spacing(context, AppSpacing.md)),
                 Text(
-                  '选择状态:',
+                  l10n.selectStatus,
                   style: TextStyle(
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   ),
@@ -649,21 +669,21 @@ class _TodoScreenState extends State<TodoScreen> {
                 // 状态选项
                 _buildStatusOption(
                   context,
-                  '已丢失',
+                  l10n.lost,
                   Icons.search_off,
                   AppColors.error,
-                  selectedStatus == '已丢失',
-                  () => setDialogState(() => selectedStatus = '已丢失'),
+                  selectedStatus == l10n.lost,
+                  () => setDialogState(() => selectedStatus = l10n.lost),
                   isDark,
                 ),
                 SizedBox(height: Responsive.spacing(context, 8)),
                 _buildStatusOption(
                   context,
-                  '停止托运',
+                  l10n.stopTransit,
                   Icons.block,
                   AppColors.warning,
-                  selectedStatus == '停止托运',
-                  () => setDialogState(() => selectedStatus = '停止托运'),
+                  selectedStatus == l10n.stopTransit,
+                  () => setDialogState(() => selectedStatus = l10n.stopTransit),
                   isDark,
                 ),
               ],
@@ -672,7 +692,7 @@ class _TodoScreenState extends State<TodoScreen> {
               TextButton(
                 onPressed: isSubmitting ? null : () => Navigator.pop(context),
                 child: Text(
-                  '取消',
+                  l10n.cancel,
                   style: TextStyle(
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   ),
@@ -700,7 +720,7 @@ class _TodoScreenState extends State<TodoScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('确认'),
+                    : Text(l10n.confirm),
               ),
             ],
           );
@@ -753,13 +773,14 @@ class _TodoScreenState extends State<TodoScreen> {
   }
 
   Future<void> _submitStatus(BuildContext context, TodoItem item, String status) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final employeeId = await StorageService.getEmployeeId();
       if (employeeId == null) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('无法获取员工工号'),
+            SnackBar(
+              content: Text(l10n.unableGetEmployeeId),
               backgroundColor: AppColors.error,
             ),
           );
@@ -779,7 +800,7 @@ class _TodoScreenState extends State<TodoScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('行李 ${item.tagNumber} 已标记为: $status'),
+              content: Text(l10n.luggageMarkedAs(item.tagNumber, status)),
               backgroundColor: AppColors.success,
             ),
           );
@@ -795,7 +816,7 @@ class _TodoScreenState extends State<TodoScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? '更新失败'),
+              content: Text(result['message'] ?? l10n.updateFailed('')),
               backgroundColor: AppColors.error,
             ),
           );
@@ -805,11 +826,70 @@ class _TodoScreenState extends State<TodoScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('更新失败: $e'),
+            content: Text(l10n.updateFailed(e.toString())),
             backgroundColor: AppColors.error,
           ),
         );
       }
     }
+  }
+
+  Future<void> _handleDamageItemTap(BuildContext context, TodoItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    // item.id 格式为 'damage_$id'，提取出数字 id
+    final parts = item.id.split('_');
+    if (parts.length < 2) return;
+    final idStr = parts.sublist(1).join('_');
+    final id = int.tryParse(idStr);
+    if (id == null) return;
+
+    try {
+      final records = await EvidenceService.getAllAbnormalBaggage();
+      final baggage = records.firstWhere(
+        (r) => r.id == id,
+        orElse: () => throw Exception('not found'),
+      );
+
+      if (!context.mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EvidenceDetailScreen(baggage: baggage),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.loadFailed(e.toString())),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUnclaimedItemTap(BuildContext context, TodoItem item) async {
+    final luggage = item.luggage;
+    if (luggage == null) {
+      final l10n = AppLocalizations.of(context)!;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.loadFailed('行李数据不完整')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ContactPassengerScreen(luggage: luggage),
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../models/luggage.dart';
 
 /// 待办事项类型
 enum TodoType {
@@ -34,6 +35,10 @@ class TodoItem {
   final DateTime timestamp;
   /// 关联航班号（unprocessed 类型用）
   final String? flightNumber;
+  /// 滞留小时数（unclaimed 类型用）
+  final int? strandedHours;
+  /// 关联行李完整对象（unclaimed 类型用，供跳转联系旅客页）
+  final Luggage? luggage;
 
   const TodoItem({
     required this.id,
@@ -46,6 +51,8 @@ class TodoItem {
     this.luggageId,
     required this.timestamp,
     this.flightNumber,
+    this.strandedHours,
+    this.luggage,
   });
 
   /// 从破损行李记录构造
@@ -75,18 +82,21 @@ class TodoItem {
     required String luggageId,
     required String passengerName,
     required DateTime arrivedAt,
-    int unclaimedHours = 24,
+    required int strandedHours,
+    Luggage? luggage,
   }) {
     return TodoItem(
       id: 'unclaimed_${luggageId}_$arrivedAt',
       type: TodoType.unclaimed,
-      title: '联系旅客（无人认领）',
-      description: '$tagNumber（旅客: $passengerName）到达超过 $unclaimedHours 小时未认领',
+      title: '滞留行李',
+      description: '$tagNumber（旅客: $passengerName）到达超过 $strandedHours 小时未认领',
       icon: Icons.phone,
       color: AppColors.info,
       tagNumber: tagNumber,
       luggageId: luggageId,
       timestamp: arrivedAt,
+      strandedHours: strandedHours,
+      luggage: luggage,
     );
   }
 

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
@@ -16,12 +15,14 @@ class BaggageApiService {
 
   /// 分页获取行李列表
   /// [page] 从 1 开始；[pageSize] 每页条数，默认 20
+  /// [forceRefresh] 为 true 时跳过缓存直接请求网络
   static Future<PagedResult<Luggage>> getAllBaggage({
     int page = 1,
     int pageSize = _pageSize,
+    bool forceRefresh = false,
   }) async {
     // 第1页且请求全部数据时使用缓存
-    if (page == 1 && pageSize >= 100) {
+    if (page == 1 && pageSize >= 100 && !forceRefresh) {
       final cacheKey = 'allBaggage_$pageSize';
       final cached = baggageListCache.get(cacheKey);
       if (cached != null) {
@@ -60,8 +61,9 @@ class BaggageApiService {
   }
 
   /// 一次性拉取全部（用于搜索等不需分页的场景）
-  static Future<List<Luggage>> getAllBaggageList() async {
-    final result = await getAllBaggage(page: 1, pageSize: 9999);
+  /// [forceRefresh] 为 true 时跳过缓存直接请求网络
+  static Future<List<Luggage>> getAllBaggageList({bool forceRefresh = false}) async {
+    final result = await getAllBaggage(page: 1, pageSize: 9999, forceRefresh: forceRefresh);
     return result.items;
   }
 
@@ -87,7 +89,6 @@ class BaggageApiService {
       ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint('[BaggageApiService] getOperationLogs HTTP错误: ${response.statusCode}');
         return [];
       }
 
@@ -100,11 +101,9 @@ class BaggageApiService {
         if (d is List) {
           rawList = d;
         } else {
-          debugPrint('[BaggageApiService] getOperationLogs 响应格式异常');
           return [];
         }
       } else {
-        debugPrint('[BaggageApiService] getOperationLogs 响应类型异常');
         return [];
       }
 
@@ -113,15 +112,14 @@ class BaggageApiService {
           .map((m) => BaggageOperationLog.fromJson(Map<String, dynamic>.from(m)))
           .toList();
     } catch (e) {
-      debugPrint('[BaggageApiService] getOperationLogs 异常: $e');
       return [];
     }
   }
 
   /// 根据行李号查询行李
-  static Future<Luggage?> getBaggageByNumber(String baggageNumber) async {
+  static Future<Luggage?> getBaggageByNumber(String baggageNumber, {bool forceRefresh = false}) async {
     try {
-      final result = await getAllBaggageList();
+      final result = await getAllBaggageList(forceRefresh: forceRefresh);
       return result.firstWhereOrNull(
         (item) => item.tagNumber == baggageNumber,
       );
@@ -139,7 +137,6 @@ class BaggageApiService {
           .where((r) => r.baggageNumber.trim().toLowerCase() == baggageNumber.trim().toLowerCase())
           .toList();
     } catch (e) {
-      debugPrint('[BaggageApiService] getAbnormalRecords 异常: $e');
       return [];
     }
   }
@@ -161,13 +158,9 @@ class BaggageApiService {
               .map((item) => AbnormalBaggage.fromJson(item as Map<String, dynamic>))
               .toList();
         }
-        debugPrint('[BaggageApiService] getAllAbnormalBaggageRaw 响应不是数组');
-        return [];
       }
-      debugPrint('[BaggageApiService] getAllAbnormalBaggageRaw HTTP错误: ${response.statusCode}');
       return [];
     } catch (e) {
-      debugPrint('[BaggageApiService] getAllAbnormalBaggageRaw 异常: $e');
       return [];
     }
   }
@@ -234,6 +227,7 @@ class BaggageApiService {
       status: _parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['flightTime'] ?? json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
       lastUpdated: parseTime(json['baggage_change_time'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      strandedAt: parseTime(json['strandedAt'] ?? json['stranded_at']),
       // 优先使用 currentLocation（当前位置），回退到 destination
       destination: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
@@ -330,16 +324,11 @@ class BaggageApiService {
           if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
         };
 
-        debugPrint('[BaggageApiService] POST /baggage/location (第$attempt次): $body');
-
         final response = await http.post(
           Uri.parse('$_baseUrl/baggage/location'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(body),
         ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
-
-        debugPrint('[BaggageApiService] 响应状态码: ${response.statusCode}');
-        debugPrint('[BaggageApiService] 响应内容: ${response.body}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
           final map = jsonDecode(response.body) as Map<String, dynamic>;
@@ -362,7 +351,6 @@ class BaggageApiService {
           throw Exception(errorDetail);
         }
       } catch (e) {
-        debugPrint('[BaggageApiService] 位置更新第$attempt次失败: $e');
         if (attempt < maxRetries) {
           await Future.delayed(const Duration(milliseconds: 500));
         } else {
@@ -403,15 +391,10 @@ class BaggageApiService {
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
         final success = map['result']?.toString().toLowerCase() == 'success';
-        if (!success) {
-          debugPrint('[BaggageApiService] addOperationLog 业务失败: ${map['message']}');
-        }
         return success;
       }
-      debugPrint('[BaggageApiService] addOperationLog HTTP错误: ${response.statusCode}');
       return false;
     } catch (e) {
-      debugPrint('[BaggageApiService] addOperationLog 异常: $e');
       return false;
     }
   }
@@ -438,13 +421,11 @@ class BaggageApiService {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
         final result = map['result']?.toString().toLowerCase();
         if (result != 'success') {
-          debugPrint('[BaggageApiService] getOperationHistory 业务失败');
           return [];
         }
 
         final data = map['data'];
         if (data == null) {
-          debugPrint('[BaggageApiService] getOperationHistory 无数据');
           return [];
         }
         if (data is List) {
@@ -454,10 +435,8 @@ class BaggageApiService {
               .toList();
         }
       }
-      debugPrint('[BaggageApiService] getOperationHistory HTTP错误: ${response.statusCode}');
       return [];
     } catch (e) {
-      debugPrint('[BaggageApiService] getOperationHistory 异常: $e');
       return [];
     }
   }
@@ -482,7 +461,6 @@ class BaggageApiService {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
         final result = map['result']?.toString().toLowerCase();
         if (result != 'success') {
-          debugPrint('[BaggageApiService] getOperationHistoryByNumber 业务失败');
           return [];
         }
 
@@ -495,10 +473,8 @@ class BaggageApiService {
               .toList();
         }
       }
-      debugPrint('[BaggageApiService] getOperationHistoryByNumber HTTP错误: ${response.statusCode}');
       return [];
     } catch (e) {
-      debugPrint('[BaggageApiService] getOperationHistoryByNumber 异常: $e');
       return [];
     }
   }
@@ -516,15 +492,11 @@ class BaggageApiService {
         'employeeId': employeeId.trim(),
       };
 
-      debugPrint('[BaggageApiService] POST /baggage/unprocessed: $body');
-
       final response = await http.post(
         Uri.parse('$_baseUrl/baggage/unprocessed'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
-
-      debugPrint('[BaggageApiService] 响应: ${response.body}');
 
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
@@ -537,16 +509,10 @@ class BaggageApiService {
                 .map((m) => _parseBaggage(Map<String, dynamic>.from(m)))
                 .toList();
           }
-          debugPrint('[BaggageApiService] getUnprocessedBaggage data不是数组');
-        } else {
-          debugPrint('[BaggageApiService] getUnprocessedBaggage 业务失败: $result');
         }
-      } else {
-        debugPrint('[BaggageApiService] getUnprocessedBaggage HTTP错误: ${response.statusCode}');
       }
       return [];
     } catch (e) {
-      debugPrint('[BaggageApiService] getUnprocessedBaggage 异常: $e');
       return [];
     }
   }
@@ -567,15 +533,11 @@ class BaggageApiService {
         'employeeId': employeeId.trim(),
       };
 
-      debugPrint('[BaggageApiService] POST /baggage/location (标记丢失): $body');
-
       final response = await http.post(
         Uri.parse('$_baseUrl/baggage/location'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
-
-      debugPrint('[BaggageApiService] 响应: ${response.body}');
 
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
@@ -602,15 +564,11 @@ class BaggageApiService {
         'baggageNumber': baggageNumber.trim(),
       };
 
-      debugPrint('[BaggageApiService] POST /baggage/contact: $body');
-
       final response = await http.post(
         Uri.parse('$_baseUrl/baggage/contact'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       ).timeout(_timeout, onTimeout: () => throw Exception('请求超时'));
-
-      debugPrint('[BaggageApiService] 响应: ${response.body}');
 
       if (response.statusCode == 200) {
         final map = jsonDecode(response.body) as Map<String, dynamic>;
@@ -618,16 +576,10 @@ class BaggageApiService {
         if (result == 'success') {
           final data = map['data'] as Map<String, dynamic>?;
           return data?['contact']?.toString();
-        } else {
-          debugPrint('[BaggageApiService] getPassengerContact 业务失败: $result');
-          return null;
         }
-      } else {
-        debugPrint('[BaggageApiService] getPassengerContact HTTP错误: ${response.statusCode}');
-        return null;
       }
+      return null;
     } catch (e) {
-      debugPrint('[BaggageApiService] getPassengerContact 异常: $e');
       return null;
     }
   }

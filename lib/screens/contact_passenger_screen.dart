@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/luggage.dart';
+import '../services/baggage_api_service.dart';
 import '../theme/app_spacing.dart';
 import '../components/empty_state.dart';
 import '../utils/responsive.dart';
@@ -8,10 +9,11 @@ import '../l10n/app_localizations.dart';
 
 /// 旅客联系/认领页
 /// 显示旅客信息及通话记录
+/// [luggage] 为空时展示行李列表供选择
 class ContactPassengerScreen extends StatefulWidget {
-  final Luggage luggage;
+  final Luggage? luggage;
 
-  const ContactPassengerScreen({super.key, required this.luggage});
+  const ContactPassengerScreen({super.key, this.luggage});
 
   @override
   State<ContactPassengerScreen> createState() => _ContactPassengerScreenState();
@@ -19,13 +21,73 @@ class ContactPassengerScreen extends StatefulWidget {
 
 class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
   bool _isLoading = false;
+  Luggage? _selectedLuggage;
+  List<Luggage> _luggageList = [];
+  bool _loadingList = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLuggage = widget.luggage;
+    if (_selectedLuggage == null) {
+      _loadLuggageList();
+    }
+  }
+
+  Future<void> _loadLuggageList() async {
+    setState(() => _loadingList = true);
+    try {
+      final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _luggageList = result.items;
+          _loadingList = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingList = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (_selectedLuggage == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.passengerContact)),
+        body: _loadingList
+            ? const Center(child: CircularProgressIndicator())
+            : _luggageList.isEmpty
+                ? Center(child: Text(l10n.noLuggage))
+                : ListView.builder(
+                    padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
+                    itemCount: _luggageList.length,
+                    itemBuilder: (ctx, i) {
+                      final item = _luggageList[i];
+                      return Card(
+                        margin: EdgeInsets.only(bottom: Responsive.spacing(context, AppSpacing.xs)),
+                        child: ListTile(
+                          leading: const Icon(Icons.luggage_outlined),
+                          title: Text(item.tagNumber),
+                          subtitle: Text(item.passengerName),
+                          onTap: () => setState(() => _selectedLuggage = item),
+                        ),
+                      );
+                    },
+                  ),
+      );
+    }
+
+    final bag = _selectedLuggage!;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.passengerContact),
+        leading: widget.luggage == null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _selectedLuggage = null),
+              )
+            : null,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(Responsive.padding(context, AppSpacing.sm)),
@@ -42,9 +104,9 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                   children: [
                     Text(l10n.luggageInfo, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                    Text('${l10n.luggageTagNoLabel}: ${widget.luggage.tagNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                    Text('${l10n.flightNo}: ${widget.luggage.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                    Text('${l10n.destination}: ${widget.luggage.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.luggageTagNoLabel}: ${bag.tagNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.flightNo}: ${bag.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.destination}: ${bag.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ],
                 ),
               ),
@@ -60,11 +122,11 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('姓名: ${widget.luggage.passengerName}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.name}: ${bag.passengerName}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                    Text('手机号: ******1234', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.phoneNumber}: ******1234', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                    Text('邮箱: ******@example.com', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.email}: ******@example.com', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ],
                 ),
               ),
@@ -72,7 +134,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
             // 通话记录
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            Text('通话记录', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
+            Text(l10n.callLog, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             Card(
               child: Padding(
@@ -80,7 +142,6 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                 child: EmptyState(
                   icon: Icons.call_end_outlined,
                   title: '暂无通话记录',
-                  subtitle: '话务/外呼记录需对接后端后展示，当前无本地模拟数据。',
                   iconSize: Responsive.iconSize(context, 40),
                 ),
               ),
@@ -94,7 +155,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                   child: FilledButton.icon(
                     onPressed: () => _makePhoneCall(),
                     icon: Icon(Icons.phone, size: Responsive.iconSize(context, 18)),
-                    label: Text('拨打电话', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                    label: Text(l10n.makeCall, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ),
                 ),
                 SizedBox(width: Responsive.spacing(context, AppSpacing.sm)),
@@ -102,7 +163,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                   child: FilledButton.icon(
                     onPressed: () => _sendSms(),
                     icon: Icon(Icons.sms, size: Responsive.iconSize(context, 18)),
-                    label: Text('发送短信', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                    label: Text(l10n.sendMessage, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                   ),
                 ),
               ],
@@ -110,7 +171,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
             // 认领确认
             SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
-            Text('认领确认', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
+            Text(l10n.claimConfirmation, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: Responsive.fontSize(context, 14))),
             SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
             Card(
               child: Padding(
@@ -118,7 +179,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('请确认旅客身份后，点击下方按钮完成认领流程。', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text(l10n.confirmPassengerIdentity, style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
                     FilledButton(
                       onPressed: _isLoading ? null : _confirmClaim,
@@ -131,7 +192,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                               width: 18,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
-                          : Text('确认认领', style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
+                          : Text(l10n.confirmClaim, style: TextStyle(fontSize: Responsive.fontSize(context, 14))),
                     ),
                   ],
                 ),
@@ -144,6 +205,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
   }
 
   Future<void> _confirmClaim() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
     });
@@ -154,14 +216,14 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('认领成功')),
+          SnackBar(content: Text(l10n.claimSuccess)),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('认领失败: $e')),
+          SnackBar(content: Text(l10n.claimFailed(e.toString()))),
         );
       }
     } finally {
@@ -175,6 +237,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
   /// 拨打电话
   Future<void> _makePhoneCall() async {
+    final l10n = AppLocalizations.of(context)!;
     // 模拟电话号码，实际应该从行李数据中获取
     const phoneNumber = '13800138000';
     final uri = Uri.parse('tel:$phoneNumber');
@@ -185,14 +248,14 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('无法拨打电话')),
+            SnackBar(content: Text(l10n.cannotMakeCall)),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('拨打失败: $e')),
+          SnackBar(content: Text(l10n.callFailed(e.toString()))),
         );
       }
     }
@@ -200,6 +263,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
 
   /// 发送短信
   Future<void> _sendSms() async {
+    final l10n = AppLocalizations.of(context)!;
     // 模拟电话号码
     const phoneNumber = '13800138000';
     final uri = Uri.parse('sms:$phoneNumber');
@@ -210,14 +274,14 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('无法发送短信')),
+            SnackBar(content: Text(l10n.cannotSendMessage)),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('发送失败: $e')),
+          SnackBar(content: Text(l10n.messageSendFailed(e.toString()))),
         );
       }
     }

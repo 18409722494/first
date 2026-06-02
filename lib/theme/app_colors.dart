@@ -23,18 +23,18 @@ class AppColors {
   static const Color inTransit = Color(0xFFF59E0B);
   static const Color arrived = Color(0xFF22C55E);
   static const Color received = Color(0xFF06B6D4);
-  static const Color delivered = Color(0xFFEC4899);
   static const Color damaged = Color(0xFFEF4444);
   static const Color lost = Color(0xFF94A3B8);
+  static const Color stranded = Color(0xFFF97316);
 
   // 行李状态背景色 (深色主题)
   static const Color checkInBg = Color(0xFF1E3A5F);
   static const Color inTransitBg = Color(0xFF451A03);
   static const Color arrivedBg = Color(0xFF14532D);
   static const Color receivedBg = Color(0xFF164E63);
-  static const Color deliveredBg = Color(0xFF500724);
   static const Color damagedBg = Color(0xFF450A0A);
   static const Color lostBg = Color(0xFF1E293B);
+  static const Color strandedBg = Color(0xFF431407);
 
   // ==================== 深色主题 (与 UI 设计保持一致) ====================
   // 深色背景 (#0F172A)

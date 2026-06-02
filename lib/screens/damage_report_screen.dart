@@ -119,7 +119,7 @@ class _DamageReportScreenState extends State<DamageReportScreen> {
     if (employeeId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法获取用户信息，请重新登录')),
+          SnackBar(content: Text(l10n.unableGetUserInfo)),
         );
       }
       return;

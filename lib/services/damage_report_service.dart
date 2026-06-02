@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import '../models/luggage.dart';
 import '../services/evidence_service.dart';
 import '../services/baggage_api_service.dart';
 import '../services/oss_service.dart';
+import '../services/local_queue_service.dart';
 
 /// 破损报告提交阶段枚举
 enum DamageReportStage {
@@ -28,6 +30,8 @@ class DamageReportResult {
   final List<StageExecution> executionHistory;
   /// 行李状态同步是否成功
   final bool statusSyncCompleted;
+  /// 是否已保存到本地队列等待重试
+  final bool savedToQueue;
 
   const DamageReportResult._({
     required this.success,
@@ -37,6 +41,7 @@ class DamageReportResult {
     this.exceptionMessage,
     this.executionHistory = const [],
     this.statusSyncCompleted = false,
+    this.savedToQueue = false,
   });
 
   factory DamageReportResult.ok({
@@ -67,6 +72,7 @@ class DamageReportResult {
     String? responseBody,
     String? exceptionMessage,
     required List<StageExecution> executionHistory,
+    bool savedToQueue = false,
   }) =>
       DamageReportResult._(
         success: false,
@@ -75,6 +81,7 @@ class DamageReportResult {
         responseBody: responseBody,
         exceptionMessage: exceptionMessage,
         executionHistory: executionHistory,
+        savedToQueue: savedToQueue,
       );
 
   /// 人类可读的阶段名称
@@ -203,21 +210,25 @@ class DamageReportService {
         addHistory(DamageReportStage.ossUpload, '图片上传', true, '图片上传完成');
       } on OssUploadException catch (e) {
         addHistory(DamageReportStage.ossUpload, '图片上传', false, '上传失败: ${e.message}');
+        final saved = await _saveToQueueIfNeeded(imageBytes, luggageId, timestamp, latitude, longitude, damageDescription, employeeId, '图片上传失败');
         return DamageReportResult.fail(
           stage: DamageReportStage.ossUpload,
           statusCode: e.statusCode,
           responseBody: e.body,
-          exceptionMessage: e.message,
+          exceptionMessage: saved ? '${e.message}（已保存到本地，网络恢复后将自动重试）' : e.message,
           executionHistory: history,
+          savedToQueue: saved,
         );
       } on OssSignatureException catch (e) {
         addHistory(DamageReportStage.ossSignature, 'OSS签名', false, '签名获取失败: ${e.message}');
+        final saved = await _saveToQueueIfNeeded(imageBytes, luggageId, timestamp, latitude, longitude, damageDescription, employeeId, '签名获取失败');
         return DamageReportResult.fail(
           stage: DamageReportStage.ossSignature,
           statusCode: e.statusCode,
           responseBody: e.body,
-          exceptionMessage: e.message,
+          exceptionMessage: saved ? '${e.message}（已保存到本地，网络恢复后将自动重试）' : e.message,
           executionHistory: history,
+          savedToQueue: saved,
         );
       }
 
@@ -233,11 +244,15 @@ class DamageReportService {
 
       if (!apiResult.isSuccess) {
         addHistory(DamageReportStage.businessApi, '业务提交', false, '提交失败: HTTP ${apiResult.statusCode}');
+        // 图片已上传成功，保存数据到队列等待重试
+        final saved = await _saveToQueueIfNeeded(imageBytes, luggageId, timestamp, latitude, longitude, damageDescription, employeeId, '业务提交失败');
         return DamageReportResult.fail(
           stage: DamageReportStage.businessApi,
           statusCode: apiResult.statusCode,
           responseBody: apiResult.body,
+          exceptionMessage: saved ? '提交失败（已保存到本地，网络恢复后将自动重试）' : '提交失败',
           executionHistory: history,
+          savedToQueue: saved,
         );
       }
       addHistory(DamageReportStage.businessApi, '业务提交', true, '破损记录已提交');
@@ -274,11 +289,42 @@ class DamageReportService {
       }
     } catch (e) {
       addHistory(DamageReportStage.businessApi, '未知错误', false, e.toString());
+      final saved = await _saveToQueueIfNeeded(imageBytes, luggageId, timestamp, latitude, longitude, damageDescription, employeeId, '未知错误');
       return DamageReportResult.fail(
         stage: DamageReportStage.businessApi,
-        exceptionMessage: e.toString(),
+        exceptionMessage: saved ? '${e.toString()}（已保存到本地，网络恢复后将自动重试）' : e.toString(),
         executionHistory: history,
+        savedToQueue: saved,
       );
+    }
+  }
+
+  /// 将失败的报告保存到本地队列，返回是否保存成功
+  static Future<bool> _saveToQueueIfNeeded(
+    Uint8List imageBytes,
+    String luggageId,
+    DateTime timestamp,
+    double latitude,
+    double longitude,
+    String damageDescription,
+    String employeeId,
+    String reason,
+  ) async {
+    try {
+      await LocalQueueService.saveToQueue({
+        'imageBytes': base64Encode(imageBytes),
+        'luggageId': luggageId.trim(),
+        'timestamp': timestamp.toIso8601String(),
+        'latitude': latitude,
+        'longitude': longitude,
+        'damageDescription': damageDescription.trim(),
+        'employeeId': employeeId,
+        'failReason': reason,
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

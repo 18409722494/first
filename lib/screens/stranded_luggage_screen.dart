@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/luggage.dart';
 import '../services/baggage_api_service.dart';
+import '../services/luggage_service.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_colors.dart';
 
 /// 滞留件列表页面
-/// 显示状态为"已到达"且超过2天未更新的行李
+/// 显示状态为"滞留"的行李（由 LuggageService.getStrandedLuggage 根据12小时阈值自动标记）
 class StrandedLuggageScreen extends StatefulWidget {
   const StrandedLuggageScreen({super.key});
 
@@ -33,20 +35,13 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
     });
 
     try {
-      final allLuggage = await BaggageApiService.getAllBaggageList();
-
-      // 筛选滞留件：状态为"已到达"且超过2天未更新
-      final now = DateTime.now();
-      final stranded = allLuggage.where((luggage) {
-        if (luggage.status != LuggageStatus.arrived) return false;
-        final daysDiff = now.difference(luggage.lastUpdated).inDays;
-        return daysDiff > 2;
-      }).toList();
+      // 使用统一服务：自动将超时行李标记为滞留，并返回所有滞留行李
+      final stranded = await LuggageService.getStrandedLuggage();
 
       // 按滞留天数降序排序（滞留越久的排前面）
       stranded.sort((a, b) {
-        final daysA = now.difference(a.lastUpdated).inDays;
-        final daysB = now.difference(b.lastUpdated).inDays;
+        final daysA = DateTime.now().difference(a.lastUpdated).inDays;
+        final daysB = DateTime.now().difference(b.lastUpdated).inDays;
         return daysB.compareTo(daysA);
       });
 
@@ -57,7 +52,6 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
         });
       }
     } catch (e) {
-      debugPrint('[StrandedLuggageScreen] 加载滞留件失败: $e');
       if (mounted) {
         setState(() {
           _errorMessage = l10n.loadFailed(e.toString());
@@ -346,7 +340,8 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
   Widget _buildLuggageCard(Luggage luggage, int index) {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
-    final daysStranded = now.difference(luggage.lastUpdated).inDays;
+    final strandedAt = luggage.strandedAt ?? luggage.lastUpdated;
+    final daysStranded = now.difference(strandedAt).inDays;
     final isLoading = _loadingItems.contains(luggage.tagNumber);
 
     return Card(
@@ -367,12 +362,33 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        luggage.tagNumber,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              luggage.tagNumber,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              l10n.strandedLuggage,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFF97316),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -387,7 +403,7 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange[100],
+                    color: AppColors.stranded.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -396,13 +412,13 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
                       Icon(
                         Icons.access_time,
                         size: 16,
-                        color: Colors.orange[800],
+                        color: AppColors.stranded,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         l10n.strandedDays(daysStranded),
                         style: TextStyle(
-                          color: Colors.orange[800],
+                          color: AppColors.stranded,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

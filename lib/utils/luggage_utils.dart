@@ -20,8 +20,8 @@ class LuggageUtils {
         return '运输中';
       case 'arrived':
         return '已到达';
-      case 'delivered':
-        return '已交付';
+      case 'received':
+        return '已接收';
       case 'damaged':
         return '已损坏';
       case 'lost':

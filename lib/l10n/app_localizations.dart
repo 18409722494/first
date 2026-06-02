@@ -269,7 +269,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirm.
   ///
   /// In zh, this message translates to:
-  /// **'确定'**
+  /// **'确认'**
   String get confirm;
 
   /// No description provided for @logout.
@@ -371,7 +371,7 @@ abstract class AppLocalizations {
   /// No description provided for @phoneNumber.
   ///
   /// In zh, this message translates to:
-  /// **'手机号码'**
+  /// **'手机号'**
   String get phoneNumber;
 
   /// No description provided for @verifyCode.
@@ -839,7 +839,7 @@ abstract class AppLocalizations {
   /// No description provided for @remark.
   ///
   /// In zh, this message translates to:
-  /// **'备注: {note}'**
+  /// **'备注'**
   String remark(String note);
 
   /// No description provided for @filterConditions.
@@ -889,12 +889,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已接收'**
   String get received;
-
-  /// No description provided for @delivered.
-  ///
-  /// In zh, this message translates to:
-  /// **'已交付'**
-  String get delivered;
 
   /// No description provided for @damaged.
   ///
@@ -959,7 +953,7 @@ abstract class AppLocalizations {
   /// No description provided for @totalLuggage.
   ///
   /// In zh, this message translates to:
-  /// **'共 {count} 个行李'**
+  /// **'行李总数'**
   String totalLuggage(int count);
 
   /// No description provided for @loadMore.
@@ -1079,7 +1073,7 @@ abstract class AppLocalizations {
   /// No description provided for @location.
   ///
   /// In zh, this message translates to:
-  /// **'位置'**
+  /// **'当前位置'**
   String get location;
 
   /// No description provided for @note.
@@ -1529,7 +1523,7 @@ abstract class AppLocalizations {
   /// No description provided for @contactPassengerGuide.
   ///
   /// In zh, this message translates to:
-  /// **'当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已交付」。'**
+  /// **'当待办事项中出现无人认领行李提示时，点击该条进入联系旅客页面。系统会显示旅客的联系方式，点击呼叫按钮可直接拨打电话。联系成功后更新行李状态为「已接收」。'**
   String get contactPassengerGuide;
 
   /// No description provided for @submitFeedbackGuide.
@@ -2090,12 +2084,6 @@ abstract class AppLocalizations {
   /// **'已接收'**
   String get statusReceived;
 
-  /// No description provided for @statusDelivered.
-  ///
-  /// In zh, this message translates to:
-  /// **'已交付'**
-  String get statusDelivered;
-
   /// No description provided for @statusDamaged.
   ///
   /// In zh, this message translates to:
@@ -2107,6 +2095,246 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已丢失'**
   String get statusLost;
+
+  /// No description provided for @updateLuggageStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新行李状态'**
+  String get updateLuggageStatus;
+
+  /// No description provided for @selectStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择状态'**
+  String get selectStatus;
+
+  /// No description provided for @unableGetEmployeeId.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法获取员工工号'**
+  String get unableGetEmployeeId;
+
+  /// No description provided for @luggageMarkedAs.
+  ///
+  /// In zh, this message translates to:
+  /// **'行李 {tag} 已标记为: {status}'**
+  String luggageMarkedAs(String tag, String status);
+
+  /// No description provided for @loadingFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败: {error}'**
+  String loadingFailed(String error);
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新失败: {error}'**
+  String updateFailed(String error);
+
+  /// No description provided for @strandedLuggageMonitor.
+  ///
+  /// In zh, this message translates to:
+  /// **'滞留行李监控'**
+  String get strandedLuggageMonitor;
+
+  /// No description provided for @more.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多'**
+  String get more;
+
+  /// No description provided for @showAllLuggage.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示全部行李'**
+  String get showAllLuggage;
+
+  /// No description provided for @locateLuggage.
+  ///
+  /// In zh, this message translates to:
+  /// **'定位行李'**
+  String get locateLuggage;
+
+  /// No description provided for @loadingLuggageData.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载行李数据...'**
+  String get loadingLuggageData;
+
+  /// No description provided for @mapTileLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图瓦片加载失败，请检查网络'**
+  String get mapTileLoadFailed;
+
+  /// No description provided for @closeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭提示'**
+  String get closeHint;
+
+  /// No description provided for @strandedLuggageStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'滞留行李统计'**
+  String get strandedLuggageStats;
+
+  /// No description provided for @strandedLuggage.
+  ///
+  /// In zh, this message translates to:
+  /// **'滞留行李'**
+  String get strandedLuggage;
+
+  /// No description provided for @filterCondition.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选条件'**
+  String get filterCondition;
+
+  /// No description provided for @flight.
+  ///
+  /// In zh, this message translates to:
+  /// **'航班'**
+  String get flight;
+
+  /// No description provided for @updateTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新时间'**
+  String get updateTime;
+
+  /// No description provided for @viewDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详情'**
+  String get viewDetail;
+
+  /// No description provided for @passenger.
+  ///
+  /// In zh, this message translates to:
+  /// **'乘客'**
+  String get passenger;
+
+  /// No description provided for @weight.
+  ///
+  /// In zh, this message translates to:
+  /// **'重量'**
+  String get weight;
+
+  /// No description provided for @unableGetUserInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法获取用户信息，请重新登录'**
+  String get unableGetUserInfo;
+
+  /// No description provided for @locationUploadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'位置上传失败'**
+  String locationUploadFailed(String error);
+
+  /// No description provided for @locationUploadFailedButContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'位置上传失败，但不影响操作'**
+  String get locationUploadFailedButContinue;
+
+  /// No description provided for @stopTransit.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止托运'**
+  String get stopTransit;
+
+  /// No description provided for @selectNewStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择新的状态'**
+  String get selectNewStatus;
+
+  /// No description provided for @callLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'通话记录'**
+  String get callLog;
+
+  /// No description provided for @makeCall.
+  ///
+  /// In zh, this message translates to:
+  /// **'拨打电话'**
+  String get makeCall;
+
+  /// No description provided for @sendMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送短信'**
+  String get sendMessage;
+
+  /// No description provided for @claimConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'认领确认'**
+  String get claimConfirmation;
+
+  /// No description provided for @confirmPassengerIdentity.
+  ///
+  /// In zh, this message translates to:
+  /// **'请确认旅客身份后，点击下方按钮完成认领流程。'**
+  String get confirmPassengerIdentity;
+
+  /// No description provided for @claimFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'认领失败: {error}'**
+  String claimFailed(String error);
+
+  /// No description provided for @cannotMakeCall.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法拨打电话'**
+  String get cannotMakeCall;
+
+  /// No description provided for @callFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'拨打失败: {error}'**
+  String callFailed(String error);
+
+  /// No description provided for @cannotSendMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法发送短信'**
+  String get cannotSendMessage;
+
+  /// No description provided for @messageSendFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败: {error}'**
+  String messageSendFailed(String error);
+
+  /// No description provided for @employmentStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'在职状态'**
+  String get employmentStatus;
+
+  /// No description provided for @passwordChangeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'密码修改失败: {error}'**
+  String passwordChangeFailed(String error);
+
+  /// No description provided for @pleaseEnterLocation.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先输入位置信息'**
+  String get pleaseEnterLocation;
+
+  /// No description provided for @reportDamage.
+  ///
+  /// In zh, this message translates to:
+  /// **'上报破损'**
+  String get reportDamage;
 
   /// No description provided for @daysAgo.
   ///
@@ -2546,18 +2774,6 @@ abstract class AppLocalizations {
   /// **'确认到达'**
   String get confirmArrived;
 
-  /// No description provided for @flight.
-  ///
-  /// In zh, this message translates to:
-  /// **'航班'**
-  String get flight;
-
-  /// No description provided for @weight.
-  ///
-  /// In zh, this message translates to:
-  /// **'重量'**
-  String get weight;
-
   /// No description provided for @confirmDelete.
   ///
   /// In zh, this message translates to:
@@ -2948,11 +3164,18 @@ abstract class AppLocalizations {
   /// **'待处理'**
   String get unprocessed;
 
-  /// No description provided for @strandedLuggage.
+  /// No description provided for @strandedLuggageTodoItem.
   ///
   /// In zh, this message translates to:
   /// **'滞留行李'**
-  String get strandedLuggage;
+  String get strandedLuggageTodoItem;
+
+  /// No description provided for @strandedHoursUnclaimed.
+  ///
+  /// In zh, this message translates to:
+  /// **'{tagNumber}（旅客: {passengerName}）到达超过 {hours} 小时未认领'**
+  String strandedHoursUnclaimed(
+      String tagNumber, String passengerName, int hours);
 
   /// No description provided for @noStrandedLuggage.
   ///
@@ -2983,12 +3206,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'获取电话失败'**
   String get getPhoneFailed;
-
-  /// No description provided for @cannotMakeCall.
-  ///
-  /// In zh, this message translates to:
-  /// **'无法拨打电话'**
-  String get cannotMakeCall;
 
   /// No description provided for @cannotSendSms.
   ///
@@ -3110,18 +3327,6 @@ abstract class AppLocalizations {
   /// **'操作选项'**
   String get operationOptions;
 
-  /// No description provided for @locationUploadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'位置上传失败'**
-  String get locationUploadFailed;
-
-  /// No description provided for @locationUploadFailedButContinue.
-  ///
-  /// In zh, this message translates to:
-  /// **'位置上传失败，但不影响操作'**
-  String get locationUploadFailedButContinue;
-
   /// No description provided for @damageType.
   ///
   /// In zh, this message translates to:
@@ -3205,12 +3410,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'离职申请已提交'**
   String get resignationSubmitted;
-
-  /// No description provided for @unableGetUserInfo.
-  ///
-  /// In zh, this message translates to:
-  /// **'无法获取用户信息，请重新登录'**
-  String get unableGetUserInfo;
 
   /// No description provided for @cannotGetEmployeeInfo.
   ///

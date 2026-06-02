@@ -54,8 +54,8 @@ class AppConstants {
       'https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=$tiandituApiKey';
 
   // 行李状态超时规则
-  /// 无人认领判定时间（小时）
-  static const int unclaimedHoursThreshold = 24;
+  /// 滞留件判定时间（小时）：行李状态变为"已到达"后，超过此时间未变为"已接收"则判定为滞留
+  static const int strandedHoursThreshold = 12;
 
   // 分页配置
   static const int pageSize = 20;

@@ -160,7 +160,6 @@
   "inTransit": "In Transit",
   "arrived": "Arrived",
   "received": "Received",
-  "delivered": "Delivered",
   "damaged": "Damaged",
   "lost": "Lost",
   "unknownStatus": "Unknown Status",
@@ -198,7 +197,13 @@
   "uploadCreateSuccess": "Upload/Create successful",
   "luggageInfo": "Luggage Info",
   "basicInfo": "Basic Info",
+  "basicInfoTab": "Basic Info",
+  "damageTab": "Damage Record",
+  "logTab": "Operation Log",
   "historyLog": "History",
+  "noDamageRecord": "No damage records",
+  "noOperationLog": "No operation logs",
+  "logSubtitle": "From backend GET /baggage/operationLogs",
   "qrCodeResult": "QR Code Result",
   "luggageDetail": "Luggage Detail",
   "location": "Location",
@@ -275,6 +280,18 @@
   "max3Photos": "Max 3 photos",
   "addLuggage": "Add Luggage",
 
+  "tagNumber": "Tag Number",
+  "weightKg": "{weight} kg",
+  "@weightKg": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
+  "contactPhone": "Contact Phone",
+  "lastUpdated": "Last Updated",
+  "updateStatus": "Update Status",
+  "updateLocation": "Update Location",
+
   "processSuccess": "Processed successfully",
   "processFailed": "Process failed: {error}",
   "@processFailed": {
@@ -316,7 +333,7 @@
   "luggageListGuide": "Tap Luggage at the bottom nav to view the luggage list. Use the search bar to search by tag number or passenger name, or use the filter button to filter by status.",
   "damageRegistrationGuide": "When you find damaged luggage, tap 'Register Damage' on the scan result page or luggage detail page. Upload damage photos and submit. The system will generate a damage record and notify relevant staff.",
   "overweightGuide": "When an overweight luggage item appears in To-Do, tap it to enter the overweight handling page. Verify weight, choose payment method (cash/e-payment), then update status.",
-  "contactPassengerGuide": "When an unclaimed luggage item appears in To-Do, tap it to enter the contact passenger page. System shows passenger contact info. Tap call to dial directly. Update status to 'Delivered' after successful contact.",
+  "contactPassengerGuide": "When an unclaimed luggage item appears in To-Do, tap it to enter the contact passenger page. System shows passenger contact info. Tap call to dial directly. Update status to 'Received' after successful contact.",
   "submitFeedbackGuide": "If you have issues or suggestions, submit feedback at 'Me → Help & Support → Feedback'. We value every piece of feedback.",
   "themeLanguageGuide": "Switch between Light/Dark/System theme at 'Me → System Settings → Theme Settings'. Change language at 'Language Settings'. Settings are saved automatically.",
   "notificationGuide": "The app pushes notifications for To-Do items including overweight luggage, unclaimed luggage, and damage registration. Enable or disable each notification type at 'System Settings → Notification Settings'.",
@@ -331,6 +348,19 @@
   "todoTitle": "To-Do",
   "reload": "Reload",
   "noTodoItems": "No To-Do items",
+  "selectFlight": "Select Flight",
+  "noFlightHistory": "No flight history",
+  "loading": "Loading...",
+  "pleaseSelectFlight": "Please select a flight",
+  "noUnprocessedLuggage": "No unprocessed luggage for this flight",
+  "pleaseSelectFlightFirst": "Please select a flight first",
+  "selectFlightFromDropdown": "Select a flight from the dropdown above",
+  "unprocessedLuggageCount": "Unprocessed luggage count: {count}",
+  "@unprocessedLuggageCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "abnormalLuggage": "Abnormal luggage requiring action",
   "luggageNotFound": "Luggage not found: {tag}",
   "@luggageNotFound": {
@@ -454,6 +484,39 @@
   "luggageId": "Luggage ID",
   "enterLuggageId": "Enter luggage ID",
   "damageDescription": "Damage Description",
+  "damageLocation": "Report Location",
+  "damageReportTime": "Report Time",
+  "image": "Image",
+  "operation": "Operation",
+  "goodMorning": "Good morning, {username}",
+  "@goodMorning": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "groundStaff": "Ground Staff · {airport}",
+  "@groundStaff": {
+    "placeholders": {
+      "airport": {"type": "String"}
+    }
+  },
+  "t3Terminal": "T3 Terminal",
+  "scanRegister": "Scan & Register",
+  "manualAdd": "Manual Add",
+  "unprocessedLuggage": "Unprocessed Luggage",
+  "damageReport": "Damage Report",
+  "luggageSearch": "Luggage Search",
+  "contactPassenger": "Contact Passenger",
+  "evidenceManagement": "Evidence Management",
+  "recentProcessing": "Recent Processing",
+  "noProcessingRecord": "No processing records",
+  "unknownLocation": "Unknown Location",
+  "overweight": "Overweight +{weight}kg",
+  "@overweight": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
   "enterDamageDesc": "Describe the damage",
   "locationCoords": "Location: {lat}, {lng}",
   "@locationCoords": {
@@ -470,9 +533,112 @@
   "statusInTransit": "In Transit",
   "statusArrived": "Arrived",
   "statusReceived": "Received",
-  "statusDelivered": "Delivered",
   "statusDamaged": "Damaged",
   "statusLost": "Lost",
+
+  "updateLuggageStatus": "Update Luggage Status",
+  "selectStatus": "Select Status",
+  "unableGetEmployeeId": "Unable to get employee ID",
+  "luggageMarkedAs": "Luggage {tag} marked as: {status}",
+  "@luggageMarkedAs": {
+    "placeholders": {
+      "tag": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "loadingFailed": "Loading failed: {error}",
+  "@loadingFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "updateFailed": "Update failed: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "strandedLuggageMonitor": "Stranded Luggage Monitor",
+  "refresh": "Refresh",
+  "more": "More",
+  "showAllLuggage": "Show All Luggage",
+  "locateLuggage": "Locate Luggage",
+  "loadingLuggageData": "Loading luggage data...",
+  "mapTileLoadFailed": "Map tiles failed to load, please check network",
+  "closeHint": "Close Hint",
+  "strandedLuggageStats": "Stranded Luggage Statistics",
+  "strandedLuggage": "Stranded Luggage",
+  "totalLuggage": "Total Luggage",
+  "filterCondition": "Filter Condition",
+  "flight": "Flight",
+  "updateTime": "Update Time",
+  "status": "Status",
+  "remark": "Remark",
+  "viewDetail": "View Detail",
+  "passenger": "Passenger",
+  "weight": "Weight",
+  "location": "Location",
+  "unableGetUserInfo": "Unable to get user info, please login again",
+  "locationUploadFailed": "Location upload failed: {error}",
+  "@locationUploadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "locationUploadFailedButContinue": "Location upload failed, but operation continues",
+  "all": "All",
+  "stopTransit": "Stop Transit",
+  "confirm": "Confirm",
+  "selectNewStatus": "Please select a new status",
+  "name": "Name",
+  "phoneNumber": "Phone Number",
+  "email": "Email",
+  "callLog": "Call Log",
+  "makeCall": "Make Call",
+  "sendMessage": "Send Message",
+  "claimConfirmation": "Claim Confirmation",
+  "confirmPassengerIdentity": "Please confirm passenger identity, then tap the button below to complete the claim process.",
+  "confirmClaim": "Confirm Claim",
+  "claimSuccess": "Claim Success",
+  "claimFailed": "Claim failed: {error}",
+  "@claimFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotMakeCall": "Cannot make call",
+  "callFailed": "Call failed: {error}",
+  "@callFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotSendMessage": "Cannot send message",
+  "messageSendFailed": "Message send failed: {error}",
+  "@messageSendFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "employmentStatus": "Employment Status",
+  "passwordChangeFailed": "Password change failed: {error}",
+  "@passwordChangeFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "pleaseEnterLocation": "Please enter location info first",
+  "locationSynced": "Location and status synced to backend",
+  "updateLocationFailed": "Update location failed: {error}",
+  "@updateLocationFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "updateSuccess": "Update Success",
+  "close": "Close",
+  "damageRegistration": "Damage Registration",
+  "reportDamage": "Report Damage",
 
   "daysAgo": "{days} days ago",
   "@daysAgo": {
@@ -767,6 +933,15 @@
   "unprocessed": "Pending",
 
   "strandedLuggage": "Stranded Luggage",
+  "strandedLuggageTodoItem": "Stranded Luggage",
+  "strandedHoursUnclaimed": "{tagNumber} (Passenger: {passengerName}) arrived over {hours} hours unclaimed",
+  "@strandedHoursUnclaimed": {
+    "placeholders": {
+      "tagNumber": {"type": "String"},
+      "passengerName": {"type": "String"},
+      "hours": {"type": "int"}
+    }
+  },
   "noStrandedLuggage": "No Stranded Luggage",
   "allLuggageProcessed": "All luggage has been processed",
   "strandedDays": "{days} days stranded",

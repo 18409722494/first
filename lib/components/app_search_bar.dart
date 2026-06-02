@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/luggage.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -197,9 +198,9 @@ class FilterChipGroup extends StatelessWidget {
     LuggageStatus.inTransit,
     LuggageStatus.arrived,
     LuggageStatus.received,
-    LuggageStatus.delivered,
     LuggageStatus.damaged,
     LuggageStatus.lost,
+    LuggageStatus.stranded,
   ];
 
   @override
@@ -236,11 +237,12 @@ class FilterChipGroup extends StatelessWidget {
   }
 
   Widget _buildAllChip(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isSelected = selectedStatus == null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FilterChip(
-      label: const Text('全部'),
+      label: Text(l10n.all),
       selected: isSelected,
       onSelected: (_) => onStatusChanged?.call(null),
       selectedColor: AppColors.primary.withValues(alpha: 0.2),
@@ -340,32 +342,18 @@ class FilterChipGroup extends StatelessWidget {
         return AppColors.arrived;
       case LuggageStatus.received:
         return AppColors.received;
-      case LuggageStatus.delivered:
-        return AppColors.delivered;
       case LuggageStatus.damaged:
         return AppColors.damaged;
       case LuggageStatus.lost:
         return AppColors.lost;
+      case LuggageStatus.stranded:
+        return AppColors.stranded;
     }
   }
 
   Color _getStatusBgColor(LuggageStatus status) {
-    switch (status) {
-      case LuggageStatus.checkIn:
-        return AppColors.checkInBg;
-      case LuggageStatus.inTransit:
-        return AppColors.inTransitBg;
-      case LuggageStatus.arrived:
-        return AppColors.arrivedBg;
-      case LuggageStatus.received:
-        return AppColors.receivedBg;
-      case LuggageStatus.delivered:
-        return AppColors.deliveredBg;
-      case LuggageStatus.damaged:
-        return AppColors.damagedBg;
-      case LuggageStatus.lost:
-        return AppColors.lostBg;
-    }
+    // 使用 LuggageStatus 枚举自带的浅色背景色
+    return status.bgColor;
   }
 }
 

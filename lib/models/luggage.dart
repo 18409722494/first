@@ -8,9 +8,9 @@ enum LuggageStatus {
   inTransit('运输中'),
   arrived('已到达'),
   received('已接收'),
-  delivered('已交付'),
   damaged('已损坏'),
-  lost('已丢失');
+  lost('已丢失'),
+  stranded('滞留');
 
   /// 中文默认显示名
   final String displayName;
@@ -26,12 +26,12 @@ enum LuggageStatus {
         return const Color(0xFF22C55E); // 绿色
       case LuggageStatus.received:
         return const Color(0xFF06B6D4); // 青色
-      case LuggageStatus.delivered:
-        return const Color(0xFFEC4899); // 粉色
       case LuggageStatus.damaged:
         return const Color(0xFFEF4444); // 红色
       case LuggageStatus.lost:
         return const Color(0xFF94A3B8); // 灰色
+      case LuggageStatus.stranded:
+        return const Color(0xFFF97316); // 橙色
     }
   }
 
@@ -46,12 +46,12 @@ enum LuggageStatus {
         return const Color(0xFFDCFCE7); // 浅绿
       case LuggageStatus.received:
         return const Color(0xFFE0F7FA); // 浅青
-      case LuggageStatus.delivered:
-        return const Color(0xFFFCE7F3); // 浅粉
       case LuggageStatus.damaged:
         return const Color(0xFFFEE2E2); // 浅红
       case LuggageStatus.lost:
         return const Color(0xFFF1F5F9); // 浅灰
+      case LuggageStatus.stranded:
+        return const Color(0xFFFFF7ED); // 浅橙
     }
   }
 
@@ -71,6 +71,8 @@ class Luggage {
   final LuggageStatus status;
   final DateTime checkInTime;
   final DateTime lastUpdated;
+  /// 滞留时间（行李被标记为 stranded 时记录，非 stranded 行李为 null）
+  final DateTime? strandedAt;
   /// 当前位置（对应后端 currentLocation 字段）
   /// 注意：此字段存储的是行李当前位置
   final String destination;
@@ -88,6 +90,7 @@ class Luggage {
     required this.status,
     required this.checkInTime,
     required this.lastUpdated,
+    this.strandedAt,
     required this.destination,
     required this.notes,
     this.latitude,
@@ -123,6 +126,7 @@ class Luggage {
       status: parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
       lastUpdated: parseTime(json['baggage_change_time'] ?? json['lastUpdated'] ?? json['last_updated'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      strandedAt: parseTime(json['strandedAt'] ?? json['stranded_at']),
       destination: json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
           json['note']?.toString() ??
@@ -144,6 +148,7 @@ class Luggage {
         'status': status.name,
         'checkInTime': checkInTime.toIso8601String(),
         'lastUpdated': lastUpdated.toIso8601String(),
+        'strandedAt': strandedAt?.toIso8601String(),
         'destination': destination,
         'notes': notes,
         'latitude': latitude,
@@ -160,6 +165,7 @@ class Luggage {
     LuggageStatus? status,
     DateTime? checkInTime,
     DateTime? lastUpdated,
+    DateTime? strandedAt,
     String? destination,
     String? notes,
     double? latitude,
@@ -175,6 +181,7 @@ class Luggage {
       status: status ?? this.status,
       checkInTime: checkInTime ?? this.checkInTime,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      strandedAt: strandedAt ?? this.strandedAt,
       destination: destination ?? this.destination,
       notes: notes ?? this.notes,
       latitude: latitude ?? this.latitude,
@@ -217,15 +224,15 @@ class BaggageStatusMapper {
       case '领取':
       case 'received':
         return LuggageStatus.received;
-      case '已交付':
-      case '交付':
-        return LuggageStatus.delivered;
       case '已损坏':
       case '损坏':
         return LuggageStatus.damaged;
       case '已丢失':
       case '丢失':
         return LuggageStatus.lost;
+      case '滞留':
+      case 'stranded':
+        return LuggageStatus.stranded;
     }
 
     final s = raw.toLowerCase();
@@ -237,15 +244,14 @@ class BaggageStatusMapper {
       case 'arrived':
       case 'arrival':
         return LuggageStatus.arrived;
-      case 'delivered':
-      case 'claimed':
-        return LuggageStatus.delivered;
       case 'damaged':
       case 'broken':
         return LuggageStatus.damaged;
       case 'lost':
       case 'missing':
         return LuggageStatus.lost;
+      case 'stranded':
+        return LuggageStatus.stranded;
       case 'checkin':
       case 'check_in':
       case 'checked':
@@ -266,12 +272,12 @@ class BaggageStatusMapper {
         return '已达';
       case LuggageStatus.received:
         return '已接收';
-      case LuggageStatus.delivered:
-        return '已交付';
       case LuggageStatus.damaged:
         return '已损坏';
       case LuggageStatus.lost:
         return '已丢失';
+      case LuggageStatus.stranded:
+        return '滞留';
     }
   }
 

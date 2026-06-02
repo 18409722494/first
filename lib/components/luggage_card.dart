@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/luggage.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -120,26 +121,27 @@ class LuggageCard extends StatelessWidget {
   }
 
   Widget _buildInfoGrid(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _InfoItem(
             icon: Icons.person_outline,
-            label: '乘客',
+            label: l10n.passenger,
             value: luggage.passengerName,
           ),
         ),
         Expanded(
           child: _InfoItem(
             icon: Icons.scale_outlined,
-            label: '重量',
+            label: l10n.weight,
             value: '${luggage.weight.toStringAsFixed(1)} kg',
           ),
         ),
         Expanded(
           child: _InfoItem(
             icon: Icons.flight_land,
-            label: '当前位置',
+            label: l10n.location,
             value: luggage.destination,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
