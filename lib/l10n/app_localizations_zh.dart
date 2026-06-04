@@ -72,9 +72,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountSecurity => '账户安全';
 
   @override
-  String get personalization => '个性化设置';
-
-  @override
   String get systemSettings => '系统设置';
 
   @override
@@ -222,16 +219,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nicknameChangedSuccess => '昵称修改成功';
-
-  @override
-  String get personalizationTitle => '个性化设置';
-
-  @override
-  String get personalizationNote => '个性化设置说明';
-
-  @override
-  String get personalizationNoteContent =>
-      '• 修改头像可以让您的个人资料更加个性化\n• 修改昵称可以更改您在系统中的显示名称\n• 这些设置仅影响您的个人资料显示，不会影响您的账户安全';
 
   @override
   String get languageSettings => '语言设置';
@@ -603,7 +590,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get addLuggageInfo => '添加行李信息';
+  String get addLuggageInfo => '更改行李信息';
 
   @override
   String get luggageTagNoLabel => '行李标签号';
@@ -1021,7 +1008,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get scanRegister => '扫码登记';
 
   @override
-  String get manualAdd => '手动添加';
+  String get manualAdd => '手动修改';
 
   @override
   String get unprocessedLuggage => '未处理行李';

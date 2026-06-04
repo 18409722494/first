@@ -9,7 +9,6 @@ import '../utils/responsive.dart';
 import 'login_screen.dart';
 import 'account_info_screen.dart';
 import 'account_security_screen.dart';
-import 'personalization_screen.dart';
 import 'system_settings_screen.dart';
 import 'quick_functions_screen.dart';
 import 'help_support_screen.dart';
@@ -231,20 +230,6 @@ class ProfileScreen extends StatelessWidget {
             iconColor: AppColors.warning,
             title: l10n.accountSecurity,
             onTap: () => _navigateTo(context, const AccountSecurityScreen()),
-            iconContainerSize: iconContainerSize,
-            iconSizeVal: iconSizeVal,
-            titleFont: titleFont,
-            chevronSize: chevronSize,
-            paddingH: tilePadH,
-            paddingV: tilePadV,
-          ),
-          Divider(height: 1, indent: dividerIndent),
-          _buildSettingsTile(
-            context: context,
-            icon: Icons.account_circle_outlined,
-            iconColor: AppColors.info,
-            title: l10n.personalization,
-            onTap: () => _navigateTo(context, const PersonalizationScreen()),
             iconContainerSize: iconContainerSize,
             iconSizeVal: iconSizeVal,
             titleFont: titleFont,

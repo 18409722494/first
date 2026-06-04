@@ -106,7 +106,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
                     Text('${l10n.luggageTagNoLabel}: ${bag.tagNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     Text('${l10n.flightNo}: ${bag.flightNumber}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
-                    Text('${l10n.destination}: ${bag.destination}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.destination}: ${bag.currentLocation}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ],
                 ),
               ),
@@ -124,7 +124,7 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
                   children: [
                     Text('${l10n.name}: ${bag.passengerName}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
-                    Text('${l10n.phoneNumber}: ******1234', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
+                    Text('${l10n.phoneNumber}: ${bag.contact ?? "—"}', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                     SizedBox(height: Responsive.spacing(context, AppSpacing.xs)),
                     Text('${l10n.email}: ******@example.com', style: TextStyle(fontSize: Responsive.fontSize(context, 13))),
                   ],
@@ -238,8 +238,15 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
   /// 拨打电话
   Future<void> _makePhoneCall() async {
     final l10n = AppLocalizations.of(context)!;
-    // 模拟电话号码，实际应该从行李数据中获取
-    const phoneNumber = '13800138000';
+    final phoneNumber = _selectedLuggage?.contact;
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无联系电话')),
+        );
+      }
+      return;
+    }
     final uri = Uri.parse('tel:$phoneNumber');
 
     try {
@@ -264,8 +271,15 @@ class _ContactPassengerScreenState extends State<ContactPassengerScreen> {
   /// 发送短信
   Future<void> _sendSms() async {
     final l10n = AppLocalizations.of(context)!;
-    // 模拟电话号码
-    const phoneNumber = '13800138000';
+    final phoneNumber = _selectedLuggage?.contact;
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无联系电话')),
+        );
+      }
+      return;
+    }
     final uri = Uri.parse('sms:$phoneNumber');
 
     try {

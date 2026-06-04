@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as latlong2;
 import '../constants/app_constants.dart';
 import '../models/luggage.dart';
 import '../models/qr_payload.dart';
 import '../models/search_result.dart';
+import '../services/location_search_service.dart';
 import '../services/luggage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -27,22 +30,31 @@ class LuggageMapScreen extends StatefulWidget {
   State<LuggageMapScreen> createState() => _LuggageMapScreenState();
 }
 
+/// 行李 + latlong2.LatLng 坐标的组合
+class _LuggageCoords {
+  final Luggage luggage;
+  final latlong2.LatLng position;
+  const _LuggageCoords(this.luggage, this.position);
+}
+
 class _LuggageMapScreenState extends State<LuggageMapScreen> {
-  List<Luggage> _luggages = [];
+  /// 滞留行李按位置分组: 位置名 → 该位置下所有行李（含坐标）
+  Map<String, List<_LuggageCoords>> _strandedGroups = {};
+
+  /// 当前地图上要渲染的所有标记
+  List<Marker> _markers = [];
+
+  /// 第一个标记位置，用于地图初始中心
+  latlong2.LatLng? _firstMarkerPosition;
+
   bool _isLoading = true;
   String? _error;
   bool _tileError = false;
   SearchResult? _searchResult;
 
-  /// 预缓存的行李标记，key 与 _luggages 一一对应，只在数据加载/刷新时重建一次
-  List<Marker> _luggageMarkerCache = [];
-
-  /// 第一个有坐标行李的位置，用于地图初始中心
-  LatLng? _firstLuggagePosition;
-
   late final MapController _mapController;
 
-  static const _defaultCenter = LatLng(30.5928, 114.3055);
+  static const _defaultCenter = latlong2.LatLng(30.5928, 114.3055);
   static const _defaultZoom = 5.0;
 
   @override
@@ -58,107 +70,202 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     super.dispose();
   }
 
-  /// 滞留行李筛选条件：状态不为已接收，且超过24小时无位置更新
-  List<Luggage> _filterStrandedLuggages(List<Luggage> all) {
-    return all.where((l) {
-      // 状态不是已接收
-      if (l.status == LuggageStatus.received) return false;
-      // 有有效的GPS坐标
-      if (l.latitude == null || l.longitude == null) return false;
-      // 超过24小时无更新
-      final hoursSinceUpdate = DateTime.now().difference(l.lastUpdated).inHours;
-      if (hoursSinceUpdate < 24) return false;
-      return true;
-    }).toList();
-  }
-
-  /// 统计滞留行李信息
-  int _totalCount = 0;
-  int _strandedCount = 0;
+  int get _strandedCount =>
+      _strandedGroups.values.fold(0, (sum, list) => sum + list.length);
 
   Future<void> _loadLuggageData() async {
     setState(() => _isLoading = true);
     try {
-      final result = await LuggageService.getLuggageList(page: 1, pageSize: 5000);
-      final allItems = result.items;
-      final strandedItems = _filterStrandedLuggages(allItems);
+      final strandedItems = await LuggageService.getStrandedLuggage(
+        forceRefresh: true,
+      ).timeout(const Duration(seconds: 20), onTimeout: () {
+        throw TimeoutException('加载行李超时，请检查网络连接');
+      });
+
+      debugPrint('[地图] 获取到滞留行李 ${strandedItems.length} 件');
+      for (final l in strandedItems) {
+        debugPrint(
+            '  - ${l.tagNumber} 状态:${l.status.displayName} 坐标:(${l.latitude},${l.longitude}) 位置:${l.currentLocation}');
+      }
+
+      // 分类：有 GPS 坐标 vs 无 GPS 坐标（需地理编码）
+      final Map<String, List<_LuggageCoords>> groups = {};
+      final List<Luggage> needGeoCode = [];
+      latlong2.LatLng? firstPos;
+
+      for (final luggage in strandedItems) {
+        if (luggage.latitude != null && luggage.longitude != null) {
+          final pos = latlong2.LatLng(luggage.latitude!, luggage.longitude!);
+          firstPos ??= pos;
+          final key = luggage.currentLocation.isNotEmpty ? luggage.currentLocation : '未知位置';
+          groups.putIfAbsent(key, () => []).add(_LuggageCoords(luggage, pos));
+        } else if (luggage.currentLocation.isNotEmpty) {
+          needGeoCode.add(luggage);
+        }
+      }
+
+      debugPrint('[地图] 有坐标行李 ${groups.length} 组，无坐标需地理编码 ${needGeoCode.length} 件');
+
+      // 天地图地理编码（已有 10 分钟内存缓存，不会重复请求）
+      for (final luggage in needGeoCode) {
+        final pos = await LocationSearchService.geocode(luggage.currentLocation);
+        if (pos != null) {
+          final ll = latlong2.LatLng(pos.latitude, pos.longitude);
+          firstPos ??= ll;
+          groups.putIfAbsent(luggage.currentLocation, () => []).add(_LuggageCoords(luggage, ll));
+          debugPrint('[地图] 地理编码成功: ${luggage.currentLocation} → (${pos.latitude}, ${pos.longitude})');
+        } else {
+          debugPrint('[地图] 地理编码失败: ${luggage.currentLocation}');
+        }
+      }
+
+      final markers = <Marker>[];
+      for (final entry in groups.entries) {
+        markers.add(_buildLocationMarker(entry.key, entry.value));
+      }
+
+      debugPrint('[地图] 渲染标记 ${markers.length} 个');
 
       setState(() {
-        _totalCount = allItems.length;
-        _strandedCount = strandedItems.length;
-        _luggages = strandedItems;
+        _strandedGroups = groups;
+        _markers = markers;
+        _firstMarkerPosition = firstPos;
         _isLoading = false;
         _error = null;
       });
-      _rebuildMarkerCache(strandedItems);
     } catch (e) {
+      debugPrint('[地图] 加载失败: $e');
       setState(() {
-        _luggages = [];
+        _strandedGroups = {};
+        _markers = [];
         _isLoading = false;
         _error = '加载行李数据失败: $e';
       });
-      _rebuildMarkerCache([]);
     }
   }
 
-  /// 根据行李列表一次性构建 marker 列表，避免每次地图 rebuild 重复创建对象
-  void _rebuildMarkerCache(List<Luggage> luggages) {
-    final validLuggages = luggages
-        .where((l) => l.latitude != null && l.longitude != null)
-        .toList();
-    _firstLuggagePosition = validLuggages.isNotEmpty
-        ? LatLng(validLuggages.first.latitude!, validLuggages.first.longitude!)
-        : null;
-    _luggageMarkerCache = [
-      for (final luggage in validLuggages) _buildMarker(luggage),
-    ];
-  }
-
-  Marker _buildMarker(Luggage luggage) {
+  Marker _buildLocationMarker(String locationName, List<_LuggageCoords> items) {
+    final pos = items.first.position;
     return Marker(
-      point: LatLng(luggage.latitude!, luggage.longitude!),
-      width: 44,
-      height: 44,
+      point: pos,
+      width: 80,
+      height: 80,
+      alignment: Alignment.topCenter,
       child: GestureDetector(
-        onTap: () => _onMarkerTap(luggage),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _markerColor(luggage).withValues(alpha: 0.85),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Icon(_markerIcon(luggage), color: Colors.white, size: 22),
+        onTap: () => _onMarkerTap(locationName),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red.shade600,
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
+              ),
+              child: Text(
+                items.length > 1 ? '${items.first.luggage.tagNumber}等${items.length}件' : items.first.luggage.tagNumber,
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              width: 12,
+              height: 12,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: Colors.red.shade600,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  LatLng _luggagePosition(Luggage luggage) {
-    if (luggage.latitude != null && luggage.longitude != null) {
-      return LatLng(luggage.latitude!, luggage.longitude!);
-    }
-    return _defaultCenter;
+  void _onMarkerTap(String locationName) {
+    final items = _strandedGroups[locationName];
+    if (items == null || items.isEmpty) return;
+    _showLocationSheet(locationName, items);
   }
 
-  void _onMarkerTap(Luggage luggage) {
-    _showLuggageDetailSheet(luggage);
-  }
-
-  void _showLuggageDetailSheet(Luggage luggage) {
+  void _showLocationSheet(String locationName, List<_LuggageCoords> items) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => LuggageDetailBottomSheet(
-        luggage: luggage,
-        onViewDetail: () {
-          Navigator.pop(context);
-          _viewDetail(luggage);
-        },
-        onClose: () => Navigator.pop(context),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.cardDark
+              : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.red.shade600, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    locationName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${items.length}件',
+                  style: TextStyle(
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            ...items.map((item) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.luggage, color: Color(0xFFF97316), size: 18),
+              ),
+              title: Text(
+                item.luggage.tagNumber,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: Text(
+                '${item.luggage.flightNumber} · ${item.luggage.passengerName}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () {
+                Navigator.pop(context);
+                _viewDetail(item.luggage);
+              },
+            )),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -182,9 +289,8 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   void _goToLuggage() {
-    if (_luggages.isNotEmpty) {
-      final pos = _luggagePosition(_luggages.first);
-      _mapController.move(pos, 10.0);
+    if (_markers.isNotEmpty && _firstMarkerPosition != null) {
+      _mapController.move(_firstMarkerPosition!, 10.0);
     }
   }
 
@@ -192,7 +298,6 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
     setState(() {
       _searchResult = result;
     });
-    // 定位到目标并缩放到合适层级（14 级适合城市视图）
     _mapController.move(result.location, 14.0);
   }
 
@@ -203,51 +308,18 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
   }
 
   void _fitAllMarkers() {
-    if (_luggages.isEmpty) return;
-    final validPoints = _luggages
-        .where((l) => l.latitude != null && l.longitude != null)
-        .map(_luggagePosition)
-        .toList();
-    if (validPoints.isEmpty) return;
+    if (_markers.isEmpty) return;
 
-    if (validPoints.length == 1) {
-      _mapController.move(validPoints.first, 10.0);
+    if (_markers.length == 1) {
+      _mapController.move(_markers.first.point, 10.0);
       return;
     }
 
-    final bounds = LatLngBounds.fromPoints(validPoints);
+    final points = _markers.map((m) => m.point).toList();
+    final bounds = LatLngBounds.fromPoints(points);
     _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(60),
-      ),
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
     );
-  }
-
-  Color _markerColor(Luggage luggage) {
-    switch (luggage.status) {
-      case LuggageStatus.checkIn:
-        return AppColors.checkIn;
-      case LuggageStatus.inTransit:
-        return AppColors.inTransit;
-      case LuggageStatus.arrived:
-        return AppColors.arrived;
-      case LuggageStatus.received:
-        return AppColors.received;
-      case LuggageStatus.damaged:
-        return AppColors.damaged;
-      case LuggageStatus.lost:
-        return AppColors.lost;
-      case LuggageStatus.stranded:
-        return AppColors.stranded;
-    }
-  }
-
-  IconData _markerIcon(Luggage luggage) {
-    if (luggage.status == LuggageStatus.damaged) {
-      return Icons.luggage_outlined;
-    }
-    return Icons.luggage;
   }
 
   @override
@@ -322,7 +394,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
       child: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
-          initialCenter: _firstLuggagePosition ?? _defaultCenter,
+          initialCenter: _firstMarkerPosition ?? _defaultCenter,
           initialZoom: _defaultZoom,
           minZoom: 4,
           maxZoom: 17,
@@ -347,7 +419,7 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
           ),
           MarkerLayer(
             markers: [
-              ..._luggageMarkerCache,
+              ..._markers,
               if (_searchResult != null)
                 Marker(
                   point: _searchResult!.location,
@@ -526,15 +598,6 @@ class _LuggageMapScreenState extends State<LuggageMapScreen> {
               ),
               SizedBox(height: Responsive.spacing(context, AppSpacing.sm)),
               _statItem(AppColors.warning, l10n.strandedLuggage, '$_strandedCount 件', isDark),
-              _statItem(AppColors.grey, l10n.totalLuggage(_totalCount), '件', isDark),
-              Divider(height: Responsive.spacing(context, AppSpacing.sm + 2), color: isDark ? Colors.white24 : Colors.black12),
-              Text(
-                '${l10n.filterCondition}：${l10n.statusReceived}\n且超过24小时无位置更新',
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 11),
-                  color: isDark ? Colors.white54 : Colors.black54,
-                ),
-              ),
             ],
           ),
         ),
@@ -828,7 +891,7 @@ class LuggageDetailBottomSheet extends StatelessWidget {
                   context,
                   Icons.location_on,
                   l10n.location,
-                  luggage.destination,
+                  luggage.currentLocation,
                   isDark,
                 ),
                 SizedBox(height: Responsive.spacing(context, AppSpacing.sm + 4)),

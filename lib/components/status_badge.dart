@@ -78,6 +78,8 @@ class StatusBadge extends StatelessWidget {
         return const Color(0xFFF1F5F9); // 浅灰
       case LuggageStatus.stranded:
         return const Color(0xFFFFF7ED); // 浅橙
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFFFF7ED); // 浅橙（与滞留一致）
     }
   }
 
@@ -140,7 +142,14 @@ class StatusBadgeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final statuses = showAll
         ? LuggageStatus.values
-        : LuggageStatus.values.where((s) => s != LuggageStatus.lost).toList();
+        : [
+            LuggageStatus.checkIn,
+            LuggageStatus.arrived,
+            LuggageStatus.received,
+            LuggageStatus.damaged,
+            LuggageStatus.lost,
+            LuggageStatus.stopTransit,
+          ];
 
     return Wrap(
       spacing: 8,
@@ -192,6 +201,8 @@ class StatusBadgeSelector extends StatelessWidget {
         return const Color(0xFFF1F5F9);
       case LuggageStatus.stranded:
         return const Color(0xFFFFF7ED); // 浅橙
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFFFF7ED); // 浅橙（与滞留一致）
     }
   }
 }

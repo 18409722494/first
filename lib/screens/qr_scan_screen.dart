@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -112,8 +112,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
         final serviceEnabled = await LocationService.isLocationServiceEnabled();
 
         if (!serviceEnabled) {
-          locationName = luggage.destination.isNotEmpty
-              ? luggage.destination
+          locationName = luggage.currentLocation.isNotEmpty
+              ? luggage.currentLocation
               : l10n.unknownLocation;
           // 尝试上传位置信息（即使GPS不可用也记录当前位置）
           try {
@@ -148,8 +148,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
               }
             }
           } else {
-            locationName = luggage.destination.isNotEmpty
-                ? luggage.destination
+            locationName = luggage.currentLocation.isNotEmpty
+                ? luggage.currentLocation
                 : l10n.unknownLocation;
             try {
               await LuggageService.updateScanLocation(
@@ -161,8 +161,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
           }
         }
       } catch (e) {
-        locationName = luggage.destination.isNotEmpty
-            ? luggage.destination
+        locationName = luggage.currentLocation.isNotEmpty
+            ? luggage.currentLocation
             : l10n.unknownLocation;
       }
 
@@ -236,7 +236,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       }
       final employeeId = await StorageService.getEmployeeId();
       final finalLocation =
-          locationName.isNotEmpty ? locationName : luggage.destination;
+          locationName.isNotEmpty ? locationName : luggage.currentLocation;
 
       // 更新行李位置和状态到后端
       await LuggageService.updateScanLocation(
@@ -557,8 +557,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
     } catch (_) {}
 
     locationName = locationName.isEmpty
-        ? (luggage.destination.isNotEmpty
-            ? luggage.destination
+        ? (luggage.currentLocation.isNotEmpty
+            ? luggage.currentLocation
             : l10n.unknownLocation)
         : locationName;
 
@@ -1021,8 +1021,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
       } catch (_) {}
 
       locationName = locationName.isEmpty
-          ? (luggage.destination.isNotEmpty
-              ? luggage.destination
+          ? (luggage.currentLocation.isNotEmpty
+              ? luggage.currentLocation
               : l10n.unknownLocation)
           : locationName;
 

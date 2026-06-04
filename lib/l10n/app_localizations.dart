@@ -224,12 +224,6 @@ abstract class AppLocalizations {
   /// **'账户安全'**
   String get accountSecurity;
 
-  /// No description provided for @personalization.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化设置'**
-  String get personalization;
-
   /// No description provided for @systemSettings.
   ///
   /// In zh, this message translates to:
@@ -517,24 +511,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'昵称修改成功'**
   String get nicknameChangedSuccess;
-
-  /// No description provided for @personalizationTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化设置'**
-  String get personalizationTitle;
-
-  /// No description provided for @personalizationNote.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化设置说明'**
-  String get personalizationNote;
-
-  /// No description provided for @personalizationNoteContent.
-  ///
-  /// In zh, this message translates to:
-  /// **'• 修改头像可以让您的个人资料更加个性化\n• 修改昵称可以更改您在系统中的显示名称\n• 这些设置仅影响您的个人资料显示，不会影响您的账户安全'**
-  String get personalizationNoteContent;
 
   /// No description provided for @languageSettings.
   ///
@@ -1235,7 +1211,7 @@ abstract class AppLocalizations {
   /// No description provided for @addLuggageInfo.
   ///
   /// In zh, this message translates to:
-  /// **'添加行李信息'**
+  /// **'更改行李信息'**
   String get addLuggageInfo;
 
   /// No description provided for @luggageTagNoLabel.
@@ -1979,7 +1955,7 @@ abstract class AppLocalizations {
   /// No description provided for @manualAdd.
   ///
   /// In zh, this message translates to:
-  /// **'手动添加'**
+  /// **'手动修改'**
   String get manualAdd;
 
   /// No description provided for @unprocessedLuggage.

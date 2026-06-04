@@ -1,4 +1,9 @@
+import 'dart:convert';
+
 import 'package:collection/collection.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
 import '../models/abnormal_baggage.dart';
 import '../models/baggage_operation_log.dart';
@@ -124,7 +129,7 @@ class LuggageService {
     try {
       await BaggageApiService.updateBaggageLocation(
         baggageNumber: luggage.tagNumber,
-        location: luggage.destination,
+        location: luggage.currentLocation,
         status: BaggageStatusMapper.toBackendLocationStatus(luggage.status),
       );
       return luggage;
@@ -146,7 +151,7 @@ class LuggageService {
       status: patch['status'] is String
           ? BaggageStatusMapper.parseFromApi(patch['status'])
           : luggage.status,
-      destination: patch['destination']?.toString() ?? luggage.destination,
+      currentLocation: patch['currentLocation']?.toString() ?? luggage.currentLocation,
       notes: patch['notes']?.toString() ?? luggage.notes,
     );
 
@@ -154,7 +159,7 @@ class LuggageService {
     try {
       await BaggageApiService.updateBaggageLocation(
         baggageNumber: updatedLuggage.tagNumber,
-        location: updatedLuggage.destination,
+        location: updatedLuggage.currentLocation,
         status:
             BaggageStatusMapper.toBackendLocationStatus(updatedLuggage.status),
       );
@@ -203,10 +208,17 @@ class LuggageService {
   /// 调用 POST /baggage/location 直接修改数据库 status 字段为"滞留"
   static Future<bool> markAsStranded(Luggage luggage) async {
     try {
+      final employeeId = await StorageService.getEmployeeId();
+      final baggageNumber = luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id;
+      final location = (luggage.latitude != null && luggage.longitude != null)
+          ? '${luggage.latitude},${luggage.longitude}'
+          : luggage.currentLocation;
+
       final result = await BaggageApiService.updateBaggageLocation(
-        baggageNumber: luggage.tagNumber.isNotEmpty ? luggage.tagNumber : luggage.id,
-        location: luggage.destination,
+        baggageNumber: baggageNumber,
+        location: location,
         status: '滞留',
+        employeeId: employeeId,
       );
       return result['result'] == 'success' ||
           result['success'] == true ||
@@ -219,35 +231,23 @@ class LuggageService {
 
   /// 获取滞留行李列表
   ///
-  /// 从后端获取状态为"滞留"的行李，同时对"已到达"超时的行李自动标记为滞留
-  static Future<List<Luggage>> getStrandedLuggage() async {
+  /// 从后端获取状态为"滞留"的行李，同时将"已到达"超时行李纳入列表（不阻塞UI）
+  /// [forceRefresh] 为 true 时跳过缓存直接请求网络
+  static Future<List<Luggage>> getStrandedLuggage({bool forceRefresh = false}) async {
     final thresholdHours = AppConstants.strandedHoursThreshold;
-    final result = await BaggageApiService.getAllBaggage(page: 1, pageSize: 9999);
-    final now = DateTime.now();
-    final threshold = now.subtract(Duration(hours: thresholdHours));
+    final result = await BaggageApiService.getAllBaggage(
+      page: 1,
+      pageSize: 9999,
+      forceRefresh: forceRefresh,
+    );
+    final threshold = DateTime.now().subtract(Duration(hours: thresholdHours));
 
-    final List<Luggage> strandedList = [];
-    final List<Luggage> candidates = [];
-
-    for (final item in result.items) {
-      if (item.status == LuggageStatus.stranded) {
-        strandedList.add(item);
-      } else if (item.status == LuggageStatus.arrived &&
-          item.lastUpdated.isBefore(threshold)) {
-        candidates.add(item);
-      }
-    }
-
-    // 对超时未更新的"已到达"行李，自动标记为滞留
-    for (final luggage in candidates) {
-      await markAsStranded(luggage);
-      strandedList.add(luggage.copyWith(
-        status: LuggageStatus.stranded,
-        strandedAt: now,
-      ));
-    }
-
-    return strandedList;
+    return result.items.where((item) {
+      if (item.status == LuggageStatus.stranded) return true;
+      // "已到达"超时的行李也算滞留，但不阻塞等待标记接口
+      return item.status == LuggageStatus.arrived &&
+          item.lastUpdated.isBefore(threshold);
+    }).toList();
   }
 
   /// 获取无人认领行李列表（已到达但超过阈值小时未交付）
@@ -411,4 +411,141 @@ class LuggageService {
         rawQr: rawQr,
         forceRefresh: forceRefresh,
       );
+
+  // ─────────────────────────────────────────────
+  // 地理编码（位置名称 → 经纬度）
+  // ─────────────────────────────────────────────
+
+  /// 内存缓存，key=规范化位置名，value=GeoPoint
+  static final Map<String, GeoPoint> _geoCache = {};
+
+  /// 腾讯位置服务 WebService API Key（申请地址：https://lbs.qq.com）
+  /// 生产环境建议通过 --dart-define 注入，或放在 .env 中
+  static String get _tencentApiKey {
+    const fromDefine = String.fromEnvironment('TENCENT_LBS_KEY');
+    if (fromDefine.isNotEmpty) return fromDefine.trim();
+    try {
+      final v = dotenv.env['TENCENT_LBS_KEY'];
+      if (v != null && v.trim().isNotEmpty) return v.trim();
+    } catch (_) {}
+    return '';
+  }
+
+  /// SharedPreferences 持久化缓存 key 前缀
+  static const String _spGeoCacheKey = 'geo_cache_v1';
+
+  /// 初始化时从本地缓存加载地理编码结果（异步，页面加载时调用一次即可）
+  static Future<void> initGeoCache() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final raw = sp.getString(_spGeoCacheKey);
+      if (raw == null || raw.isEmpty) return;
+      final Map<String, dynamic> decoded = jsonDecode(raw);
+      for (final entry in decoded.entries) {
+        final lat = double.tryParse(entry.value['lat']?.toString() ?? '');
+        final lon = double.tryParse(entry.value['lng']?.toString() ?? '');
+        if (lat != null && lon != null) {
+          _geoCache[entry.key] = GeoPoint(lat, lon);
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// 将内存缓存写回本地持久化存储
+  static Future<void> _persistCache() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final data = <String, dynamic>{};
+      for (final entry in _geoCache.entries) {
+        data[entry.key] = {'lat': entry.value.latitude, 'lng': entry.value.longitude};
+      }
+      await sp.setString(_spGeoCacheKey, jsonEncode(data));
+    } catch (_) {}
+  }
+
+  /// 将位置名称转换为经纬度
+  ///
+  /// 优先使用内存缓存 → 本地持久化缓存 → 腾讯位置服务 API。
+  /// 中国中文地址推荐使用腾讯/高德，Nominatim 对中文支持差。
+  static Future<GeoPoint?> geocode(String locationName) async {
+    final key = locationName.trim();
+    if (key.isEmpty) return null;
+    if (_geoCache.containsKey(key)) return _geoCache[key];
+
+    GeoPoint? result;
+
+    // 优先腾讯位置服务（对中国中文地址友好）
+    if (_tencentApiKey.isNotEmpty) {
+      result = await _geocodeTencent(key);
+    }
+
+    // 腾讯失败则降级到 Nominatim
+    if (result == null) {
+      result = await _geocodeNominatim(key);
+    }
+
+    if (result != null) {
+      _geoCache[key] = result;
+      // 异步持久化，不阻塞
+      _persistCache();
+    }
+
+    return result;
+  }
+
+  /// 腾讯位置服务地理编码
+  static Future<GeoPoint?> _geocodeTencent(String locationName) async {
+    try {
+      final encoded = Uri.encodeComponent(locationName);
+      final uri = Uri.parse(
+        'https://apis.map.qq.com/ws/geocoder/v1'
+        '?address=$encoded&key=$_tencentApiKey',
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 0 && data['result'] != null) {
+          final location = data['result']['location'];
+          final lat = double.tryParse(location['lat']?.toString() ?? '');
+          final lng = double.tryParse(location['lng']?.toString() ?? '');
+          if (lat != null && lng != null) {
+            return GeoPoint(lat, lng);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Nominatim 地理编码（降级兜底）
+  static Future<GeoPoint?> _geocodeNominatim(String locationName) async {
+    try {
+      final encoded = Uri.encodeComponent(locationName);
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/search'
+        '?q=$encoded&format=json&limit=1',
+      );
+      final response = await http
+          .get(uri, headers: {'User-Agent': 'BaggageApp/1.0'})
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        if (data.isNotEmpty) {
+          final lat = double.tryParse(data[0]['lat']?.toString() ?? '');
+          final lon = double.tryParse(data[0]['lon']?.toString() ?? '');
+          if (lat != null && lon != null) {
+            return GeoPoint(lat, lon);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+}
+
+/// 地理坐标点
+class GeoPoint {
+  final double latitude;
+  final double longitude;
+  const GeoPoint(this.latitude, this.longitude);
 }

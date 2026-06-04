@@ -127,7 +127,7 @@ class _LuggageListScreenState extends State<LuggageListScreen> {
       final matchesSearch = _searchQuery.isEmpty ||
           luggage.tagNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           luggage.passengerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          luggage.destination.toLowerCase().contains(_searchQuery.toLowerCase());
+          luggage.currentLocation.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesStatus =
           _statusFilter == null || luggage.status.name == _statusFilter;
       return matchesSearch && matchesStatus;

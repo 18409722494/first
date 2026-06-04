@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
 import '../constants/app_constants.dart';
@@ -42,6 +43,7 @@ class BaggageApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        debugPrint('[API] baggage/all 返回 ${data.length} 条，原始前3条: ${data.take(3)}');
         final items = data.map((json) => _parseBaggage(json)).toList();
 
         // 缓存第1页大量数据
@@ -173,7 +175,7 @@ class BaggageApiService {
       return luggage.tagNumber.toLowerCase().contains(lowerKeyword) ||
           luggage.flightNumber.toLowerCase().contains(lowerKeyword) ||
           luggage.passengerName.toLowerCase().contains(lowerKeyword) ||
-          luggage.destination.toLowerCase().contains(lowerKeyword);
+          luggage.currentLocation.toLowerCase().contains(lowerKeyword);
     }).toList();
   }
 
@@ -226,10 +228,10 @@ class BaggageApiService {
       // 后端表字段为 baggageStatus；旧字段名 status 作回退
       status: _parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['flightTime'] ?? json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
-      lastUpdated: parseTime(json['baggage_change_time'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      lastUpdated: parseTime(json['baggageChangeTime'] ?? json['baggage_change_time'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
       strandedAt: parseTime(json['strandedAt'] ?? json['stranded_at']),
       // 优先使用 currentLocation（当前位置），回退到 destination
-      destination: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
+      currentLocation: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
           json['remark']?.toString() ??
           json['baggageRemark']?.toString() ??
@@ -251,7 +253,7 @@ class BaggageApiService {
       'flightTime': luggage.checkInTime.toIso8601String(),
       'passengerName': luggage.passengerName,
       'weight': luggage.weight,
-      'currentLocation': luggage.destination,
+      'currentLocation': luggage.currentLocation,
       'notes': luggage.notes,
       'latitude': luggage.latitude,
       'longitude': luggage.longitude,

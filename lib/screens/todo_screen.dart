@@ -161,7 +161,7 @@ class _TodoScreenState extends State<TodoScreen> {
 
   Future<List<TodoItem>> _fetchUnclaimedTodos() async {
     try {
-      final list = await LuggageService.getStrandedLuggage();
+      final list = await LuggageService.getStrandedLuggage(forceRefresh: true);
       return list.map((luggage) => TodoItem.fromUnclaimedLuggage(
         tagNumber: luggage.tagNumber,
         luggageId: luggage.id,

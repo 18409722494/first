@@ -68,7 +68,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     showAboutDialog(
       context: context,
       applicationName: l10n.appName,
-      applicationVersion: '1.0.0',
+      applicationVersion: '2.0.1',
       applicationIcon: Icon(
         Icons.luggage,
         size: 48,

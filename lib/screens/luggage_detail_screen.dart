@@ -79,7 +79,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen>
       );
       _detail = detail;
       _statusCtrl.text = detail.luggage.status.displayName;
-      _locationCtrl.text = detail.luggage.destination;
+      _locationCtrl.text = detail.luggage.currentLocation;
       _noteCtrl.text = detail.luggage.notes;
     } catch (e) {
       _error = '加载异常: $e';
@@ -99,7 +99,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen>
         status: LuggageStatus.checkIn,
         checkInTime: DateTime.now(),
         lastUpdated: DateTime.now(),
-        destination: '',
+        currentLocation: '',
         notes: '',
         contact: widget.qrPayload.extra['contact']?.toString(),
       );
@@ -165,7 +165,7 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen>
       final locationText = _locationCtrl.text.trim();
       final locationForApi = locationText.isNotEmpty
           ? locationText
-          : (bag.destination.isNotEmpty ? bag.destination : '未知位置');
+          : (bag.currentLocation.isNotEmpty ? bag.currentLocation : '未知位置');
 
       final employeeId = await StorageService.getEmployeeId();
 
@@ -182,13 +182,13 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen>
       try {
         updated = await LuggageService.updateLuggage(bag.id, {
           'status': status.name,
-          'destination': locationText.isEmpty ? null : locationText,
+          'currentLocation': locationText.isEmpty ? null : locationText,
           'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         });
       } catch (_) {
         updated = bag.copyWith(
           status: status,
-          destination: locationText.isNotEmpty ? locationText : bag.destination,
+          currentLocation: locationText.isNotEmpty ? locationText : bag.currentLocation,
           notes: _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : bag.notes,
           lastUpdated: DateTime.now(),
         );
@@ -332,8 +332,8 @@ class _LuggageDetailScreenState extends State<LuggageDetailScreen>
             _kv(l10n.passengerName, bag.passengerName.isNotEmpty ? bag.passengerName : '-'),
             _kv(l10n.weight, bag.weight > 0 ? l10n.weightKg(bag.weight.toString()) : '-'),
             _kv(l10n.status, '', status: bag.status),
-            _kv(l10n.destination, bag.destination.isNotEmpty
-                ? LuggageUtils.cleanLocationString(bag.destination)
+            _kv(l10n.destination, bag.currentLocation.isNotEmpty
+                ? LuggageUtils.cleanLocationString(bag.currentLocation)
                 : '-'),
             _kv(l10n.contactPhone, bag.contact != null && bag.contact!.isNotEmpty ? bag.contact! : '-'),
             _kv(l10n.lastUpdated, _formatDateTime(bag.lastUpdated)),

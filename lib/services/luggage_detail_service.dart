@@ -128,7 +128,7 @@ class LuggageDetailService {
       status: LuggageStatus.checkIn,
       checkInTime: DateTime.now(),
       lastUpdated: DateTime.now(),
-      destination: '',
+      currentLocation: '',
       notes: '',
       contact: contact,
     );

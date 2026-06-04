@@ -24,6 +24,16 @@ class LuggageFilterSheet extends StatelessWidget {
   /// 本地化字符串获取器
   final String Function(String key) l10n;
 
+  /// 筛选时可用的状态列表（不含 inTransit，无相关业务逻辑）
+  static const List<LuggageStatus> _filterableStatuses = [
+    LuggageStatus.checkIn,
+    LuggageStatus.arrived,
+    LuggageStatus.received,
+    LuggageStatus.damaged,
+    LuggageStatus.lost,
+    LuggageStatus.stopTransit,
+  ];
+
   const LuggageFilterSheet({
     super.key,
     this.currentStatus,
@@ -99,7 +109,7 @@ class LuggageFilterSheet extends StatelessWidget {
                 runSpacing: Responsive.spacing(context, AppSpacing.sm),
                 children: [
                   _buildFilterChip(context, l10n('all'), null),
-                  ...LuggageStatus.values.map((status) {
+                  ..._filterableStatuses.map((status) {
                     return _buildFilterChip(context, status.displayName, status.name);
                   }),
                 ],

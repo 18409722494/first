@@ -26,6 +26,10 @@ class LuggageUtils {
         return '已损坏';
       case 'lost':
         return '已丢失';
+      case 'stopTransit':
+        return '停止托运';
+      case 'stranded':
+        return '滞留';
       default:
         return statusKey;
     }

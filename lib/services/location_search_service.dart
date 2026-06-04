@@ -116,6 +116,28 @@ class LocationSearchService {
     _cache.clear();
   }
 
+  /// 将地址转换为经纬度（仅返回第一个结果，无结果返回 null）
+  ///
+  /// 内部使用天地图地理编码 API，与地图共用同一 Key。
+  static Future<LatLng?> geocode(String address) async {
+    final key = address.trim();
+    if (key.isEmpty) return null;
+
+    final cached = _cache[key];
+    if (cached != null && !cached.isExpired()) {
+      if (cached.results.isNotEmpty) return cached.results.first.location;
+    }
+
+    try {
+      final results = await _searchTiandituGeocoder(key);
+      if (results.isNotEmpty) {
+        _cache[key] = _CacheEntry(results);
+        return results.first.location;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   // ──────────────────── 私有方法 ────────────────────
 
   /// 行政区划查询（省 / 市 / 区县名，如「天津市」「东丽区」）

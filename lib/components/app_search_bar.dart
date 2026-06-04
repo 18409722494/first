@@ -195,12 +195,11 @@ class FilterChipGroup extends StatelessWidget {
 
   static const List<LuggageStatus> _filterableStatuses = [
     LuggageStatus.checkIn,
-    LuggageStatus.inTransit,
     LuggageStatus.arrived,
     LuggageStatus.received,
     LuggageStatus.damaged,
     LuggageStatus.lost,
-    LuggageStatus.stranded,
+    LuggageStatus.stopTransit,
   ];
 
   @override
@@ -348,6 +347,8 @@ class FilterChipGroup extends StatelessWidget {
         return AppColors.lost;
       case LuggageStatus.stranded:
         return AppColors.stranded;
+      case LuggageStatus.stopTransit:
+        return AppColors.stranded; // 与滞留一致
     }
   }
 

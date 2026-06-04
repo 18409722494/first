@@ -111,8 +111,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final isOverweight = luggage.weight > 23.0;
         // 拼接显示信息
         final info = isOverweight
-            ? '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation} · ${l10n.overweight((luggage.weight - 23.0).toStringAsFixed(1))}'
-            : '${luggage.flightNumber} · ${luggage.destination.isNotEmpty ? luggage.destination : l10n.unknownLocation} · ${luggage.weight}kg';
+            ? '${luggage.flightNumber} · ${luggage.currentLocation.isNotEmpty ? luggage.currentLocation : l10n.unknownLocation} · ${l10n.overweight((luggage.weight - 23.0).toStringAsFixed(1))}'
+            : '${luggage.flightNumber} · ${luggage.currentLocation.isNotEmpty ? luggage.currentLocation : l10n.unknownLocation} · ${luggage.weight}kg';
 
         return RecentLuggageItem(
           tagNumber: luggage.tagNumber,
@@ -159,6 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return l10n.lost;
       case LuggageStatus.stranded:
         return l10n.strandedLuggage;
+      case LuggageStatus.stopTransit:
+        return l10n.stopTransit;
     }
   }
 
@@ -179,6 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const Color(0xFFF1F5F9); // 浅灰
       case LuggageStatus.stranded:
         return const Color(0xFFFFF7ED); // 浅橙
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFFFF7ED); // 浅橙（与滞留一致）
     }
   }
 
@@ -199,6 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const Color(0xFF94A3B8); // 灰色
       case LuggageStatus.stranded:
         return const Color(0xFFF97316); // 橙色
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFF97316); // 橙色（与滞留一致）
     }
   }
 
@@ -626,6 +632,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 3),
                 Text(
                   info,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondaryLight,

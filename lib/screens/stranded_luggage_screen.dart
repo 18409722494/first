@@ -36,7 +36,7 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
 
     try {
       // 使用统一服务：自动将超时行李标记为滞留，并返回所有滞留行李
-      final stranded = await LuggageService.getStrandedLuggage();
+      final stranded = await LuggageService.getStrandedLuggage(forceRefresh: true);
 
       // 按滞留天数降序排序（滞留越久的排前面）
       stranded.sort((a, b) {
@@ -442,8 +442,8 @@ class _StrandedLuggageScreenState extends State<StrandedLuggageScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        luggage.destination.isNotEmpty
-                            ? luggage.destination
+                        luggage.currentLocation.isNotEmpty
+                            ? luggage.currentLocation
                             : l10n.unknownLocation,
                         style: TextStyle(
                           color: Colors.grey[600],

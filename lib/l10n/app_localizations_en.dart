@@ -72,9 +72,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountSecurity => 'Account Security';
 
   @override
-  String get personalization => 'Personalization';
-
-  @override
   String get systemSettings => 'System Settings';
 
   @override
@@ -223,16 +220,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nicknameChangedSuccess => 'Nickname changed successfully';
-
-  @override
-  String get personalizationTitle => 'Personalization';
-
-  @override
-  String get personalizationNote => 'Personalization Notice';
-
-  @override
-  String get personalizationNoteContent =>
-      '• Changing your avatar personalizes your profile\n• Changing your nickname updates your display name\n• These settings only affect how your profile is displayed, not account security';
 
   @override
   String get languageSettings => 'Language Settings';
@@ -610,7 +597,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get addLuggageInfo => 'Add Luggage Info';
+  String get addLuggageInfo => 'Edit Luggage Info';
 
   @override
   String get luggageTagNoLabel => 'Luggage Tag';
@@ -1035,7 +1022,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanRegister => 'Scan & Register';
 
   @override
-  String get manualAdd => 'Manual Add';
+  String get manualAdd => 'Manual Edit';
 
   @override
   String get unprocessedLuggage => 'Unprocessed Luggage';

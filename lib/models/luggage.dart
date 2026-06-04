@@ -10,7 +10,8 @@ enum LuggageStatus {
   received('已接收'),
   damaged('已损坏'),
   lost('已丢失'),
-  stranded('滞留');
+  stranded('滞留'),
+  stopTransit('停止托运');
 
   /// 中文默认显示名
   final String displayName;
@@ -32,6 +33,8 @@ enum LuggageStatus {
         return const Color(0xFF94A3B8); // 灰色
       case LuggageStatus.stranded:
         return const Color(0xFFF97316); // 橙色
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFF97316); // 橙色（与滞留一致，表示警告）
     }
   }
 
@@ -52,6 +55,8 @@ enum LuggageStatus {
         return const Color(0xFFF1F5F9); // 浅灰
       case LuggageStatus.stranded:
         return const Color(0xFFFFF7ED); // 浅橙
+      case LuggageStatus.stopTransit:
+        return const Color(0xFFFFF7ED); // 浅橙（与滞留一致）
     }
   }
 
@@ -74,8 +79,7 @@ class Luggage {
   /// 滞留时间（行李被标记为 stranded 时记录，非 stranded 行李为 null）
   final DateTime? strandedAt;
   /// 当前位置（对应后端 currentLocation 字段）
-  /// 注意：此字段存储的是行李当前位置
-  final String destination;
+  final String currentLocation;
   final String notes;
   final double? latitude;
   final double? longitude;
@@ -91,7 +95,7 @@ class Luggage {
     required this.checkInTime,
     required this.lastUpdated,
     this.strandedAt,
-    required this.destination,
+    required this.currentLocation,
     required this.notes,
     this.latitude,
     this.longitude,
@@ -125,9 +129,9 @@ class Luggage {
       weight: parseDouble(json['weight'] ?? json['weightKg'] ?? json['weight_kg']) ?? 0.0,
       status: parseStatus(json['baggageStatus'] ?? json['status']),
       checkInTime: parseTime(json['checkInTime'] ?? json['check_in_time'] ?? DateTime.now()) ?? DateTime.now(),
-      lastUpdated: parseTime(json['baggage_change_time'] ?? json['lastUpdated'] ?? json['last_updated'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
+      lastUpdated: parseTime(json['baggageChangeTime'] ?? json['baggage_change_time'] ?? json['lastUpdated'] ?? json['last_updated'] ?? json['updatedAt'] ?? json['updated_at'] ?? DateTime.now()) ?? DateTime.now(),
       strandedAt: parseTime(json['strandedAt'] ?? json['stranded_at']),
-      destination: json['destination']?.toString() ?? '',
+      currentLocation: json['currentLocation']?.toString() ?? json['destination']?.toString() ?? '',
       notes: json['notes']?.toString() ??
           json['note']?.toString() ??
           json['remark']?.toString() ??
@@ -149,7 +153,7 @@ class Luggage {
         'checkInTime': checkInTime.toIso8601String(),
         'lastUpdated': lastUpdated.toIso8601String(),
         'strandedAt': strandedAt?.toIso8601String(),
-        'destination': destination,
+        'currentLocation': currentLocation,
         'notes': notes,
         'latitude': latitude,
         'longitude': longitude,
@@ -166,7 +170,7 @@ class Luggage {
     DateTime? checkInTime,
     DateTime? lastUpdated,
     DateTime? strandedAt,
-    String? destination,
+    String? currentLocation,
     String? notes,
     double? latitude,
     double? longitude,
@@ -182,7 +186,7 @@ class Luggage {
       checkInTime: checkInTime ?? this.checkInTime,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       strandedAt: strandedAt ?? this.strandedAt,
-      destination: destination ?? this.destination,
+      currentLocation: currentLocation ?? this.currentLocation,
       notes: notes ?? this.notes,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -233,6 +237,8 @@ class BaggageStatusMapper {
       case '滞留':
       case 'stranded':
         return LuggageStatus.stranded;
+      case '停止托运':
+        return LuggageStatus.stopTransit;
     }
 
     final s = raw.toLowerCase();
@@ -256,6 +262,9 @@ class BaggageStatusMapper {
       case 'check_in':
       case 'checked':
         return LuggageStatus.checkIn;
+      case 'stoptransit':
+      case 'stop_transit':
+        return LuggageStatus.stopTransit;
       default:
         return LuggageStatus.checkIn;
     }
@@ -278,6 +287,8 @@ class BaggageStatusMapper {
         return '已丢失';
       case LuggageStatus.stranded:
         return '滞留';
+      case LuggageStatus.stopTransit:
+        return '停止托运';
     }
   }
 
